@@ -8,21 +8,24 @@ const { Pool } = require('pg');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Configuration de la base de données
+// Connexion à la base de données PostgreSQL
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Middleware d'authentification JWT
+// Route racine
+app.get('/', (req, res) => {
+  res.send('✅ API Lotato en ligne. Utilisez /api/...');
+});
+
+// ======================= MIDDLEWARE =======================
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['x-auth-token'] || req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1] || authHeader;
-
   if (!token) return res.status(401).json({ success: false, error: 'Token manquant' });
 
   jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
@@ -32,7 +35,6 @@ const authenticateToken = (req, res, next) => {
   });
 };
 
-// Vérification des rôles
 const requireRole = (roles) => (req, res, next) => {
   if (!req.user || !roles.includes(req.user.role)) {
     return res.status(403).json({ success: false, error: 'Accès interdit' });
@@ -41,8 +43,6 @@ const requireRole = (roles) => (req, res, next) => {
 };
 
 // ======================= ROUTES PUBLIQUES =======================
-
-// Connexion
 app.post('/api/auth/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
@@ -77,9 +77,7 @@ app.post('/api/auth/login', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    // Ne pas renvoyer le hash
     delete user.password_hash;
-
     res.json({ success: true, token, admin: user });
   } catch (err) {
     console.error(err);
@@ -87,10 +85,12 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Vérification du token
 app.get('/api/auth/check', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, username, email, full_name, role, subsystem_id, is_active FROM users WHERE id = $1', [req.user.id]);
+    const result = await pool.query(
+      'SELECT id, username, email, full_name, role, subsystem_id, is_active FROM users WHERE id = $1',
+      [req.user.id]
+    );
     if (result.rows.length === 0) {
       return res.status(401).json({ success: false, error: 'Utilisateur non trouvé' });
     }
@@ -101,10 +101,9 @@ app.get('/api/auth/check', authenticateToken, async (req, res) => {
 });
 
 // ======================= ROUTES MASTER =======================
-
 // Créer un sous-système
 app.post('/api/master/subsystems', authenticateToken, requireRole(['master']), async (req, res) => {
-  const { name, subdomain, contact_email, contact_phone, max_users, subscription_type, subscription_months, send_credentials } = req.body;
+  const { name, subdomain, contact_email, contact_phone, max_users, subscription_type, subscription_months } = req.body;
   if (!name || !subdomain || !contact_email) {
     return res.status(400).json({ success: false, error: 'Données manquantes' });
   }
@@ -113,14 +112,12 @@ app.post('/api/master/subsystems', authenticateToken, requireRole(['master']), a
   try {
     await client.query('BEGIN');
 
-    // Vérifier unicité du sous-domaine
     const existing = await client.query('SELECT id FROM subsystems WHERE subdomain = $1', [subdomain]);
     if (existing.rows.length > 0) {
       await client.query('ROLLBACK');
       return res.status(400).json({ success: false, error: 'Ce sous-domaine est déjà utilisé' });
     }
 
-    // Créer le sous-système
     const expiresAt = subscription_months ? new Date(Date.now() + subscription_months * 30 * 24 * 60 * 60 * 1000) : null;
     const subsystemResult = await client.query(
       `INSERT INTO subsystems (name, subdomain, contact_email, contact_phone, max_users, subscription_type, subscription_expires)
@@ -129,23 +126,18 @@ app.post('/api/master/subsystems', authenticateToken, requireRole(['master']), a
     );
     const subsystem = subsystemResult.rows[0];
 
-    // Générer un mot de passe aléatoire pour l'admin du sous-système
     const plainPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8).toUpperCase();
     const hashedPassword = await bcrypt.hash(plainPassword, 10);
-
-    // Créer l'utilisateur admin du sous-système
     const adminUsername = subdomain + '_admin';
-    const adminEmail = contact_email;
     const adminResult = await client.query(
       `INSERT INTO users (username, password_hash, email, full_name, role, subsystem_id, is_active)
        VALUES ($1, $2, $3, $4, 'subsystem', $5, true) RETURNING id, username, email`,
-      [adminUsername, hashedPassword, adminEmail, `Admin ${name}`, subsystem.id]
+      [adminUsername, hashedPassword, contact_email, `Admin ${name}`, subsystem.id]
     );
     const admin = adminResult.rows[0];
 
     await client.query('COMMIT');
 
-    // Réponse
     const accessUrl = `https://${subdomain}.${process.env.MAIN_DOMAIN || 'novalotto.com'}`;
     res.status(201).json({
       success: true,
@@ -157,7 +149,6 @@ app.post('/api/master/subsystems', authenticateToken, requireRole(['master']), a
         access_url: accessUrl
       }
     });
-
   } catch (err) {
     await client.query('ROLLBACK');
     console.error(err);
@@ -167,7 +158,7 @@ app.post('/api/master/subsystems', authenticateToken, requireRole(['master']), a
   }
 });
 
-// Lister tous les sous-systèmes (avec pagination)
+// Lister tous les sous-systèmes
 app.get('/api/master/subsystems', authenticateToken, requireRole(['master']), async (req, res) => {
   try {
     const { page = 1, limit = 10, search, status } = req.query;
@@ -225,7 +216,7 @@ app.get('/api/master/subsystems', authenticateToken, requireRole(['master']), as
   }
 });
 
-// Obtenir les détails d'un sous-système
+// Obtenir un sous-système par ID
 app.get('/api/master/subsystems/:id', authenticateToken, requireRole(['master']), async (req, res) => {
   try {
     const result = await pool.query(`
@@ -267,7 +258,7 @@ app.put('/api/master/subsystems/:id/activate', authenticateToken, requireRole(['
   }
 });
 
-// Liste des agents d'un sous-système
+// Lister les agents d'un sous-système
 app.get('/api/master/subsystems/:id/users', authenticateToken, requireRole(['master']), async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -298,9 +289,7 @@ app.get('/api/master/subsystems/:id/users', authenticateToken, requireRole(['mas
   }
 });
 
-// ======================= ROUTES SOUS-SYSTÈME (admin) =======================
-
-// Obtenir les infos du sous-système de l'utilisateur connecté
+// ======================= ROUTES SOUS-SYSTÈME (ADMIN) =======================
 app.get('/api/subsystems/mine', authenticateToken, requireRole(['subsystem']), async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM subsystems WHERE id = $1', [req.user.subsystem_id]);
@@ -313,7 +302,6 @@ app.get('/api/subsystems/mine', authenticateToken, requireRole(['subsystem']), a
   }
 });
 
-// Statistiques du sous-système (dashboard)
 app.get('/api/subsystem/stats', authenticateToken, requireRole(['subsystem']), async (req, res) => {
   const subsystemId = req.user.subsystem_id;
   try {
@@ -356,7 +344,6 @@ app.get('/api/subsystem/stats', authenticateToken, requireRole(['subsystem']), a
   }
 });
 
-// Lister les agents du sous-système
 app.get('/api/subsystem/users', authenticateToken, requireRole(['subsystem']), async (req, res) => {
   try {
     const result = await pool.query(
@@ -373,7 +360,6 @@ app.get('/api/subsystem/users', authenticateToken, requireRole(['subsystem']), a
   }
 });
 
-// Créer un agent
 app.post('/api/subsystem/users/create', authenticateToken, requireRole(['subsystem']), async (req, res) => {
   const { name, username, email, password } = req.body;
   if (!name || !username || !password) {
@@ -384,7 +370,6 @@ app.post('/api/subsystem/users/create', authenticateToken, requireRole(['subsyst
   try {
     await client.query('BEGIN');
 
-    // Vérifier quota
     const quotaCheck = await client.query(
       'SELECT max_users, (SELECT COUNT(*) FROM users WHERE subsystem_id = $1 AND role = $2) as current_count FROM subsystems WHERE id = $1',
       [req.user.subsystem_id, 'agent']
@@ -395,7 +380,6 @@ app.post('/api/subsystem/users/create', authenticateToken, requireRole(['subsyst
       return res.status(400).json({ success: false, error: 'Quota d\'agents atteint' });
     }
 
-    // Vérifier unicité du username
     const existing = await client.query('SELECT id FROM users WHERE username = $1', [username]);
     if (existing.rows.length > 0) {
       await client.query('ROLLBACK');
@@ -420,12 +404,10 @@ app.post('/api/subsystem/users/create', authenticateToken, requireRole(['subsyst
   }
 });
 
-// Modifier un agent
 app.put('/api/subsystem/users/:userId', authenticateToken, requireRole(['subsystem']), async (req, res) => {
   const { name, email, is_active, password } = req.body;
   const userId = req.params.userId;
   try {
-    // Vérifier que l'agent appartient bien au sous-système
     const check = await pool.query('SELECT id FROM users WHERE id = $1 AND subsystem_id = $2', [userId, req.user.subsystem_id]);
     if (check.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Agent non trouvé' });
@@ -450,7 +432,6 @@ app.put('/api/subsystem/users/:userId', authenticateToken, requireRole(['subsyst
   }
 });
 
-// Activer/désactiver un agent (status)
 app.put('/api/subsystem/users/:userId/status', authenticateToken, requireRole(['subsystem']), async (req, res) => {
   const { is_active } = req.body;
   try {
@@ -461,7 +442,6 @@ app.put('/api/subsystem/users/:userId/status', authenticateToken, requireRole(['
   }
 });
 
-// Supprimer un agent
 app.delete('/api/subsystem/users/:userId', authenticateToken, requireRole(['subsystem']), async (req, res) => {
   try {
     await pool.query('DELETE FROM users WHERE id = $1 AND subsystem_id = $2 AND role = $3', [req.params.userId, req.user.subsystem_id, 'agent']);
@@ -471,99 +451,6 @@ app.delete('/api/subsystem/users/:userId', authenticateToken, requireRole(['subs
   }
 });
 
-// ======================= ROUTES AGENT =======================
-
-// Sauvegarder un ticket
-app.post('/api/tickets', authenticateToken, requireRole(['agent']), async (req, res) => {
-  const { number, date, draw, drawTime, bets, total } = req.body;
-  if (!draw || !drawTime || !bets || !total) {
-    return res.status(400).json({ success: false, error: 'Données incomplètes' });
-  }
-
-  try {
-    const result = await pool.query(
-      `INSERT INTO tickets (ticket_number, subsystem_id, agent_id, agent_name, draw, draw_time, date, bets, total, is_synced)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true) RETURNING *`,
-      [number, req.user.subsystem_id, req.user.id, req.user.full_name || req.user.username, draw, drawTime, date || new Date(), JSON.stringify(bets), total]
-    );
-    res.status(201).json({ success: true, ticket: result.rows[0] });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
-  }
-});
-
-// Obtenir les tickets (pour agent)
-app.get('/api/tickets', authenticateToken, requireRole(['agent']), async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM tickets WHERE agent_id = $1 ORDER BY date DESC',
-      [req.user.id]
-    );
-    res.json({ success: true, tickets: result.rows });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
-  }
-});
-
-// Obtenir les tickets en attente (pour agent)
-app.get('/api/tickets/pending', authenticateToken, requireRole(['agent']), async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM tickets WHERE agent_id = $1 AND is_synced = false ORDER BY date DESC',
-      [req.user.id]
-    );
-    res.json({ success: true, tickets: result.rows });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
-  }
-});
-
-// Obtenir les tickets gagnants (pour agent)
-app.get('/api/tickets/winning', authenticateToken, requireRole(['agent']), async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT t.*, wt.total_winnings, wt.paid 
-       FROM tickets t 
-       JOIN winning_tickets wt ON t.id = wt.ticket_id 
-       WHERE t.agent_id = $1 ORDER BY t.date DESC`,
-      [req.user.id]
-    );
-    res.json({ success: true, tickets: result.rows });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
-  }
-});
-
-// Obtenir les résultats (pour agent)
-app.get('/api/results', authenticateToken, requireRole(['agent', 'subsystem']), async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM results WHERE subsystem_id = $1 ORDER BY result_date DESC, draw_time',
-      [req.user.subsystem_id]
-    );
-    res.json({ success: true, results: result.rows });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
-  }
-});
-
-// Obtenir les restrictions (pour agent)
-app.get('/api/restrictions', authenticateToken, requireRole(['agent', 'subsystem']), async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM restrictions WHERE subsystem_id = $1 ORDER BY created_at DESC',
-      [req.user.subsystem_id]
-    );
-    res.json({ success: true, restrictions: result.rows });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur' });
-  }
-});
-
-// ======================= ROUTES POUR SOUS-SYSTÈME (admin) complémentaires =======================
-
-// Obtenir les tickets du sous-système
 app.get('/api/subsystem/tickets', authenticateToken, requireRole(['subsystem']), async (req, res) => {
   const { period = 'month', status, limit = 100 } = req.query;
   let dateCondition = '';
@@ -595,7 +482,77 @@ app.get('/api/subsystem/tickets', authenticateToken, requireRole(['subsystem']),
   }
 });
 
-// Enregistrer un résultat (admin)
+// ======================= ROUTES AGENT =======================
+app.post('/api/tickets', authenticateToken, requireRole(['agent']), async (req, res) => {
+  const { number, date, draw, drawTime, bets, total } = req.body;
+  if (!draw || !drawTime || !bets || !total) {
+    return res.status(400).json({ success: false, error: 'Données incomplètes' });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO tickets (ticket_number, subsystem_id, agent_id, agent_name, draw, draw_time, date, bets, total, is_synced)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true) RETURNING *`,
+      [number, req.user.subsystem_id, req.user.id, req.user.full_name || req.user.username, draw, drawTime, date || new Date(), JSON.stringify(bets), total]
+    );
+    res.status(201).json({ success: true, ticket: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/tickets', authenticateToken, requireRole(['agent']), async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM tickets WHERE agent_id = $1 ORDER BY date DESC',
+      [req.user.id]
+    );
+    res.json({ success: true, tickets: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/tickets/pending', authenticateToken, requireRole(['agent']), async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM tickets WHERE agent_id = $1 AND is_synced = false ORDER BY date DESC',
+      [req.user.id]
+    );
+    res.json({ success: true, tickets: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/tickets/winning', authenticateToken, requireRole(['agent']), async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT t.*, wt.total_winnings, wt.paid 
+       FROM tickets t 
+       JOIN winning_tickets wt ON t.id = wt.ticket_id 
+       WHERE t.agent_id = $1 ORDER BY t.date DESC`,
+      [req.user.id]
+    );
+    res.json({ success: true, tickets: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+app.get('/api/results', authenticateToken, requireRole(['agent', 'subsystem']), async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM results WHERE subsystem_id = $1 ORDER BY result_date DESC, draw_time',
+      [req.user.subsystem_id]
+    );
+    res.json({ success: true, results: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
 app.post('/api/results', authenticateToken, requireRole(['subsystem']), async (req, res) => {
   const { draw, time, date, lot1, lot2, lot3, verified } = req.body;
   if (!draw || !time || !date || !lot1) {
@@ -618,7 +575,18 @@ app.post('/api/results', authenticateToken, requireRole(['subsystem']), async (r
   }
 });
 
-// Gestion des restrictions
+app.get('/api/restrictions', authenticateToken, requireRole(['agent', 'subsystem']), async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM restrictions WHERE subsystem_id = $1 ORDER BY created_at DESC',
+      [req.user.subsystem_id]
+    );
+    res.json({ success: true, restrictions: result.rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
 app.post('/api/restrictions', authenticateToken, requireRole(['subsystem']), async (req, res) => {
   const { number, type, limitAmount, draw, time } = req.body;
   if (!number || !type) return res.status(400).json({ success: false, error: 'Données manquantes' });
@@ -658,11 +626,7 @@ app.delete('/api/restrictions/:id', authenticateToken, requireRole(['subsystem']
   }
 });
 
-// ======================= ROUTES COMMUNES =======================
-
-// Obtenir les informations de l'entreprise (pour agent)
 app.get('/api/company-info', authenticateToken, async (req, res) => {
-  // On pourrait avoir une table settings, mais pour simplifier on renvoie des valeurs par défaut
   res.json({
     name: "Nova Lotto",
     phone: "+509 32 53 49 58",
@@ -672,12 +636,41 @@ app.get('/api/company-info', authenticateToken, async (req, res) => {
   });
 });
 
-// Obtenir le logo
 app.get('/api/logo', authenticateToken, async (req, res) => {
   res.json({ logoUrl: "logo-borlette.jpg" });
 });
 
+// ======================= CRÉATION AUTO DU COMPTE MASTER =======================
+async function ensureMasterExists() {
+  const client = await pool.connect();
+  try {
+    const result = await client.query("SELECT id FROM users WHERE role = 'master' LIMIT 1");
+    if (result.rows.length === 0) {
+      const username = process.env.MASTER_USERNAME || 'master';
+      const password = process.env.MASTER_PASSWORD || 'master123';
+      const email = process.env.MASTER_EMAIL || 'master@novalotto.com';
+      const fullName = process.env.MASTER_FULLNAME || 'Master Administrator';
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await client.query(
+        `INSERT INTO users (username, password_hash, email, full_name, role, is_active)
+         VALUES ($1, $2, $3, $4, 'master', true)`,
+        [username, hashedPassword, email, fullName]
+      );
+      console.log(`✅ Compte master créé avec l'identifiant "${username}".`);
+    } else {
+      console.log('✅ Compte master existant.');
+    }
+  } catch (err) {
+    console.error('❌ Erreur création master:', err);
+  } finally {
+    client.release();
+  }
+}
+
 // ======================= DÉMARRAGE =======================
-app.listen(PORT, () => {
-  console.log(`Serveur démarré sur le port ${PORT}`);
-});
+(async () => {
+  await ensureMasterExists();
+  app.listen(PORT, () => {
+    console.log(`Serveur démarré sur le port ${PORT}`);
+  });
+})();
