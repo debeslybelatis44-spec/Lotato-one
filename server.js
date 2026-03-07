@@ -627,24 +627,29 @@ app.get('*', (req, res) => {
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('✅ MongoDB connecté');
-    // Créer le master par défaut si inexistant et si les variables d'env sont définies
+    // Créer le master par défaut si inexistant
     const masterExists = await User.findOne({ role: 'master' });
     if (!masterExists) {
-      const masterUsername = process.env.DEFAULT_MASTER_USERNAME;
-      const masterPassword = process.env.DEFAULT_MASTER_PASSWORD;
-      if (masterUsername && masterPassword) {
-        const hashedPassword = await bcrypt.hash(masterPassword, 10);
-        await User.create({
-          username: masterUsername,
-          password: hashedPassword,
-          name: 'Master Admin',
-          role: 'master',
-          is_active: true
-        });
-        console.log('✅ Master par défaut créé');
+      let masterUsername, masterPassword;
+      if (process.env.DEFAULT_MASTER_USERNAME && process.env.DEFAULT_MASTER_PASSWORD) {
+        masterUsername = process.env.DEFAULT_MASTER_USERNAME;
+        masterPassword = process.env.DEFAULT_MASTER_PASSWORD;
+        console.log('Création du master avec les variables d\'environnement');
       } else {
-        console.warn('⚠️  DEFAULT_MASTER_USERNAME/PASSWORD non définis, master par défaut non créé. Vous pouvez en créer un manuellement.');
+        // Fallback pour le développement : identifiants par défaut
+        masterUsername = 'admin';
+        masterPassword = 'admin123';
+        console.warn('⚠️  ATTENTION: Utilisation des identifiants par défaut pour le master (admin/admin123). Changez-les dès que possible.');
       }
+      const hashedPassword = await bcrypt.hash(masterPassword, 10);
+      await User.create({
+        username: masterUsername,
+        password: hashedPassword,
+        name: 'Master Admin',
+        role: 'master',
+        is_active: true
+      });
+      console.log('✅ Master par défaut créé');
     }
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`🚀 Serveur sur le port ${PORT}`));
