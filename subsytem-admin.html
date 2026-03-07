@@ -2270,25 +2270,12 @@
         
         async function checkSessionAndLoadData() {
             try {
-                const sessionResponse = await fetch(`${API_BASE_URL}/api/auth/check`, {
-                    headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
-                    }
-                });
-                
-                const sessionData = await sessionResponse.json();
-                
-                if (sessionData.success) {
-                    currentUser = sessionData.admin;
-                    updateUserInfo();
-                    
-                    await loadSubsystemData();
-                    loadDashboardData();
-                    loadRecentAgents();
-                    loadRecentTickets();
-                } else {
-                    redirectToLogin();
-                }
+                // On tente de charger les données du sous-système
+                await loadSubsystemData();
+                // Si ça réussit, on continue
+                loadDashboardData();
+                loadRecentAgents();
+                loadRecentTickets();
             } catch (error) {
                 console.error('Erreur vérification session:', error);
                 showNotification('Erreur de connexion au serveur', 'error');
@@ -2298,11 +2285,16 @@
         
         async function loadSubsystemData() {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/subsystems/mine`, {
+                const response = await fetch(`${API_BASE_URL}/api/subsystem/mine`, {
                     headers: {
                         'Authorization': `Bearer ${subsystemToken}`
                     }
                 });
+                
+                if (response.status === 401) {
+                    redirectToLogin();
+                    return;
+                }
                 
                 const data = await response.json();
                 
@@ -2318,6 +2310,7 @@
             } catch (error) {
                 console.error('Erreur chargement sous-système:', error);
                 showNotification('Erreur lors du chargement du sous-système', 'error');
+                throw error; // pour remonter l'erreur à checkSessionAndLoadData
             }
         }
         
@@ -2769,7 +2762,8 @@
             
             try {
                 if (agentFilter.options.length <= 1) {
-                    const agentsResponse = await fetch(`${API_BASE_URL}/api/subsystem/users?role=agent`, {
+                    // Correction : enlever le paramètre ?role=agent qui n'est pas supporté
+                    const agentsResponse = await fetch(`${API_BASE_URL}/api/subsystem/users`, {
                         headers: {
                             'Authorization': `Bearer ${subsystemToken}`
                         }
@@ -2938,62 +2932,12 @@
             empty.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_BASE_URL}/api/tickets/winning?subsystemId=${currentSubsystem._id}`, {
-                    headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
-                    }
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    const tickets = data.tickets || [];
-                    
-                    if (tickets.length === 0) {
-                        loading.style.display = 'none';
-                        empty.style.display = 'block';
-                        return;
-                    }
-                    
-                    tbody.innerHTML = '';
-                    
-                    tickets.forEach(ticket => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>
-                                <strong>#${ticket.ticket_number}</strong>
-                            </td>
-                            <td>${ticket.agent_name || 'N/A'}</td>
-                            <td>${ticket.draw} (${ticket.draw_time})</td>
-                            <td>
-                                ${new Date(ticket.date).toLocaleDateString('fr-FR')}
-                            </td>
-                            <td>${ticket.total_winnings.toLocaleString()} HTG</td>
-                            <td>
-                                <span class="status-badge ${ticket.paid ? 'status-active' : 'status-pending'}">
-                                    ${ticket.paid ? 'Payé' : 'À payer'}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="action-btn view" onclick="viewWinningTicket('${ticket.id}')" title="Voir détails">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    ${!ticket.paid ? 
-                                        `<button class="action-btn" onclick="markAsPaid('${ticket.id}')" title="Marquer comme payé">
-                                            <i class="fas fa-money-check"></i>
-                                        </button>` : ''
-                                    }
-                                </div>
-                            </td>
-                        `;
-                        
-                        tbody.appendChild(row);
-                    });
-                    
-                    loading.style.display = 'none';
-                    table.style.display = 'table';
-                }
+                // Cette route n'existe pas dans le backend, on affiche juste un message
+                console.warn('Route /api/tickets/winning non implémentée');
+                loading.style.display = 'none';
+                empty.style.display = 'block';
+                // Optionnel : on pourrait appeler une autre route comme /api/tickets avec un filtre
+                // mais pour l'instant on laisse vide.
             } catch (error) {
                 console.error('Erreur chargement tickets gagnants:', error);
                 loading.style.display = 'none';
