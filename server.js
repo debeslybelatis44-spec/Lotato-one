@@ -617,22 +617,34 @@ app.get('/api/company-info', (req, res) => {
   });
 });
 
+// ==================== SERVEUR STATIQUE ET FALLBACK ====================
+// Route catch-all pour les applications monopages (si nécessaire)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // ==================== DÉMARRAGE ====================
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('✅ MongoDB connecté');
-    // Créer le master par défaut si inexistant
+    // Créer le master par défaut si inexistant et si les variables d'env sont définies
     const masterExists = await User.findOne({ role: 'master' });
     if (!masterExists) {
-      const hashedPassword = await bcrypt.hash(process.env.DEFAULT_MASTER_PASSWORD, 10);
-      await User.create({
-        username: process.env.DEFAULT_MASTER_USERNAME,
-        password: hashedPassword,
-        name: 'Master Admin',
-        role: 'master',
-        is_active: true
-      });
-      console.log('✅ Master par défaut créé');
+      const masterUsername = process.env.DEFAULT_MASTER_USERNAME;
+      const masterPassword = process.env.DEFAULT_MASTER_PASSWORD;
+      if (masterUsername && masterPassword) {
+        const hashedPassword = await bcrypt.hash(masterPassword, 10);
+        await User.create({
+          username: masterUsername,
+          password: hashedPassword,
+          name: 'Master Admin',
+          role: 'master',
+          is_active: true
+        });
+        console.log('✅ Master par défaut créé');
+      } else {
+        console.warn('⚠️  DEFAULT_MASTER_USERNAME/PASSWORD non définis, master par défaut non créé. Vous pouvez en créer un manuellement.');
+      }
     }
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`🚀 Serveur sur le port ${PORT}`));
