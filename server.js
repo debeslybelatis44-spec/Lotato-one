@@ -164,6 +164,20 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// --- Vérification de session (pour les applications frontend) ---
+app.get('/api/auth/check', auth, async (req, res) => {
+  // auth middleware a déjà vérifié le token et attaché req.user
+  const userData = {
+    id: req.user._id,
+    username: req.user.username,
+    name: req.user.name,
+    email: req.user.email,
+    role: req.user.role,
+    subsystem_id: req.user.subsystem_id
+  };
+  res.json({ success: true, admin: userData });
+});
+
 // --- MASTER (protégé) ---
 app.get('/api/master/subsystems', auth, authorize('master'), async (req, res) => {
   try {
