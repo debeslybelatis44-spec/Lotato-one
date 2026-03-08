@@ -164,20 +164,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// --- Vérification de session (pour les applications frontend) ---
-app.get('/api/auth/check', auth, async (req, res) => {
-  // auth middleware a déjà vérifié le token et attaché req.user
-  const userData = {
-    id: req.user._id,
-    username: req.user.username,
-    name: req.user.name,
-    email: req.user.email,
-    role: req.user.role,
-    subsystem_id: req.user.subsystem_id
-  };
-  res.json({ success: true, admin: userData });
-});
-
 // --- MASTER (protégé) ---
 app.get('/api/master/subsystems', auth, authorize('master'), async (req, res) => {
   try {
@@ -641,29 +627,24 @@ app.get('*', (req, res) => {
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('✅ MongoDB connecté');
-    // Créer le master par défaut si inexistant
+    // Créer le master par défaut si inexistant et si les variables d'env sont définies
     const masterExists = await User.findOne({ role: 'master' });
     if (!masterExists) {
-      let masterUsername, masterPassword;
-      if (process.env.DEFAULT_MASTER_USERNAME && process.env.DEFAULT_MASTER_PASSWORD) {
-        masterUsername = process.env.DEFAULT_MASTER_USERNAME;
-        masterPassword = process.env.DEFAULT_MASTER_PASSWORD;
-        console.log('Création du master avec les variables d\'environnement');
+      const masterUsername = process.env.DEFAULT_MASTER_USERNAME;
+      const masterPassword = process.env.DEFAULT_MASTER_PASSWORD;
+      if (masterUsername && masterPassword) {
+        const hashedPassword = await bcrypt.hash(masterPassword, 10);
+        await User.create({
+          username: masterUsername,
+          password: hashedPassword,
+          name: 'Master Admin',
+          role: 'master',
+          is_active: true
+        });
+        console.log('✅ Master par défaut créé');
       } else {
-        // Fallback pour le développement : identifiants par défaut
-        masterUsername = 'admin';
-        masterPassword = 'admin123';
-        console.warn('⚠️  ATTENTION: Utilisation des identifiants par défaut pour le master (admin/admin123). Changez-les dès que possible.');
+        console.warn('⚠️  DEFAULT_MASTER_USERNAME/PASSWORD non définis, master par défaut non créé. Vous pouvez en créer un manuellement.');
       }
-      const hashedPassword = await bcrypt.hash(masterPassword, 10);
-      await User.create({
-        username: masterUsername,
-        password: hashedPassword,
-        name: 'Master Admin',
-        role: 'master',
-        is_active: true
-      });
-      console.log('✅ Master par défaut créé');
     }
     const PORT = process.env.PORT || 5000;
     app.listen(PORT, () => console.log(`🚀 Serveur sur le port ${PORT}`));
