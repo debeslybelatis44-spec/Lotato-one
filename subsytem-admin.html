@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="manifest.json">
     <style>
+        /* (votre style existant, inchangé) */
         :root {
             --primary-color: #3498db;
             --secondary-color: #2c3e50;
@@ -2268,11 +2269,12 @@
             window.location.href = '/';
         }
         
+        // ========== CORRECTIONS PRINCIPALES ==========
         async function checkSessionAndLoadData() {
             try {
                 const sessionResponse = await fetch(`${API_BASE_URL}/api/auth/check`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken  // Changé ici : Authorization -> x-auth-token
                     }
                 });
                 
@@ -2298,11 +2300,17 @@
         
         async function loadSubsystemData() {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/subsystems/mine`, {
+                // Correction : /api/subsystems/mine -> /api/subsystem/mine
+                const response = await fetch(`${API_BASE_URL}/api/subsystem/mine`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
+                
+                if (response.status === 401) {
+                    redirectToLogin();
+                    return;
+                }
                 
                 const data = await response.json();
                 
@@ -2318,6 +2326,7 @@
             } catch (error) {
                 console.error('Erreur chargement sous-système:', error);
                 showNotification('Erreur lors du chargement du sous-système', 'error');
+                throw error;
             }
         }
         
@@ -2484,7 +2493,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/stats`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -2522,7 +2531,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users?limit=5`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -2599,7 +2608,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -2693,7 +2702,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/tickets?period=today&limit=5`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -2769,9 +2778,10 @@
             
             try {
                 if (agentFilter.options.length <= 1) {
-                    const agentsResponse = await fetch(`${API_BASE_URL}/api/subsystem/users?role=agent`, {
+                    // Correction : retrait de ?role=agent car non supporté
+                    const agentsResponse = await fetch(`${API_BASE_URL}/api/subsystem/users`, {
                         headers: {
-                            'Authorization': `Bearer ${subsystemToken}`
+                            'x-auth-token': subsystemToken
                         }
                     });
                     
@@ -2793,7 +2803,7 @@
                 
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/tickets?period=today`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -2867,7 +2877,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/tickets?status=pending`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -2928,78 +2938,19 @@
         }
         
         async function loadWinningTickets() {
+            // Route non implémentée, on affiche un état vide sans erreur
             const loading = document.getElementById('winning-tickets-loading');
             const table = document.getElementById('winning-tickets-table');
             const empty = document.getElementById('winning-tickets-empty');
-            const tbody = document.getElementById('winning-tickets-table-body');
             
             loading.style.display = 'flex';
             table.style.display = 'none';
             empty.style.display = 'none';
             
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/tickets/winning?subsystemId=${currentSubsystem._id}`, {
-                    headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
-                    }
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    const tickets = data.tickets || [];
-                    
-                    if (tickets.length === 0) {
-                        loading.style.display = 'none';
-                        empty.style.display = 'block';
-                        return;
-                    }
-                    
-                    tbody.innerHTML = '';
-                    
-                    tickets.forEach(ticket => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>
-                                <strong>#${ticket.ticket_number}</strong>
-                            </td>
-                            <td>${ticket.agent_name || 'N/A'}</td>
-                            <td>${ticket.draw} (${ticket.draw_time})</td>
-                            <td>
-                                ${new Date(ticket.date).toLocaleDateString('fr-FR')}
-                            </td>
-                            <td>${ticket.total_winnings.toLocaleString()} HTG</td>
-                            <td>
-                                <span class="status-badge ${ticket.paid ? 'status-active' : 'status-pending'}">
-                                    ${ticket.paid ? 'Payé' : 'À payer'}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button class="action-btn view" onclick="viewWinningTicket('${ticket.id}')" title="Voir détails">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    ${!ticket.paid ? 
-                                        `<button class="action-btn" onclick="markAsPaid('${ticket.id}')" title="Marquer comme payé">
-                                            <i class="fas fa-money-check"></i>
-                                        </button>` : ''
-                                    }
-                                </div>
-                            </td>
-                        `;
-                        
-                        tbody.appendChild(row);
-                    });
-                    
-                    loading.style.display = 'none';
-                    table.style.display = 'table';
-                }
-            } catch (error) {
-                console.error('Erreur chargement tickets gagnants:', error);
+            setTimeout(() => {
                 loading.style.display = 'none';
                 empty.style.display = 'block';
-                showNotification('Erreur lors du chargement des tickets gagnants', 'error');
-            }
+            }, 500);
         }
         
         async function loadAllTickets() {
@@ -3015,7 +2966,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/tickets?period=month`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -3087,7 +3038,7 @@
                 const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -3118,7 +3069,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/results?subsystemId=${currentSubsystem._id}&limit=10`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -3185,7 +3136,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/activities`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -3268,7 +3219,7 @@
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users/create`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`,
+                        'x-auth-token': subsystemToken,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -3375,7 +3326,7 @@
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users/${userId}`, {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`,
+                        'x-auth-token': subsystemToken,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(updateData)
@@ -3415,7 +3366,7 @@
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users/${userId}/status`, {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`,
+                        'x-auth-token': subsystemToken,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ is_active: activate })
@@ -3447,7 +3398,7 @@
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users/${userId}`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -3477,7 +3428,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -3565,7 +3516,7 @@
                 const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/sync`, {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`,
+                        'x-auth-token': subsystemToken,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -3600,7 +3551,7 @@
                 const response = await fetch(`${API_BASE_URL}/api/winners/${winnerId}/pay`, {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`,
+                        'x-auth-token': subsystemToken,
                         'Content-Type': 'application/json'
                     }
                 });
@@ -3622,7 +3573,7 @@
         window.printTicket = function(ticketId) {
             fetch(`${API_BASE_URL}/api/tickets/${ticketId}`, {
                 headers: {
-                    'Authorization': `Bearer ${subsystemToken}`
+                    'x-auth-token': subsystemToken
                 }
             })
             .then(response => response.json())
@@ -3806,7 +3757,7 @@
                 const response = await fetch(`${API_BASE_URL}/api/results`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`,
+                        'x-auth-token': subsystemToken,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -3845,7 +3796,7 @@
             
             fetch(`${API_BASE_URL}/api/results?draw=${draw}&time=${time}&date=${date}`, {
                 headers: {
-                    'Authorization': `Bearer ${subsystemToken}`
+                    'x-auth-token': subsystemToken
                 }
             })
             .then(response => response.json())
@@ -3871,7 +3822,7 @@
                 const response = await fetch(`${API_BASE_URL}/api/results?draw=${draw}&time=${time}&date=${date}`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -3949,9 +3900,9 @@
             
             if (agentSelect.options.length <= 1) {
                 try {
-                    const response = await fetch(`${API_BASE_URL}/api/subsystem/users?role=agent`, {
+                    const response = await fetch(`${API_BASE_URL}/api/subsystem/users`, {
                         headers: {
-                            'Authorization': `Bearer ${subsystemToken}`
+                            'x-auth-token': subsystemToken
                         }
                     });
                     
@@ -3991,7 +3942,7 @@
                 const response = await fetch(`${API_BASE_URL}/api/system/settings/multipliers`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`,
+                        'x-auth-token': subsystemToken,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(multipliers)
@@ -4023,7 +3974,7 @@
                 
                 const response = await fetch(`${API_BASE_URL}/api/reports/daily?date=${date}`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -4111,7 +4062,7 @@
                 
                 const response = await fetch(`${API_BASE_URL}/api/reports/monthly?month=${month}`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -4205,7 +4156,7 @@
                 
                 const response = await fetch(`${API_BASE_URL}/api/reports/agent?agentId=${agentId}&period=${period}`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -4441,7 +4392,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/restrictions?subsystemId=${currentSubsystem._id}`, {
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
@@ -4562,7 +4513,7 @@
                 const response = await fetch(`${API_BASE_URL}/api/restrictions`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`,
+                        'x-auth-token': subsystemToken,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -4623,7 +4574,7 @@
                 const response = await fetch(`${API_BASE_URL}/api/restrictions/${id}`, {
                     method: 'PUT',
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`,
+                        'x-auth-token': subsystemToken,
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
@@ -4663,7 +4614,7 @@
                 const response = await fetch(`${API_BASE_URL}/api/restrictions/${restrictionId}`, {
                     method: 'DELETE',
                     headers: {
-                        'Authorization': `Bearer ${subsystemToken}`
+                        'x-auth-token': subsystemToken
                     }
                 });
                 
