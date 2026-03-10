@@ -260,7 +260,7 @@
 
     <script>
         // Variables globales
-        const API_BASE_URL = 'https://lotato-one.onrender.com'; // URL relative
+        const API_BASE_URL = 'https://lotato-one.onrender.com';
 
         // Gestion des onglets
         document.querySelectorAll('.tab-btn').forEach(button => {
@@ -302,7 +302,7 @@
             showStatusMessage('Connexion en cours...', 'info');
             
             try {
-                const response = await fetch('/api/auth/login', {
+                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -311,6 +311,7 @@
                 });
                 
                 const data = await response.json();
+                console.log('Réponse du serveur:', data);
                 
                 if (data.success && data.admin) {
                     showStatusMessage('Connexion réussie! Redirection...', 'success');
@@ -349,6 +350,11 @@
         }
 
         function checkStoredToken() {
+            // Désactivé temporairement pour diagnostic
+            // Si vous voulez réactiver, décommentez le code ci-dessous
+            return false;
+            
+            /* Code original commenté
             const token = localStorage.getItem('nova_token');
             const userData = localStorage.getItem('nova_user_data');
             
@@ -365,6 +371,7 @@
                 }
             }
             return false;
+            */
         }
 
         function showStatusMessage(message, type) {
@@ -379,6 +386,12 @@
         }
         
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page de connexion chargée');
+            console.log('API_BASE_URL:', API_BASE_URL);
+            
+            // Vider localStorage pour repartir à zéro (optionnel)
+            // localStorage.clear();
+            
             if (!checkStoredToken()) {
                 document.getElementById('agent-username').focus();
             }
