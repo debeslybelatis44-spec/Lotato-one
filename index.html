@@ -6,7 +6,7 @@
     <link rel="manifest" href="/manifest.json">
     <title>Lotato - Connexion</title>
     <style>
-        /* Styles inchangés (identiques) */
+        /* Styles inchangés */
         * {
             margin: 0;
             padding: 0;
@@ -236,6 +236,7 @@
     <script>
         const API_BASE_URL = 'https://lotato-one.onrender.com';
 
+        // Gestion des onglets
         document.querySelectorAll('.tab-btn').forEach(button => {
             button.addEventListener('click', () => {
                 const tab = button.getAttribute('data-tab');
@@ -250,56 +251,41 @@
         async function login(role) {
             const usernameInput = document.getElementById(`${role}-username`);
             const passwordInput = document.getElementById(`${role}-password`);
-            
             if (!usernameInput || !passwordInput) {
                 showStatusMessage('Erreur: formulaire non trouvé', 'error');
                 return;
             }
-            
             const username = usernameInput.value.trim();
             const password = passwordInput.value;
-            
             if (!username || !password) {
                 showStatusMessage('Veuillez remplir tous les champs', 'error');
                 return;
             }
-            
             showStatusMessage('Connexion en cours...', 'info');
-            
+
             try {
                 const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                
                 const data = await response.json();
                 console.log('Réponse du serveur:', data);
-                
+
                 if (data.success && data.admin) {
                     // Afficher le rôle reçu
                     alert('Rôle reçu du serveur : ' + data.admin.role);
-                    
+
                     localStorage.setItem('nova_token', data.token);
                     localStorage.setItem('nova_user_role', data.admin.role);
                     localStorage.setItem('nova_user_data', JSON.stringify(data.admin));
-                    
+
                     let redirectUrl = getRedirectUrl(data.admin);
-                    
-                    // Vérifier que le fichier de destination existe avant de rediriger
-                    fetch(redirectUrl, { method: 'HEAD' })
-                        .then(res => {
-                            if (res.ok) {
-                                window.location.href = redirectUrl;
-                            } else {
-                                showStatusMessage('Fichier de destination introuvable: ' + redirectUrl, 'error');
-                                console.error('Erreur 404 sur', redirectUrl);
-                            }
-                        })
-                        .catch(err => {
-                            showStatusMessage('Erreur lors de la vérification du fichier', 'error');
-                            console.error(err);
-                        });
+
+                    // Redirection après 1 seconde
+                    setTimeout(() => {
+                        window.location.href = redirectUrl;
+                    }, 1000);
                 } else {
                     showStatusMessage(data.error || 'Identifiants incorrects', 'error');
                 }
@@ -313,7 +299,7 @@
             if (!user || !user.role) return '/index.html';
             switch(user.role) {
                 case 'agent': return '/lotato.html';
-                case 'subsystem': return '/subsystem-admin.html';
+                case 'subsystem': return '/subsytem-admin.html'; // CORRECTION : avec un 'y'
                 case 'master': return '/master-dashboard.html';
                 default: return '/index.html';
             }
@@ -325,15 +311,14 @@
             statusDiv.className = `status-message status-${type}`;
             statusDiv.style.display = 'block';
         }
-        
         function hideStatusMessage() {
             document.getElementById('status-message').style.display = 'none';
         }
 
-        // Vérification du token au chargement (optionnelle, peut être commentée si elle gêne)
+        // Au chargement, on laisse l'utilisateur se connecter (pas de redirection auto)
         document.addEventListener('DOMContentLoaded', function() {
-            // Si vous voulez garder la redirection automatique, décommentez la suite
-            // mais pour l'instant on laisse l'utilisateur se connecter manuellement
+            // Vider localStorage si nécessaire (optionnel)
+            // localStorage.clear();
             document.getElementById('agent-username').focus();
         });
     </script>
