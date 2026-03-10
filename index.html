@@ -6,14 +6,13 @@
     <link rel="manifest" href="/manifest.json">
     <title>Lotato - Connexion</title>
     <style>
-        /* Styles inchangés (identiques à la version précédente) */
+        /* Styles inchangés (identiques) */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        
         body {
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: #c2078a;
@@ -23,7 +22,6 @@
             align-items: center;
             padding: 20px;
         }
-        
         .container {
             background: linear-gradient(rgba(209, 161, 2, 0.7), rgba(240, 20, 4, 0.7)), 
                         url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="%230a0a2a"/><path d="M0 0L100 100M100 0L0 100" stroke="%236e44ff" stroke-width="1"/></svg>');
@@ -34,12 +32,10 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
         .logo {
             text-align: center;
             margin-bottom: 30px;
         }
-        
         .logo h1 {
             font-size: 2.5rem;
             background: linear-gradient(90deg, #0044b1fd, #a300a8);
@@ -47,19 +43,16 @@
             -webkit-text-fill-color: transparent;
             margin-bottom: 5px;
         }
-        
         .logo p {
             color: #0a0044;
             font-size: 1.1rem;
         }
-        
         .tabs {
             display: flex;
             gap: 10px;
             margin-bottom: 30px;
             flex-wrap: wrap;
         }
-        
         .tab-btn {
             flex: 1;
             padding: 15px 10px;
@@ -73,43 +66,35 @@
             text-align: center;
             min-width: 100px;
         }
-        
         .tab-btn:hover {
             background: rgb(4, 0, 255);
             transform: translateY(-2px);
         }
-        
         .tab-btn.active {
             background: linear-gradient(90deg, #46b804, #8b5cf6);
             color: white;
             box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
         }
-        
         .form-container {
             display: none;
         }
-        
         .form-container.active {
             display: block;
             animation: fadeIn 0.5s ease;
         }
-        
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
         .form-group {
             margin-bottom: 20px;
         }
-        
         .form-group label {
             display: block;
             margin-bottom: 8px;
             color: #e2e8f0;
             font-weight: 500;
         }
-        
         .form-group input {
             width: 100%;
             padding: 15px;
@@ -120,13 +105,11 @@
             font-size: 1rem;
             transition: all 0.3s ease;
         }
-        
         .form-group input:focus {
             outline: none;
             border-color: #032e74;
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
         }
-        
         .role-badge {
             display: inline-block;
             padding: 5px 15px;
@@ -136,11 +119,9 @@
             margin-bottom: 15px;
             text-transform: uppercase;
         }
-        
         .agent-badge { background: #10b981; color: white; }
         .subsystem-badge { background: #8b5cf6; color: white; }
         .master-badge { background: #f59e0b; color: white; }
-        
         .login-btn {
             width: 100%;
             padding: 15px;
@@ -154,16 +135,13 @@
             transition: all 0.3s ease;
             margin-top: 10px;
         }
-        
         .login-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 20px rgb(225, 241, 0);
         }
-        
         .login-btn:active {
             transform: translateY(0);
         }
-        
         .status-message {
             padding: 12px;
             border-radius: 8px;
@@ -171,26 +149,22 @@
             text-align: center;
             display: none;
         }
-        
         .status-success {
             background: rgba(16, 185, 129, 0.2);
             color: #10b981;
             border: 1px solid #10b981;
         }
-        
         .status-error {
             background: rgba(239, 68, 68, 0.2);
             color: #ef4444;
             border: 1px solid #ef4444;
         }
-        
         .footer {
             text-align: center;
             margin-top: 30px;
             color: #000000;
             font-size: 0.9rem;
         }
-        
         .footer a {
             color: #ef4444;
         }
@@ -260,29 +234,19 @@
     </div>
 
     <script>
-        // Variables globales
         const API_BASE_URL = 'https://lotato-one.onrender.com';
 
-        // Gestion des onglets
         document.querySelectorAll('.tab-btn').forEach(button => {
             button.addEventListener('click', () => {
                 const tab = button.getAttribute('data-tab');
-                
-                document.querySelectorAll('.tab-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
+                document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
                 button.classList.add('active');
-                
-                document.querySelectorAll('.form-container').forEach(div => {
-                    div.classList.remove('active');
-                });
+                document.querySelectorAll('.form-container').forEach(div => div.classList.remove('active'));
                 document.getElementById(`${tab}-form`).classList.add('active');
-                
                 hideStatusMessage();
             });
         });
 
-        // Fonction de connexion
         async function login(role) {
             const usernameInput = document.getElementById(`${role}-username`);
             const passwordInput = document.getElementById(`${role}-password`);
@@ -305,9 +269,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
                 
@@ -315,7 +277,8 @@
                 console.log('Réponse du serveur:', data);
                 
                 if (data.success && data.admin) {
-                    showStatusMessage('Connexion réussie! Redirection...', 'success');
+                    // Afficher le rôle reçu
+                    alert('Rôle reçu du serveur : ' + data.admin.role);
                     
                     localStorage.setItem('nova_token', data.token);
                     localStorage.setItem('nova_user_role', data.admin.role);
@@ -323,9 +286,20 @@
                     
                     let redirectUrl = getRedirectUrl(data.admin);
                     
-                    setTimeout(() => {
-                        window.location.href = redirectUrl;
-                    }, 1000);
+                    // Vérifier que le fichier de destination existe avant de rediriger
+                    fetch(redirectUrl, { method: 'HEAD' })
+                        .then(res => {
+                            if (res.ok) {
+                                window.location.href = redirectUrl;
+                            } else {
+                                showStatusMessage('Fichier de destination introuvable: ' + redirectUrl, 'error');
+                                console.error('Erreur 404 sur', redirectUrl);
+                            }
+                        })
+                        .catch(err => {
+                            showStatusMessage('Erreur lors de la vérification du fichier', 'error');
+                            console.error(err);
+                        });
                 } else {
                     showStatusMessage(data.error || 'Identifiants incorrects', 'error');
                 }
@@ -337,56 +311,13 @@
 
         function getRedirectUrl(user) {
             if (!user || !user.role) return '/index.html';
-            
             switch(user.role) {
-                case 'agent':
-                    return '/lotato.html';
-                case 'subsystem':
-                    return '/subsystem-admin.html';  // Attention : le fichier s'appelle bien subsystem-admin.html (avec 's')
-                case 'master':
-                    return '/master-dashboard.html';
-                default:
-                    return '/index.html';
+                case 'agent': return '/lotato.html';
+                case 'subsystem': return '/subsystem-admin.html';
+                case 'master': return '/master-dashboard.html';
+                default: return '/index.html';
             }
         }
-
-        // Vérification du token au chargement avec appel API pour éviter les boucles
-        document.addEventListener('DOMContentLoaded', async function() {
-            const token = localStorage.getItem('nova_token');
-            const userData = localStorage.getItem('nova_user_data');
-            
-            if (token && userData) {
-                try {
-                    // Vérifier si le token est toujours valide
-                    const response = await fetch(`${API_BASE_URL}/api/auth/check`, {
-                        headers: { 'x-auth-token': token }
-                    });
-                    const data = await response.json();
-                    
-                    if (data.success && data.admin) {
-                        // Token valide, on redirige vers la bonne page
-                        const user = data.admin;
-                        const redirectUrl = getRedirectUrl(user);
-                        window.location.href = redirectUrl;
-                        return;
-                    } else {
-                        // Token invalide, on nettoie le localStorage
-                        localStorage.removeItem('nova_token');
-                        localStorage.removeItem('nova_user_role');
-                        localStorage.removeItem('nova_user_data');
-                    }
-                } catch (error) {
-                    console.error('Erreur lors de la vérification du token', error);
-                    // En cas d'erreur réseau, on laisse l'utilisateur se reconnecter
-                    localStorage.removeItem('nova_token');
-                    localStorage.removeItem('nova_user_role');
-                    localStorage.removeItem('nova_user_data');
-                }
-            }
-            
-            // Si pas de token valide, on affiche la page de connexion normalement
-            document.getElementById('agent-username').focus();
-        });
 
         function showStatusMessage(message, type) {
             const statusDiv = document.getElementById('status-message');
@@ -398,14 +329,13 @@
         function hideStatusMessage() {
             document.getElementById('status-message').style.display = 'none';
         }
-    </script>
-    
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/service-worker.js')
-                .then(reg => console.log('Service Worker enregistré', reg))
-                .catch(err => console.log('Échec d’enregistrement du Service Worker', err));
-        }
+
+        // Vérification du token au chargement (optionnelle, peut être commentée si elle gêne)
+        document.addEventListener('DOMContentLoaded', function() {
+            // Si vous voulez garder la redirection automatique, décommentez la suite
+            // mais pour l'instant on laisse l'utilisateur se connecter manuellement
+            document.getElementById('agent-username').focus();
+        });
     </script>
 </body>
 </html>
