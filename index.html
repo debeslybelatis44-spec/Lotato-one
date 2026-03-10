@@ -6,6 +6,7 @@
     <link rel="manifest" href="/manifest.json">
     <title>Lotato - Connexion</title>
     <style>
+        /* Styles inchangés (identiques à la version précédente) */
         * {
             margin: 0;
             padding: 0;
@@ -341,7 +342,7 @@
                 case 'agent':
                     return '/lotato.html';
                 case 'subsystem':
-                    return '/subsystem-admin.html';
+                    return '/subsystem-admin.html';  // Attention : le fichier s'appelle bien subsystem-admin.html (avec 's')
                 case 'master':
                     return '/master-dashboard.html';
                 default:
@@ -349,30 +350,43 @@
             }
         }
 
-        function checkStoredToken() {
-            // Désactivé temporairement pour diagnostic
-            // Si vous voulez réactiver, décommentez le code ci-dessous
-            return false;
-            
-            /* Code original commenté
+        // Vérification du token au chargement avec appel API pour éviter les boucles
+        document.addEventListener('DOMContentLoaded', async function() {
             const token = localStorage.getItem('nova_token');
             const userData = localStorage.getItem('nova_user_data');
             
             if (token && userData) {
                 try {
-                    const user = JSON.parse(userData);
-                    const redirectUrl = getRedirectUrl(user);
-                    window.location.href = redirectUrl;
-                    return true;
-                } catch (e) {
+                    // Vérifier si le token est toujours valide
+                    const response = await fetch(`${API_BASE_URL}/api/auth/check`, {
+                        headers: { 'x-auth-token': token }
+                    });
+                    const data = await response.json();
+                    
+                    if (data.success && data.admin) {
+                        // Token valide, on redirige vers la bonne page
+                        const user = data.admin;
+                        const redirectUrl = getRedirectUrl(user);
+                        window.location.href = redirectUrl;
+                        return;
+                    } else {
+                        // Token invalide, on nettoie le localStorage
+                        localStorage.removeItem('nova_token');
+                        localStorage.removeItem('nova_user_role');
+                        localStorage.removeItem('nova_user_data');
+                    }
+                } catch (error) {
+                    console.error('Erreur lors de la vérification du token', error);
+                    // En cas d'erreur réseau, on laisse l'utilisateur se reconnecter
                     localStorage.removeItem('nova_token');
                     localStorage.removeItem('nova_user_role');
                     localStorage.removeItem('nova_user_data');
                 }
             }
-            return false;
-            */
-        }
+            
+            // Si pas de token valide, on affiche la page de connexion normalement
+            document.getElementById('agent-username').focus();
+        });
 
         function showStatusMessage(message, type) {
             const statusDiv = document.getElementById('status-message');
@@ -384,18 +398,6 @@
         function hideStatusMessage() {
             document.getElementById('status-message').style.display = 'none';
         }
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Page de connexion chargée');
-            console.log('API_BASE_URL:', API_BASE_URL);
-            
-            // Vider localStorage pour repartir à zéro (optionnel)
-            // localStorage.clear();
-            
-            if (!checkStoredToken()) {
-                document.getElementById('agent-username').focus();
-            }
-        });
     </script>
     
     <script>
