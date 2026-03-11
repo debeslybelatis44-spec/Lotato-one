@@ -3191,52 +3191,56 @@
             document.getElementById('add-user-modal').classList.remove('active');
         }
         
-        async function createUser(e) {
-            e.preventDefault();
+     async function createUser(e) {
+    e.preventDefault();
+    
+    const name = document.getElementById('user-name-input').value.trim();
+    const username = document.getElementById('user-username').value.trim();
+    const email = document.getElementById('user-email').value.trim();
+    const password = document.getElementById('user-password').value;
+    const passwordConfirm = document.getElementById('user-password-confirm').value;
+    
+    if (!name || !username || !password) {
+        showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
+        return;
+    }
+    
+    if (password !== passwordConfirm) {
+        showNotification('Les mots de passe ne correspondent pas', 'warning');
+        return;
+    }
+    
+    console.log('Token utilisé:', subsystemToken);
+    console.log('Données envoyées:', { name, username, email, password });
+    
+    try {
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
+        submitBtn.disabled = true;
+        
+        const response = await fetch(`${API_BASE_URL}/api/subsystem/users/create`, {
+            method: 'POST',
+            headers: {
+                'x-auth-token': subsystemToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name,
+                username,
+                email,
+                password,
+                role: 'agent' // optionnel
+            })
+        });
+        
+        const data = await response.json();
+        console.log('Réponse du serveur:', data); // AJOUT ICI
+        
+        if (data.success) {
+            showNotification('Agent créé avec succès !', 'success');
             
-            const name = document.getElementById('user-name-input').value.trim();
-            const username = document.getElementById('user-username').value.trim();
-            const email = document.getElementById('user-email').value.trim();
-            const password = document.getElementById('user-password').value;
-            const passwordConfirm = document.getElementById('user-password-confirm').value;
-            
-            if (!name || !username || !password) {
-                showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
-                return;
-            }
-            
-            if (password !== passwordConfirm) {
-                showNotification('Les mots de passe ne correspondent pas', 'warning');
-                return;
-            }
-            
-            try {
-                const submitBtn = e.target.querySelector('button[type="submit"]');
-                const originalText = submitBtn.innerHTML;
-                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
-                submitBtn.disabled = true;
-                
-                const response = await fetch(`${API_BASE_URL}/api/subsystem/users/create`, {
-                    method: 'POST',
-                    headers: {
-                        'x-auth-token': subsystemToken,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        name,
-                        username,
-                        email,
-                        password,
-                        role: 'agent'
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    showNotification('Agent créé avec succès !', 'success');
-                    
-                    alert(`✅ Agent créé avec succès !
+            alert(`✅ Agent créé avec succès !
 
 📋 Identifiants d'accès:
 • Identifiant: ${username}
@@ -3244,28 +3248,28 @@
 • Email: ${email || 'Non renseigné'}
 
 ⚠️ IMPORTANT: Transmettez ces identifiants à l'agent. Le mot de passe doit être changé à la première connexion.`);
-                    
-                    hideAddUserModal();
-                    
-                    loadDashboardData();
-                    loadRecentAgents();
-                    loadAllAgents();
-                } else {
-                    if (data.error && data.error.includes('quota')) {
-                        showNotification('Quota d\'agents atteint. Impossible de créer un nouvel agent.', 'error');
-                    } else {
-                        showNotification(data.error || 'Erreur lors de la création', 'error');
-                    }
-                }
-            } catch (error) {
-                console.error('Erreur création agent:', error);
-                showNotification('Erreur de connexion au serveur', 'error');
-            } finally {
-                const submitBtn = e.target.querySelector('button[type="submit"]');
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
+            
+            hideAddUserModal();
+            
+            loadDashboardData();
+            loadRecentAgents();
+            loadAllAgents();
+        } else {
+            if (data.error && data.error.includes('quota')) {
+                showNotification('Quota d\'agents atteint. Impossible de créer un nouvel agent.', 'error');
+            } else {
+                showNotification(data.error || 'Erreur lors de la création', 'error');
             }
         }
+    } catch (error) {
+        console.error('Erreur création agent:', error);
+        showNotification('Erreur de connexion au serveur', 'error');
+    } finally {
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+}
         
         window.editUser = async function(userId) {
             try {
