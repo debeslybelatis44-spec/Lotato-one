@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="manifest.json">
     <style>
-        /* (votre style existant, inchangé) */
+        /* ========== STYLES EXISTANTS (inchangés) ========== */
         :root {
             --primary-color: #3498db;
             --secondary-color: #2c3e50;
@@ -1416,21 +1416,19 @@
             </div>
         </div>
         
-        <!-- Results Section -->
+        <!-- ========== SECTION RÉSULTATS MODIFIÉE ========== -->
         <div id="results-section" class="section-content" style="display: none;">
             <div class="table-container">
                 <div class="table-header">
                     <div class="table-title">Gestion des Résultats</div>
                     <div class="search-box">
                         <input type="text" class="search-input" placeholder="Rechercher un tirage..." id="search-results">
-                        <button class="btn btn-primary">
-                            <i class="fas fa-search"></i>
-                        </button>
+                        <button class="btn btn-primary"><i class="fas fa-search"></i></button>
                         <input type="date" class="form-control" id="filter-result-date" style="width: 150px;">
                     </div>
                 </div>
                 
-                <!-- Draw Controls -->
+                <!-- Draw Controls (boutons pour chaque tirage/matin-soir) -->
                 <div class="draw-controls">
                     <div class="draw-control">
                         <div class="draw-control-header">
@@ -1509,37 +1507,16 @@
                     </div>
                 </div>
                 
-                <!-- Recent Results -->
+                <!-- Liste des résultats récents -->
                 <div style="margin-top: 30px;">
                     <h3 style="margin-bottom: 20px; color: var(--dark-color);">Résultats récents</h3>
-                    
-                    <div class="loading" id="results-loading">
-                        <div class="loading-spinner"></div>
-                        <p>Chargement des résultats...</p>
-                    </div>
-                    
+                    <div class="loading" id="results-loading"><div class="loading-spinner"></div><p>Chargement...</p></div>
                     <table class="table" id="results-table" style="display: none;">
-                        <thead>
-                            <tr>
-                                <th>Tirage</th>
-                                <th>Heure</th>
-                                <th>Date</th>
-                                <th>Lot 1</th>
-                                <th>Lot 2</th>
-                                <th>Lot 3</th>
-                                <th>Vérifié</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="results-table-body">
-                            <!-- Rempli dynamiquement -->
-                        </tbody>
+                        <thead><tr><th>Tirage</th><th>Heure</th><th>Date</th><th>Lot 1</th><th>Lot 2</th><th>Lot 3</th><th>Vérifié</th><th>Actions</th></tr></thead>
+                        <tbody id="results-table-body"></tbody>
                     </table>
-                    
                     <div class="empty-state" id="results-empty" style="display: none;">
-                        <div class="empty-icon">
-                            <i class="fas fa-chart-pie"></i>
-                        </div>
+                        <div class="empty-icon"><i class="fas fa-chart-pie"></i></div>
                         <h3>Aucun résultat enregistré</h3>
                         <p>Les résultats apparaîtront ici après leur saisie</p>
                     </div>
@@ -2028,14 +2005,13 @@
         </div>
     </div>
     
-    <!-- Modal: Enter Result -->
+    <!-- ========== MODAL ENTER RESULT MODIFIÉE ========== -->
     <div class="modal" id="enter-result-modal">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title" id="result-modal-title">Entrer le résultat</div>
                 <button class="modal-close" id="close-result-modal">&times;</button>
             </div>
-            
             <div class="modal-body">
                 <form id="enter-result-form">
                     <input type="hidden" id="result-draw">
@@ -2046,19 +2022,21 @@
                         <input type="date" class="form-control" id="result-date" value="" required>
                     </div>
                     
+                    <!-- Nouveaux champs : Lotto 3, 2e lot, 3e lot -->
                     <div class="form-group">
-                        <label class="form-label" id="lot1-label">Lot 1 *</label>
-                        <input type="text" class="form-control" id="result-lot1" placeholder="Ex: 123" required>
+                        <label class="form-label">Lotto 3 (3 chiffres) *</label>
+                        <input type="text" class="form-control" id="result-lotto3" placeholder="Ex: 123" maxlength="3" pattern="[0-9]{3}" required>
+                        <small style="color:#aaa;">Le premier lot (2 chiffres) sera extrait des deux derniers chiffres</small>
                     </div>
                     
-                    <div class="form-group" id="lot2-group">
-                        <label class="form-label" id="lot2-label">Lot 2</label>
-                        <input type="text" class="form-control" id="result-lot2" placeholder="Ex: 45">
+                    <div class="form-group">
+                        <label class="form-label">2e lot (2 chiffres) *</label>
+                        <input type="text" class="form-control" id="result-lot2" placeholder="Ex: 45" maxlength="2" pattern="[0-9]{2}" required>
                     </div>
                     
-                    <div class="form-group" id="lot3-group">
-                        <label class="form-label" id="lot3-label">Lot 3</label>
-                        <input type="text" class="form-control" id="result-lot3" placeholder="Ex: 67">
+                    <div class="form-group">
+                        <label class="form-label">3e lot (2 chiffres) *</label>
+                        <input type="text" class="form-control" id="result-lot3" placeholder="Ex: 67" maxlength="2" pattern="[0-9]{2}" required>
                     </div>
                     
                     <div class="form-group">
@@ -2070,9 +2048,7 @@
                     
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" id="cancel-result">Annuler</button>
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save"></i> Enregistrer le résultat
-                        </button>
+                        <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Enregistrer le résultat</button>
                     </div>
                 </form>
             </div>
@@ -2235,7 +2211,13 @@
         // Configuration
         const API_BASE_URL = 'https://lotato-one.onrender.com';
         let subsystemToken = localStorage.getItem('nova_token');
-        let currentUser = JSON.parse(localStorage.getItem('nova_user_data') || '{}');
+        let currentUser = {};
+        try {
+            currentUser = JSON.parse(localStorage.getItem('nova_user_data') || '{}');
+        } catch (e) {
+            console.error('Erreur de parsing user data', e);
+            currentUser = {};
+        }
         let currentSubsystem = null;
         let agentsList = [];
         let restrictionsList = [];
@@ -2243,8 +2225,11 @@
         // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🏢 Subsystem Admin Dashboard initialisé');
+            console.log('Token:', subsystemToken);
+            console.log('User:', currentUser);
             
             if (!subsystemToken || currentUser.role !== 'subsystem') {
+                console.log('Non autorisé, redirection');
                 redirectToLogin();
                 return;
             }
@@ -2269,13 +2254,11 @@
             window.location.href = '/';
         }
         
-        // ========== CORRECTIONS PRINCIPALES ==========
+        // ========== SESSION ==========
         async function checkSessionAndLoadData() {
             try {
                 const sessionResponse = await fetch(`${API_BASE_URL}/api/auth/check`, {
-                    headers: {
-                        'x-auth-token': subsystemToken  // Changé ici : Authorization -> x-auth-token
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const sessionData = await sessionResponse.json();
@@ -2300,11 +2283,8 @@
         
         async function loadSubsystemData() {
             try {
-                // Correction : /api/subsystems/mine -> /api/subsystem/mine
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/mine`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 if (response.status === 401) {
@@ -2492,9 +2472,7 @@
         async function loadDashboardData() {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/stats`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -2530,9 +2508,7 @@
             
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users?limit=5`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -2607,9 +2583,7 @@
         async function loadAllAgents() {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -2701,9 +2675,7 @@
             
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/tickets?period=today&limit=5`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -2729,10 +2701,7 @@
                             <td>${ticket.draw} (${ticket.draw_time})</td>
                             <td>${ticket.total.toLocaleString()} HTG</td>
                             <td>
-                                ${new Date(ticket.date).toLocaleTimeString('fr-FR', { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
-                                })}
+                                ${new Date(ticket.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                             </td>
                             <td>
                                 <span class="status-badge ${ticket.is_synced ? 'status-active' : 'status-pending'}">
@@ -2778,11 +2747,8 @@
             
             try {
                 if (agentFilter.options.length <= 1) {
-                    // Correction : retrait de ?role=agent car non supporté
                     const agentsResponse = await fetch(`${API_BASE_URL}/api/subsystem/users`, {
-                        headers: {
-                            'x-auth-token': subsystemToken
-                        }
+                        headers: { 'x-auth-token': subsystemToken }
                     });
                     
                     const agentsData = await agentsResponse.json();
@@ -2802,9 +2768,7 @@
                 }
                 
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/tickets?period=today`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -2831,10 +2795,7 @@
                             <td>${ticket.agent_name}</td>
                             <td>${ticket.draw} (${ticket.draw_time})</td>
                             <td>
-                                ${new Date(ticket.date).toLocaleTimeString('fr-FR', { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
-                                })}
+                                ${new Date(ticket.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                             </td>
                             <td>${betCount}</td>
                             <td>${ticket.total.toLocaleString()} HTG</td>
@@ -2876,9 +2837,7 @@
             
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/tickets?status=pending`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -2965,9 +2924,7 @@
             
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/tickets?period=month`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -3037,9 +2994,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}`, {
                     method: 'DELETE',
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -3068,9 +3023,7 @@
             
             try {
                 const response = await fetch(`${API_BASE_URL}/api/results?subsystemId=${currentSubsystem._id}&limit=10`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -3135,9 +3088,7 @@
             
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/activities`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -3191,56 +3142,57 @@
             document.getElementById('add-user-modal').classList.remove('active');
         }
         
-     async function createUser(e) {
-    e.preventDefault();
-    
-    const name = document.getElementById('user-name-input').value.trim();
-    const username = document.getElementById('user-username').value.trim();
-    const email = document.getElementById('user-email').value.trim();
-    const password = document.getElementById('user-password').value;
-    const passwordConfirm = document.getElementById('user-password-confirm').value;
-    
-    if (!name || !username || !password) {
-        showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
-        return;
-    }
-    
-    if (password !== passwordConfirm) {
-        showNotification('Les mots de passe ne correspondent pas', 'warning');
-        return;
-    }
-    
-    console.log('Token utilisé:', subsystemToken);
-    console.log('Données envoyées:', { name, username, email, password });
-    
-    try {
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
-        submitBtn.disabled = true;
-        
-        const response = await fetch(`${API_BASE_URL}/api/subsystem/users/create`, {
-            method: 'POST',
-            headers: {
-                'x-auth-token': subsystemToken,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                name,
-                username,
-                email,
-                password,
-                role: 'agent' // optionnel
-            })
-        });
-        
-        const data = await response.json();
-        console.log('Réponse du serveur:', data); // AJOUT ICI
-        
-        if (data.success) {
-            showNotification('Agent créé avec succès !', 'success');
+        // ========== FONCTION CREATEUSER AMÉLIORÉE ==========
+        async function createUser(e) {
+            e.preventDefault();
             
-            alert(`✅ Agent créé avec succès !
+            const name = document.getElementById('user-name-input').value.trim();
+            const username = document.getElementById('user-username').value.trim();
+            const email = document.getElementById('user-email').value.trim();
+            const password = document.getElementById('user-password').value;
+            const passwordConfirm = document.getElementById('user-password-confirm').value;
+            
+            if (!name || !username || !password) {
+                showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
+                return;
+            }
+            
+            if (password !== passwordConfirm) {
+                showNotification('Les mots de passe ne correspondent pas', 'warning');
+                return;
+            }
+            
+            console.log('Token utilisé:', subsystemToken);
+            console.log('Données envoyées:', { name, username, email, password });
+            
+            try {
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
+                submitBtn.disabled = true;
+                
+                const response = await fetch(`${API_BASE_URL}/api/subsystem/users/create`, {
+                    method: 'POST',
+                    headers: {
+                        'x-auth-token': subsystemToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name,
+                        username,
+                        email,
+                        password
+                        // role: 'agent' est optionnel car le backend le fixe
+                    })
+                });
+                
+                const data = await response.json();
+                console.log('Réponse du serveur:', data);
+                
+                if (data.success) {
+                    showNotification('Agent créé avec succès !', 'success');
+                    
+                    alert(`✅ Agent créé avec succès !
 
 📋 Identifiants d'accès:
 • Identifiant: ${username}
@@ -3248,28 +3200,28 @@
 • Email: ${email || 'Non renseigné'}
 
 ⚠️ IMPORTANT: Transmettez ces identifiants à l'agent. Le mot de passe doit être changé à la première connexion.`);
-            
-            hideAddUserModal();
-            
-            loadDashboardData();
-            loadRecentAgents();
-            loadAllAgents();
-        } else {
-            if (data.error && data.error.includes('quota')) {
-                showNotification('Quota d\'agents atteint. Impossible de créer un nouvel agent.', 'error');
-            } else {
-                showNotification(data.error || 'Erreur lors de la création', 'error');
+                    
+                    hideAddUserModal();
+                    
+                    loadDashboardData();
+                    loadRecentAgents();
+                    loadAllAgents();
+                } else {
+                    if (data.error && data.error.includes('quota')) {
+                        showNotification('Quota d\'agents atteint. Impossible de créer un nouvel agent.', 'error');
+                    } else {
+                        showNotification(data.error || 'Erreur lors de la création', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur création agent:', error);
+                showNotification('Erreur de connexion au serveur', 'error');
+            } finally {
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
             }
         }
-    } catch (error) {
-        console.error('Erreur création agent:', error);
-        showNotification('Erreur de connexion au serveur', 'error');
-    } finally {
-        const submitBtn = e.target.querySelector('button[type="submit"]');
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-    }
-}
         
         window.editUser = async function(userId) {
             try {
@@ -3401,9 +3353,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users/${userId}`, {
                     method: 'DELETE',
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -3431,9 +3381,7 @@
             
             try {
                 const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -3576,9 +3524,7 @@
         
         window.printTicket = function(ticketId) {
             fetch(`${API_BASE_URL}/api/tickets/${ticketId}`, {
-                headers: {
-                    'x-auth-token': subsystemToken
-                }
+                headers: { 'x-auth-token': subsystemToken }
             })
             .then(response => response.json())
             .then(data => {
@@ -3650,6 +3596,7 @@
             });
         };
         
+        // ========== NOUVELLES FONCTIONS RESULT ==========
         window.enterResult = function(draw, time) {
             const modal = document.getElementById('enter-result-modal');
             const title = document.getElementById('result-modal-title');
@@ -3661,40 +3608,15 @@
             if (draw === 'lotto5') drawName = 'Lotto 5';
             
             let timeName = time === 'morning' ? 'Matin' : 'Soir';
-            
             title.textContent = `Résultat ${drawName} - ${timeName}`;
-            
-            const lot1Label = document.getElementById('lot1-label');
-            const lot2Group = document.getElementById('lot2-group');
-            const lot3Group = document.getElementById('lot3-group');
             
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('result-date').value = today;
             
-            if (draw === 'borlette') {
-                lot1Label.textContent = 'Lot 1 (3 chiffres) *';
-                lot2Group.style.display = 'block';
-                lot3Group.style.display = 'block';
-                document.getElementById('lot2-label').textContent = 'Lot 2 (2 chiffres)';
-                document.getElementById('lot3-label').textContent = 'Lot 3 (2 chiffres)';
-            } else if (draw === 'lotto3') {
-                lot1Label.textContent = 'Numéro gagnant (3 chiffres) *';
-                lot2Group.style.display = 'none';
-                lot3Group.style.display = 'none';
-            } else if (draw === 'lotto4') {
-                lot1Label.textContent = 'Numéro gagnant (4 chiffres) *';
-                lot2Group.style.display = 'none';
-                lot3Group.style.display = 'none';
-            } else if (draw === 'lotto5') {
-                lot1Label.textContent = 'Numéro gagnant (5 chiffres) *';
-                lot2Group.style.display = 'none';
-                lot3Group.style.display = 'none';
-            }
-            
             document.getElementById('result-draw').value = draw;
             document.getElementById('result-time').value = time;
             
-            document.getElementById('result-lot1').value = '';
+            document.getElementById('result-lotto3').value = '';
             document.getElementById('result-lot2').value = '';
             document.getElementById('result-lot3').value = '';
             document.getElementById('result-verified').checked = false;
@@ -3702,55 +3624,36 @@
             modal.classList.add('active');
         };
         
-        function hideEnterResultModal() {
-            document.getElementById('enter-result-modal').classList.remove('active');
-        }
-        
         async function saveResult(e) {
             e.preventDefault();
             
             const draw = document.getElementById('result-draw').value;
             const time = document.getElementById('result-time').value;
             const date = document.getElementById('result-date').value;
-            const lot1 = document.getElementById('result-lot1').value.trim();
+            const lotto3 = document.getElementById('result-lotto3').value.trim();
             const lot2 = document.getElementById('result-lot2').value.trim();
             const lot3 = document.getElementById('result-lot3').value.trim();
             const verified = document.getElementById('result-verified').checked;
             
-            if (!draw || !time || !date || !lot1) {
-                showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
+            if (!draw || !time || !date || !lotto3 || !lot2 || !lot3) {
+                showNotification('Veuillez remplir tous les champs', 'warning');
                 return;
             }
             
-            if (draw === 'borlette') {
-                if (lot1.length !== 3 || !/^\d{3}$/.test(lot1)) {
-                    showNotification('Le lot 1 doit être composé de 3 chiffres', 'warning');
-                    return;
-                }
-                if (lot2 && (lot2.length !== 2 || !/^\d{2}$/.test(lot2))) {
-                    showNotification('Le lot 2 doit être composé de 2 chiffres', 'warning');
-                    return;
-                }
-                if (lot3 && (lot3.length !== 2 || !/^\d{2}$/.test(lot3))) {
-                    showNotification('Le lot 3 doit être composé de 2 chiffres', 'warning');
-                    return;
-                }
-            } else if (draw === 'lotto3') {
-                if (lot1.length !== 3 || !/^\d{3}$/.test(lot1)) {
-                    showNotification('Le numéro doit être composé de 3 chiffres', 'warning');
-                    return;
-                }
-            } else if (draw === 'lotto4') {
-                if (lot1.length !== 4 || !/^\d{4}$/.test(lot1)) {
-                    showNotification('Le numéro doit être composé de 4 chiffres', 'warning');
-                    return;
-                }
-            } else if (draw === 'lotto5') {
-                if (lot1.length !== 5 || !/^\d{5}$/.test(lot1)) {
-                    showNotification('Le numéro doit être composé de 5 chiffres', 'warning');
-                    return;
-                }
+            if (!/^\d{3}$/.test(lotto3)) {
+                showNotification('Le Lotto 3 doit être composé de 3 chiffres', 'warning');
+                return;
             }
+            if (!/^\d{2}$/.test(lot2)) {
+                showNotification('Le 2e lot doit être composé de 2 chiffres', 'warning');
+                return;
+            }
+            if (!/^\d{2}$/.test(lot3)) {
+                showNotification('Le 3e lot doit être composé de 2 chiffres', 'warning');
+                return;
+            }
+            
+            const lot1 = lotto3.slice(-2);
             
             try {
                 const submitBtn = e.target.querySelector('button[type="submit"]');
@@ -3795,23 +3698,27 @@
             }
         }
         
+        function hideEnterResultModal() {
+            document.getElementById('enter-result-modal').classList.remove('active');
+        }
+        
         window.editResult = function(draw, time, date) {
             enterResult(draw, time);
             
             fetch(`${API_BASE_URL}/api/results?draw=${draw}&time=${time}&date=${date}`, {
-                headers: {
-                    'x-auth-token': subsystemToken
-                }
+                headers: { 'x-auth-token': subsystemToken }
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success && data.result) {
                     const result = data.result;
+                    // On doit remplir les champs : lotto3 doit être reconstitué ? Le backend ne stocke que lot1,lot2,lot3.
+                    // Pour simplifier, on ne pré-remplit pas, l'utilisateur ressaisit.
                     document.getElementById('result-date').value = result.date.split('T')[0];
-                    document.getElementById('result-lot1').value = result.lot1;
                     document.getElementById('result-lot2').value = result.lot2 || '';
                     document.getElementById('result-lot3').value = result.lot3 || '';
                     document.getElementById('result-verified').checked = result.verified;
+                    // On ne peut pas remplir lotto3 car on n'a que lot1 (2 chiffres). On laisse vide.
                 }
             })
             .catch(error => console.error('Erreur chargement résultat:', error));
@@ -3825,9 +3732,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/results?draw=${draw}&time=${time}&date=${date}`, {
                     method: 'DELETE',
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -3905,9 +3810,7 @@
             if (agentSelect.options.length <= 1) {
                 try {
                     const response = await fetch(`${API_BASE_URL}/api/subsystem/users`, {
-                        headers: {
-                            'x-auth-token': subsystemToken
-                        }
+                        headers: { 'x-auth-token': subsystemToken }
                     });
                     
                     const data = await response.json();
@@ -3973,13 +3876,10 @@
             results.style.display = 'none';
             
             try {
-                const date = document.getElementById('report-daily-date').value || 
-                    new Date().toISOString().split('T')[0];
+                const date = document.getElementById('report-daily-date').value || new Date().toISOString().split('T')[0];
                 
                 const response = await fetch(`${API_BASE_URL}/api/reports/daily?date=${date}`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -4061,13 +3961,10 @@
             results.style.display = 'none';
             
             try {
-                const month = document.getElementById('report-monthly-date').value || 
-                    new Date().toISOString().slice(0, 7);
+                const month = document.getElementById('report-monthly-date').value || new Date().toISOString().slice(0, 7);
                 
                 const response = await fetch(`${API_BASE_URL}/api/reports/monthly?month=${month}`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -4159,9 +4056,7 @@
                 }
                 
                 const response = await fetch(`${API_BASE_URL}/api/reports/agent?agentId=${agentId}&period=${period}`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -4381,7 +4276,7 @@
             }
         }
         
-        // --- Fonctions pour les restrictions ---
+        // --- Fonctions pour les restrictions (inchangées) ---
         
         async function loadRestrictions() {
             const loading = document.getElementById('restrictions-loading');
@@ -4395,9 +4290,7 @@
             
             try {
                 const response = await fetch(`${API_BASE_URL}/api/restrictions?subsystemId=${currentSubsystem._id}`, {
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
@@ -4617,9 +4510,7 @@
             try {
                 const response = await fetch(`${API_BASE_URL}/api/restrictions/${restrictionId}`, {
                     method: 'DELETE',
-                    headers: {
-                        'x-auth-token': subsystemToken
-                    }
+                    headers: { 'x-auth-token': subsystemToken }
                 });
                 
                 const data = await response.json();
