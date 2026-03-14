@@ -2208,7 +2208,7 @@
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // ==================== CONFIGURATION ====================
+        // Configuration
         const API_BASE_URL = 'https://lotato-one.onrender.com';
         let subsystemToken = localStorage.getItem('nova_token');
         let currentUser = {};
@@ -2221,50 +2221,52 @@
         let currentSubsystem = null;
         let agentsList = [];
         let restrictionsList = [];
-
-        // ==================== INITIALISATION ====================
+        
+        // Initialisation
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🏢 Subsystem Admin Dashboard initialisé');
             console.log('Token:', subsystemToken);
             console.log('User:', currentUser);
-
+            
             if (!subsystemToken || currentUser.role !== 'subsystem') {
                 console.log('Non autorisé, redirection');
                 redirectToLogin();
                 return;
             }
-
+            
             updateUserInfo();
             checkSessionAndLoadData();
             setupEventListeners();
             setupMultiplierSliders();
         });
-
+        
         function updateUserInfo() {
-            const avatar = document.getElementById('user-avatar');
-            const nameEl = document.getElementById('user-name');
-            const emailEl = document.getElementById('user-email');
-            if (avatar) avatar.textContent = currentUser.name?.charAt(0) || currentUser.username?.charAt(0) || 'A';
-            if (nameEl) nameEl.textContent = currentUser.name || 'Admin Sous-système';
-            if (emailEl) emailEl.textContent = currentUser.email || currentUser.username + '@example.com';
+            document.getElementById('user-avatar').textContent = 
+                currentUser.name?.charAt(0) || currentUser.username?.charAt(0) || 'A';
+            document.getElementById('user-name').textContent = 
+                currentUser.name || 'Admin Sous-système';
+            document.getElementById('user-email').textContent = 
+                currentUser.email || currentUser.username + '@example.com';
         }
-
+        
         function redirectToLogin() {
             console.log('Redirection vers la page de login...');
             window.location.href = '/';
         }
-
-        // ==================== SESSION ET DONNÉES ====================
+        
+        // ========== SESSION ==========
         async function checkSessionAndLoadData() {
             try {
                 const sessionResponse = await fetch(`${API_BASE_URL}/api/auth/check`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const sessionData = await sessionResponse.json();
-
+                
                 if (sessionData.success) {
                     currentUser = sessionData.admin;
                     updateUserInfo();
+                    
                     await loadSubsystemData();
                     loadDashboardData();
                     loadRecentAgents();
@@ -2278,21 +2280,26 @@
                 setTimeout(() => redirectToLogin(), 2000);
             }
         }
-
+        
         async function loadSubsystemData() {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/mine`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 if (response.status === 401) {
                     redirectToLogin();
                     return;
                 }
+                
                 const data = await response.json();
+                
                 if (data.success && data.subsystems.length > 0) {
                     currentSubsystem = data.subsystems[0];
                     console.log('Sous-système chargé:', currentSubsystem);
-                    document.getElementById('page-title').textContent = `Tableau de bord - ${currentSubsystem.name}`;
+                    
+                    document.getElementById('page-title').textContent = 
+                        `Tableau de bord - ${currentSubsystem.name}`;
                 } else {
                     showNotification('Aucun sous-système trouvé', 'warning');
                 }
@@ -2302,120 +2309,141 @@
                 throw error;
             }
         }
-
-        // ==================== GESTION DES ÉVÉNEMENTS ====================
+        
         function setupEventListeners() {
-            // Navigation
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.addEventListener('click', function(e) {
                     e.preventDefault();
-                    document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+                    document.querySelectorAll('.nav-item').forEach(nav => {
+                        nav.classList.remove('active');
+                    });
                     this.classList.add('active');
+                    
                     const section = this.getAttribute('data-section');
                     showSection(section);
                 });
             });
-
-            // Boutons d'action
-            const refreshBtn = document.getElementById('refresh-btn');
-            if (refreshBtn) refreshBtn.addEventListener('click', refreshData);
             
-            const addUserBtn = document.getElementById('add-user-btn');
-            if (addUserBtn) addUserBtn.addEventListener('click', showAddUserModal);
+            document.getElementById('refresh-btn').addEventListener('click', refreshData);
+            document.getElementById('add-user-btn').addEventListener('click', showAddUserModal);
+            document.getElementById('logout-btn').addEventListener('click', logout);
+            document.getElementById('create-first-user').addEventListener('click', showAddUserModal);
             
-            const logoutBtn = document.getElementById('logout-btn');
-            if (logoutBtn) logoutBtn.addEventListener('click', logout);
+            document.getElementById('search-users').addEventListener('input', filterUsers);
+            document.getElementById('search-tickets').addEventListener('input', filterTickets);
+            document.getElementById('search-agents').addEventListener('input', filterAgents);
             
-            const createFirstUser = document.getElementById('create-first-user');
-            if (createFirstUser) createFirstUser.addEventListener('click', showAddUserModal);
-
-            // Recherches
-            const searchUsers = document.getElementById('search-users');
-            if (searchUsers) searchUsers.addEventListener('input', filterUsers);
-            
-            const searchTickets = document.getElementById('search-tickets');
-            if (searchTickets) searchTickets.addEventListener('input', filterTickets);
-            
-            const searchAgents = document.getElementById('search-agents');
-            if (searchAgents) searchAgents.addEventListener('input', filterAgents);
-
-            // Tabs
             document.querySelectorAll('[data-ticket-tab]').forEach(tab => {
                 tab.addEventListener('click', function() {
                     const tabId = this.getAttribute('data-ticket-tab');
                     switchTicketTab(tabId);
                 });
             });
+            
             document.querySelectorAll('[data-setting-tab]').forEach(tab => {
                 tab.addEventListener('click', function() {
                     const tabId = this.getAttribute('data-setting-tab');
                     switchSettingTab(tabId);
                 });
             });
+            
             document.querySelectorAll('[data-report-tab]').forEach(tab => {
                 tab.addEventListener('click', function() {
                     const tabId = this.getAttribute('data-report-tab');
                     switchReportTab(tabId);
                 });
             });
-
-            // Fermeture modales
-            document.getElementById('close-add-user-modal')?.addEventListener('click', hideAddUserModal);
-            document.getElementById('cancel-add-user')?.addEventListener('click', hideAddUserModal);
-            document.getElementById('close-edit-user-modal')?.addEventListener('click', hideEditUserModal);
-            document.getElementById('cancel-edit-user')?.addEventListener('click', hideEditUserModal);
-            document.getElementById('close-result-modal')?.addEventListener('click', hideEnterResultModal);
-            document.getElementById('cancel-result')?.addEventListener('click', hideEnterResultModal);
-            document.getElementById('close-view-ticket-modal')?.addEventListener('click', hideViewTicketModal);
-            document.getElementById('close-ticket-details')?.addEventListener('click', hideViewTicketModal);
-            document.getElementById('add-restriction-btn')?.addEventListener('click', showAddRestrictionModal);
-            document.getElementById('close-add-restriction-modal')?.addEventListener('click', hideAddRestrictionModal);
-            document.getElementById('cancel-add-restriction')?.addEventListener('click', hideAddRestrictionModal);
-            document.getElementById('close-edit-restriction-modal')?.addEventListener('click', hideEditRestrictionModal);
-            document.getElementById('cancel-edit-restriction')?.addEventListener('click', hideEditRestrictionModal);
-
-            // Formulaires
-            const addUserForm = document.getElementById('add-user-form');
-            if (addUserForm) addUserForm.addEventListener('submit', createUser);
             
-            const editUserForm = document.getElementById('edit-user-form');
-            if (editUserForm) editUserForm.addEventListener('submit', updateUser);
+            document.getElementById('close-add-user-modal').addEventListener('click', hideAddUserModal);
+            document.getElementById('cancel-add-user').addEventListener('click', hideAddUserModal);
+            document.getElementById('close-edit-user-modal').addEventListener('click', hideEditUserModal);
+            document.getElementById('cancel-edit-user').addEventListener('click', hideEditUserModal);
+            document.getElementById('close-result-modal').addEventListener('click', hideEnterResultModal);
+            document.getElementById('cancel-result').addEventListener('click', hideEnterResultModal);
+            document.getElementById('close-view-ticket-modal').addEventListener('click', hideViewTicketModal);
+            document.getElementById('close-ticket-details').addEventListener('click', hideViewTicketModal);
             
-            const enterResultForm = document.getElementById('enter-result-form');
-            if (enterResultForm) enterResultForm.addEventListener('submit', saveResult);
+            document.getElementById('add-restriction-btn').addEventListener('click', showAddRestrictionModal);
+            document.getElementById('close-add-restriction-modal').addEventListener('click', hideAddRestrictionModal);
+            document.getElementById('cancel-add-restriction').addEventListener('click', hideAddRestrictionModal);
+            document.getElementById('close-edit-restriction-modal').addEventListener('click', hideEditRestrictionModal);
+            document.getElementById('cancel-edit-restriction').addEventListener('click', hideEditRestrictionModal);
             
-            const addRestrictionForm = document.getElementById('add-restriction-form');
-            if (addRestrictionForm) addRestrictionForm.addEventListener('submit', createRestriction);
+            document.getElementById('restriction-type').addEventListener('change', toggleRestrictionLimitField);
+            document.getElementById('edit-restriction-type').addEventListener('change', toggleEditRestrictionLimitField);
             
-            const editRestrictionForm = document.getElementById('edit-restriction-form');
-            if (editRestrictionForm) editRestrictionForm.addEventListener('submit', updateRestriction);
-
-            // Sauvegarde multiplicateurs
-            const saveMultipliersBtn = document.getElementById('save-multipliers');
-            if (saveMultipliersBtn) saveMultipliersBtn.addEventListener('click', saveMultipliers);
-
-            // Rapports
-            const generateDaily = document.getElementById('generate-daily-report');
-            if (generateDaily) generateDaily.addEventListener('click', generateDailyReport);
+            document.getElementById('add-user-form').addEventListener('submit', createUser);
+            document.getElementById('edit-user-form').addEventListener('submit', updateUser);
+            document.getElementById('enter-result-form').addEventListener('submit', saveResult);
+            document.getElementById('add-restriction-form').addEventListener('submit', createRestriction);
+            document.getElementById('edit-restriction-form').addEventListener('submit', updateRestriction);
             
-            const generateMonthly = document.getElementById('generate-monthly-report');
-            if (generateMonthly) generateMonthly.addEventListener('click', generateMonthlyReport);
+            document.getElementById('save-multipliers').addEventListener('click', saveMultipliers);
             
-            const generateAgent = document.getElementById('generate-agent-report');
-            if (generateAgent) generateAgent.addEventListener('click', generateAgentReport);
-
-            // Export (simulé)
-            document.getElementById('export-daily-report')?.addEventListener('click', () => showNotification('Fonctionnalité d\'export à implémenter', 'info'));
-            document.getElementById('export-monthly-report')?.addEventListener('click', () => showNotification('Fonctionnalité d\'export à implémenter', 'info'));
+            document.getElementById('generate-daily-report').addEventListener('click', generateDailyReport);
+            document.getElementById('generate-monthly-report').addEventListener('click', generateMonthlyReport);
+            document.getElementById('generate-agent-report').addEventListener('click', generateAgentReport);
         }
-
+        
+        function toggleRestrictionLimitField() {
+            const type = document.getElementById('restriction-type').value;
+            const limitGroup = document.getElementById('restriction-limit-group');
+            if (type === 'limit') {
+                limitGroup.style.display = 'block';
+                document.getElementById('restriction-limit').setAttribute('required', 'required');
+            } else {
+                limitGroup.style.display = 'none';
+                document.getElementById('restriction-limit').removeAttribute('required');
+            }
+        }
+        
+        function toggleEditRestrictionLimitField() {
+            const type = document.getElementById('edit-restriction-type').value;
+            const limitGroup = document.getElementById('edit-restriction-limit-group');
+            if (type === 'limit') {
+                limitGroup.style.display = 'block';
+                document.getElementById('edit-restriction-limit').setAttribute('required', 'required');
+            } else {
+                limitGroup.style.display = 'none';
+                document.getElementById('edit-restriction-limit').removeAttribute('required');
+            }
+        }
+        
+        function setupMultiplierSliders() {
+            const sliders = [
+                { id: 'borlette-first', valueId: 'borlette-first-value' },
+                { id: 'borlette-second', valueId: 'borlette-second-value' },
+                { id: 'borlette-third', valueId: 'borlette-third-value' },
+                { id: 'lotto3', valueId: 'lotto3-value' },
+                { id: 'lotto4', valueId: 'lotto4-value' },
+                { id: 'lotto5', valueId: 'lotto5-value' },
+                { id: 'grap', valueId: 'grap-value' },
+                { id: 'marriage', valueId: 'marriage-value' }
+            ];
+            
+            sliders.forEach(slider => {
+                const sliderElement = document.getElementById(slider.id);
+                const valueElement = document.getElementById(slider.valueId);
+                
+                if (sliderElement && valueElement) {
+                    sliderElement.addEventListener('input', function() {
+                        valueElement.textContent = this.value;
+                    });
+                }
+            });
+        }
+        
         function showSection(sectionId) {
-            document.querySelectorAll('.section-content').forEach(section => section.style.display = 'none');
+            document.querySelectorAll('.section-content').forEach(section => {
+                section.style.display = 'none';
+            });
+            
             const section = document.getElementById(`${sectionId}-section`);
             if (section) {
                 section.style.display = 'block';
-                const activeNav = document.querySelector(`.nav-item[data-section="${sectionId}"] .nav-label`);
-                document.getElementById('page-title').textContent = activeNav ? activeNav.textContent : 'Tableau de bord';
+                document.getElementById('page-title').textContent = 
+                    document.querySelector(`.nav-item[data-section="${sectionId}"] .nav-label`).textContent;
+                
                 switch(sectionId) {
                     case 'dashboard':
                         loadDashboardData();
@@ -2440,109 +2468,24 @@
                 }
             }
         }
-
-        // ==================== FONCTIONS DE NOTIFICATION ====================
-        function showNotification(message, type = 'info') {
-            const container = document.getElementById('notification-container');
-            if (!container) {
-                console.warn('Notification container manquant');
-                return;
-            }
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            let icon = 'fas fa-info-circle';
-            if (type === 'success') icon = 'fas fa-check-circle';
-            if (type === 'error') icon = 'fas fa-times-circle';
-            if (type === 'warning') icon = 'fas fa-exclamation-triangle';
-            notification.innerHTML = `
-                <i class="${icon}"></i>
-                <span>${message}</span>
-                <button style="background: none; border: none; color: inherit; margin-left: auto; cursor: pointer;" onclick="this.parentElement.remove()">
-                    <i class="fas fa-times"></i>
-                </button>
-            `;
-            container.appendChild(notification);
-            setTimeout(() => notification.remove(), 5000);
-        }
-
-        // ==================== CRÉATION D'AGENT (CORRIGÉE) ====================
-        async function createUser(e) {
-            e.preventDefault();
-            console.log('createUser appelée'); // Vérification
-
-            const name = document.getElementById('user-name-input').value.trim();
-            const username = document.getElementById('user-username').value.trim();
-            const email = document.getElementById('user-email').value.trim();
-            const password = document.getElementById('user-password').value;
-            const passwordConfirm = document.getElementById('user-password-confirm').value;
-
-            if (!name || !username || !password) {
-                showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
-                return;
-            }
-            if (password !== passwordConfirm) {
-                showNotification('Les mots de passe ne correspondent pas', 'warning');
-                return;
-            }
-
-            console.log('Données à envoyer:', { name, username, email, password });
-
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
-            submitBtn.disabled = true;
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/subsystem/users/create`, {
-                    method: 'POST',
-                    headers: {
-                        'x-auth-token': subsystemToken,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ name, username, email, password })
-                });
-
-                console.log('Réponse reçue, status:', response.status);
-                const data = await response.json();
-                console.log('Données réponse:', data);
-
-                if (data.success) {
-                    showNotification('Agent créé avec succès !', 'success');
-                    alert(`✅ Agent créé avec succès !\n\n📋 Identifiants d'accès:\n• Identifiant: ${username}\n• Mot de passe: ${password}\n• Email: ${email || 'Non renseigné'}\n\n⚠️ IMPORTANT: Transmettez ces identifiants à l'agent. Le mot de passe doit être changé à la première connexion.`);
-                    hideAddUserModal();
-                    loadDashboardData();
-                    loadRecentAgents();
-                    loadAllAgents();
-                } else {
-                    showNotification(data.error || 'Erreur lors de la création', 'error');
-                }
-            } catch (error) {
-                console.error('Erreur lors de la requête:', error);
-                showNotification('Erreur de connexion au serveur', 'error');
-            } finally {
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            }
-        }
-
-        // ==================== AUTRES FONCTIONS (inchangées mais incluses) ====================
-        // Toutes les fonctions suivantes sont reprises du code original sans modification,
-        // avec éventuellement des vérifications d'existence pour éviter les erreurs.
-        // Je les inclus intégralement pour que le fichier soit complet.
-
+        
         async function loadDashboardData() {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/stats`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     const stats = data.stats;
+                    
                     document.getElementById('total-users').textContent = `${stats.active_users} / ${stats.max_users}`;
                     document.getElementById('today-tickets').textContent = stats.today_tickets;
                     document.getElementById('today-revenue').textContent = stats.today_sales.toLocaleString() + ' HTG';
                     document.getElementById('active-rate').textContent = 
                         stats.max_users > 0 ? Math.round((stats.active_users / stats.max_users) * 100) + '%' : '0%';
+                    
                     document.getElementById('online-agents').textContent = stats.online_agents || 0;
                     document.getElementById('total-payout').textContent = (stats.pending_payout || 0).toLocaleString() + ' HTG';
                     document.getElementById('pending-issues').textContent = stats.pending_issues || 0;
@@ -2552,29 +2495,35 @@
                 showNotification('Erreur lors du chargement des données', 'error');
             }
         }
-
+        
         async function loadRecentAgents() {
             const loading = document.getElementById('users-loading');
             const table = document.getElementById('users-table');
             const empty = document.getElementById('users-empty');
             const tbody = document.getElementById('users-table-body');
-            if (!loading || !table || !empty || !tbody) return;
+            
             loading.style.display = 'flex';
             table.style.display = 'none';
             empty.style.display = 'none';
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users?limit=5`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     const users = data.users || [];
+                    
                     if (users.length === 0) {
                         loading.style.display = 'none';
                         empty.style.display = 'block';
                         return;
                     }
+                    
                     tbody.innerHTML = '';
+                    
                     users.forEach(user => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
@@ -2616,8 +2565,10 @@
                                 </div>
                             </td>
                         `;
+                        
                         tbody.appendChild(row);
                     });
+                    
                     loading.style.display = 'none';
                     table.style.display = 'table';
                 }
@@ -2628,13 +2579,15 @@
                 showNotification('Erreur lors du chargement des agents', 'error');
             }
         }
-
+        
         async function loadAllAgents() {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     agentsList = data.users || [];
                     displayAgentsList(agentsList);
@@ -2644,26 +2597,31 @@
                 showNotification('Erreur lors du chargement des agents', 'error');
             }
         }
-
+        
         function displayAgentsList(agents) {
             const loading = document.getElementById('agents-list-loading');
             const table = document.getElementById('agents-list-table');
             const empty = document.getElementById('agents-list-empty');
             const tbody = document.getElementById('agents-list-table-body');
-            if (!loading || !table || !empty || !tbody) return;
+            
             loading.style.display = 'flex';
             table.style.display = 'none';
             empty.style.display = 'none';
+            
             if (agents.length === 0) {
                 loading.style.display = 'none';
                 empty.style.display = 'block';
                 return;
             }
+            
             tbody.innerHTML = '';
+            
             agents.forEach(agent => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td><strong>${agent.name}</strong></td>
+                    <td>
+                        <strong>${agent.name}</strong>
+                    </td>
                     <td>${agent.username}</td>
                     <td>${agent.email || '—'}</td>
                     <td>
@@ -2697,42 +2655,54 @@
                         </div>
                     </td>
                 `;
+                
                 tbody.appendChild(row);
             });
+            
             loading.style.display = 'none';
             table.style.display = 'table';
         }
-
+        
         async function loadRecentTickets() {
             const loading = document.getElementById('tickets-loading');
             const table = document.getElementById('tickets-table');
             const empty = document.getElementById('tickets-empty');
             const tbody = document.getElementById('tickets-table-body');
-            if (!loading || !table || !empty || !tbody) return;
+            
             loading.style.display = 'flex';
             table.style.display = 'none';
             empty.style.display = 'none';
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/tickets?period=today&limit=5`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     const tickets = data.tickets || [];
+                    
                     if (tickets.length === 0) {
                         loading.style.display = 'none';
                         empty.style.display = 'block';
                         return;
                     }
+                    
                     tbody.innerHTML = '';
+                    
                     tickets.forEach(ticket => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td><strong>#${ticket.number}</strong></td>
+                            <td>
+                                <strong>#${ticket.number}</strong>
+                            </td>
                             <td>${ticket.agent_name}</td>
                             <td>${ticket.draw} (${ticket.draw_time})</td>
                             <td>${ticket.total.toLocaleString()} HTG</td>
-                            <td>${new Date(ticket.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</td>
+                            <td>
+                                ${new Date(ticket.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                            </td>
                             <td>
                                 <span class="status-badge ${ticket.is_synced ? 'status-active' : 'status-pending'}">
                                     ${ticket.is_synced ? 'Synchro' : 'En attente'}
@@ -2749,8 +2719,10 @@
                                 </div>
                             </td>
                         `;
+                        
                         tbody.appendChild(row);
                     });
+                    
                     loading.style.display = 'none';
                     table.style.display = 'table';
                 }
@@ -2761,25 +2733,31 @@
                 showNotification('Erreur lors du chargement des tickets', 'error');
             }
         }
-
+        
         async function loadTodayTickets() {
             const loading = document.getElementById('today-tickets-loading');
             const table = document.getElementById('today-tickets-table');
             const empty = document.getElementById('today-tickets-empty');
             const tbody = document.getElementById('today-tickets-table-body');
             const agentFilter = document.getElementById('filter-today-agent');
-            if (!loading || !table || !empty || !tbody || !agentFilter) return;
+            
             loading.style.display = 'flex';
             table.style.display = 'none';
             empty.style.display = 'none';
+            
             try {
                 if (agentFilter.options.length <= 1) {
                     const agentsResponse = await fetch(`${API_BASE_URL}/api/subsystem/users`, {
                         headers: { 'x-auth-token': subsystemToken }
                     });
+                    
                     const agentsData = await agentsResponse.json();
+                    
                     if (agentsData.success) {
-                        while (agentFilter.options.length > 1) agentFilter.remove(1);
+                        while (agentFilter.options.length > 1) {
+                            agentFilter.remove(1);
+                        }
+                        
                         agentsData.users.forEach(agent => {
                             const option = document.createElement('option');
                             option.value = agent._id;
@@ -2788,26 +2766,37 @@
                         });
                     }
                 }
+                
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/tickets?period=today`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     const tickets = data.tickets || [];
+                    
                     if (tickets.length === 0) {
                         loading.style.display = 'none';
                         empty.style.display = 'block';
                         return;
                     }
+                    
                     tbody.innerHTML = '';
+                    
                     tickets.forEach(ticket => {
                         const betCount = ticket.bets ? ticket.bets.length : 0;
+                        
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td><strong>#${ticket.number}</strong></td>
+                            <td>
+                                <strong>#${ticket.number}</strong>
+                            </td>
                             <td>${ticket.agent_name}</td>
                             <td>${ticket.draw} (${ticket.draw_time})</td>
-                            <td>${new Date(ticket.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</td>
+                            <td>
+                                ${new Date(ticket.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                            </td>
                             <td>${betCount}</td>
                             <td>${ticket.total.toLocaleString()} HTG</td>
                             <td>
@@ -2821,8 +2810,10 @@
                                 </div>
                             </td>
                         `;
+                        
                         tbody.appendChild(row);
                     });
+                    
                     loading.style.display = 'none';
                     table.style.display = 'table';
                 }
@@ -2833,38 +2824,52 @@
                 showNotification('Erreur lors du chargement des tickets', 'error');
             }
         }
-
+        
         async function loadPendingTickets() {
             const loading = document.getElementById('pending-tickets-loading');
             const table = document.getElementById('pending-tickets-table');
             const empty = document.getElementById('pending-tickets-empty');
             const tbody = document.getElementById('pending-tickets-table-body');
-            if (!loading || !table || !empty || !tbody) return;
+            
             loading.style.display = 'flex';
             table.style.display = 'none';
             empty.style.display = 'none';
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/tickets?status=pending`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     const tickets = data.tickets || [];
+                    
                     if (tickets.length === 0) {
                         loading.style.display = 'none';
                         empty.style.display = 'block';
                         return;
                     }
+                    
                     tbody.innerHTML = '';
+                    
                     tickets.forEach(ticket => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td><strong>#${ticket.number}</strong></td>
+                            <td>
+                                <strong>#${ticket.number}</strong>
+                            </td>
                             <td>${ticket.agent_name}</td>
                             <td>${ticket.draw} (${ticket.draw_time})</td>
-                            <td>${new Date(ticket.date).toLocaleDateString('fr-FR')}</td>
+                            <td>
+                                ${new Date(ticket.date).toLocaleDateString('fr-FR')}
+                            </td>
                             <td>${ticket.total.toLocaleString()} HTG</td>
-                            <td><span class="status-badge status-pending">En attente</span></td>
+                            <td>
+                                <span class="status-badge status-pending">
+                                    En attente
+                                </span>
+                            </td>
                             <td>
                                 <div class="action-buttons">
                                     <button class="action-btn view" onclick="viewTicketDetails('${ticket.id}')" title="Voir détails">
@@ -2876,8 +2881,10 @@
                                 </div>
                             </td>
                         `;
+                        
                         tbody.appendChild(row);
                     });
+                    
                     loading.style.display = 'none';
                     table.style.display = 'table';
                 }
@@ -2888,50 +2895,62 @@
                 showNotification('Erreur lors du chargement des tickets en attente', 'error');
             }
         }
-
+        
         async function loadWinningTickets() {
+            // Route non implémentée, on affiche un état vide sans erreur
             const loading = document.getElementById('winning-tickets-loading');
             const table = document.getElementById('winning-tickets-table');
             const empty = document.getElementById('winning-tickets-empty');
-            if (!loading || !table || !empty) return;
+            
             loading.style.display = 'flex';
             table.style.display = 'none';
             empty.style.display = 'none';
+            
             setTimeout(() => {
                 loading.style.display = 'none';
                 empty.style.display = 'block';
             }, 500);
         }
-
+        
         async function loadAllTickets() {
             const loading = document.getElementById('all-tickets-loading');
             const table = document.getElementById('all-tickets-table');
             const empty = document.getElementById('all-tickets-empty');
             const tbody = document.getElementById('all-tickets-table-body');
-            if (!loading || !table || !empty || !tbody) return;
+            
             loading.style.display = 'flex';
             table.style.display = 'none';
             empty.style.display = 'none';
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/tickets?period=month`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     const tickets = data.tickets || [];
+                    
                     if (tickets.length === 0) {
                         loading.style.display = 'none';
                         empty.style.display = 'block';
                         return;
                     }
+                    
                     tbody.innerHTML = '';
+                    
                     tickets.forEach(ticket => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
-                            <td><strong>#${ticket.number}</strong></td>
+                            <td>
+                                <strong>#${ticket.number}</strong>
+                            </td>
                             <td>${ticket.agent_name}</td>
                             <td>${ticket.draw} (${ticket.draw_time})</td>
-                            <td>${new Date(ticket.date).toLocaleDateString('fr-FR')}</td>
+                            <td>
+                                ${new Date(ticket.date).toLocaleDateString('fr-FR')}
+                            </td>
                             <td>${ticket.total.toLocaleString()} HTG</td>
                             <td>
                                 <span class="status-badge ${ticket.is_synced ? 'status-active' : 'status-pending'}">
@@ -2952,8 +2971,10 @@
                                 </div>
                             </td>
                         `;
+                        
                         tbody.appendChild(row);
                     });
+                    
                     loading.style.display = 'none';
                     table.style.display = 'table';
                 }
@@ -2964,15 +2985,20 @@
                 showNotification('Erreur lors du chargement de l\'historique', 'error');
             }
         }
-
+        
         window.deleteTicket = async function(ticketId) {
-            if (!confirm('Êtes-vous sûr de vouloir supprimer ce ticket ? Cette action est irréversible.')) return;
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce ticket ? Cette action est irréversible.')) {
+                return;
+            }
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}`, {
                     method: 'DELETE',
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     showNotification('Ticket supprimé avec succès', 'success');
                     loadAllTickets();
@@ -2984,29 +3010,35 @@
                 showNotification('Erreur de connexion au serveur', 'error');
             }
         };
-
+        
         async function loadRecentResults() {
             const loading = document.getElementById('results-loading');
             const table = document.getElementById('results-table');
             const empty = document.getElementById('results-empty');
             const tbody = document.getElementById('results-table-body');
-            if (!loading || !table || !empty || !tbody) return;
+            
             loading.style.display = 'flex';
             table.style.display = 'none';
             empty.style.display = 'none';
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/results?subsystemId=${currentSubsystem._id}&limit=10`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     const results = data.results || [];
+                    
                     if (results.length === 0) {
                         loading.style.display = 'none';
                         empty.style.display = 'block';
                         return;
                     }
+                    
                     tbody.innerHTML = '';
+                    
                     results.forEach(result => {
                         const row = document.createElement('tr');
                         row.innerHTML = `
@@ -3032,8 +3064,10 @@
                                 </div>
                             </td>
                         `;
+                        
                         tbody.appendChild(row);
                     });
+                    
                     loading.style.display = 'none';
                     table.style.display = 'table';
                 }
@@ -3044,39 +3078,51 @@
                 showNotification('Erreur lors du chargement des résultats', 'error');
             }
         }
-
+        
         async function loadActivities() {
             const timeline = document.getElementById('activity-timeline');
             const empty = document.getElementById('activity-empty');
-            if (!timeline || !empty) return;
+            
             timeline.innerHTML = '';
             empty.style.display = 'none';
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/activities`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     const activities = data.activities || [];
+                    
                     if (activities.length === 0) {
                         empty.style.display = 'block';
                         return;
                     }
+                    
                     activities.forEach(activity => {
                         const activityItem = document.createElement('div');
                         activityItem.className = 'activity-item';
+                        
                         let icon = 'fas fa-history';
                         if (activity.action.includes('Vente')) icon = 'fas fa-shopping-cart';
                         if (activity.action.includes('Connexion')) icon = 'fas fa-sign-in-alt';
                         if (activity.action.includes('Création')) icon = 'fas fa-user-plus';
+                        
                         activityItem.innerHTML = `
-                            <div class="activity-icon"><i class="${icon}"></i></div>
+                            <div class="activity-icon">
+                                <i class="${icon}"></i>
+                            </div>
                             <div class="activity-content">
                                 <div class="activity-title">${activity.user} - ${activity.action}</div>
                                 <div class="activity-details">${activity.details}</div>
-                                <div class="activity-time">${new Date(activity.timestamp).toLocaleString('fr-FR')}</div>
+                                <div class="activity-time">
+                                    ${new Date(activity.timestamp).toLocaleString('fr-FR')}
+                                </div>
                             </div>
                         `;
+                        
                         timeline.appendChild(activityItem);
                     });
                 }
@@ -3086,68 +3132,170 @@
                 showNotification('Erreur lors du chargement des activités', 'error');
             }
         }
-
+        
         function showAddUserModal() {
-            const modal = document.getElementById('add-user-modal');
-            if (modal) {
-                modal.classList.add('active');
-                document.getElementById('add-user-form')?.reset();
+            document.getElementById('add-user-modal').classList.add('active');
+            document.getElementById('add-user-form').reset();
+        }
+        
+        function hideAddUserModal() {
+            document.getElementById('add-user-modal').classList.remove('active');
+        }
+        
+        // ========== FONCTION CREATEUSER AMÉLIORÉE ==========
+        async function createUser(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('user-name-input').value.trim();
+            const username = document.getElementById('user-username').value.trim();
+            const email = document.getElementById('user-email').value.trim();
+            const password = document.getElementById('user-password').value;
+            const passwordConfirm = document.getElementById('user-password-confirm').value;
+            
+            if (!name || !username || !password) {
+                showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
+                return;
+            }
+            
+            if (password !== passwordConfirm) {
+                showNotification('Les mots de passe ne correspondent pas', 'warning');
+                return;
+            }
+            
+            console.log('Token utilisé:', subsystemToken);
+            console.log('Données envoyées:', { name, username, email, password });
+            
+            try {
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
+                submitBtn.disabled = true;
+                
+                const response = await fetch(`${API_BASE_URL}/api/subsystem/users/create`, {
+                    method: 'POST',
+                    headers: {
+                        'x-auth-token': subsystemToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name,
+                        username,
+                        email,
+                        password
+                        // role: 'agent' est optionnel car le backend le fixe
+                    })
+                });
+                
+                const data = await response.json();
+                alert('Réponse du serveur : ' + JSON.stringify(data));
+                console.log('Réponse du serveur:', data);
+                
+                if (data.success) {
+                    showNotification('Agent créé avec succès !', 'success');
+                    
+                    alert(`✅ Agent créé avec succès !
+
+📋 Identifiants d'accès:
+• Identifiant: ${username}
+• Mot de passe: ${password}
+• Email: ${email || 'Non renseigné'}
+
+⚠️ IMPORTANT: Transmettez ces identifiants à l'agent. Le mot de passe doit être changé à la première connexion.`);
+                    
+                    hideAddUserModal();
+                    
+                    loadDashboardData();
+                    loadRecentAgents();
+                    loadAllAgents();
+                } else {
+                    if (data.error && data.error.includes('quota')) {
+                        showNotification('Quota d\'agents atteint. Impossible de créer un nouvel agent.', 'error');
+                    } else {
+                        showNotification(data.error || 'Erreur lors de la création', 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur création agent:', error);
+                showNotification('Erreur de connexion au serveur', 'error');
+            } finally {
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
             }
         }
-
-        function hideAddUserModal() {
-            document.getElementById('add-user-modal')?.classList.remove('active');
-        }
-
+        
         window.editUser = async function(userId) {
             try {
                 const user = agentsList.find(u => u._id === userId);
+                
                 if (!user) {
                     showNotification('Agent non trouvé', 'error');
                     return;
                 }
+                
                 document.getElementById('edit-user-id').value = user._id;
                 document.getElementById('edit-user-name').value = user.name;
                 document.getElementById('edit-user-email').value = user.email || '';
                 document.getElementById('edit-user-status').value = user.is_active.toString();
+                
                 document.getElementById('edit-user-modal').classList.add('active');
+                
             } catch (error) {
                 console.error('Erreur préparation modification:', error);
                 showNotification('Erreur lors de la préparation de la modification', 'error');
             }
         };
-
+        
         function hideEditUserModal() {
-            document.getElementById('edit-user-modal')?.classList.remove('active');
+            document.getElementById('edit-user-modal').classList.remove('active');
         }
-
+        
         async function updateUser(e) {
             e.preventDefault();
+            
             const userId = document.getElementById('edit-user-id').value;
             const name = document.getElementById('edit-user-name').value.trim();
             const email = document.getElementById('edit-user-email').value.trim();
             const isActive = document.getElementById('edit-user-status').value === 'true';
             const password = document.getElementById('edit-user-password').value;
+            
             if (!userId || !name) {
                 showNotification('Données manquantes', 'warning');
                 return;
             }
+            
             try {
                 const submitBtn = e.target.querySelector('button[type="submit"]');
                 const originalText = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde...';
                 submitBtn.disabled = true;
-                const updateData = { name, email, is_active: isActive };
-                if (password) updateData.password = password;
+                
+                const updateData = {
+                    name: name,
+                    email: email,
+                    is_active: isActive
+                };
+                
+                if (password) {
+                    updateData.password = password;
+                }
+                
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users/${userId}`, {
                     method: 'PUT',
-                    headers: { 'x-auth-token': subsystemToken, 'Content-Type': 'application/json' },
+                    headers: {
+                        'x-auth-token': subsystemToken,
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify(updateData)
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     showNotification('Agent modifié avec succès !', 'success');
+                    
                     hideEditUserModal();
+                    
                     loadDashboardData();
                     loadRecentAgents();
                     loadAllAgents();
@@ -3163,19 +3311,29 @@
                 submitBtn.disabled = false;
             }
         }
-
+        
         window.toggleUserStatus = async function(userId, activate) {
             const action = activate ? 'activer' : 'désactiver';
-            if (!confirm(`Êtes-vous sûr de vouloir ${action} cet agent ?`)) return;
+            
+            if (!confirm(`Êtes-vous sûr de vouloir ${action} cet agent ?`)) {
+                return;
+            }
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users/${userId}/status`, {
                     method: 'PUT',
-                    headers: { 'x-auth-token': subsystemToken, 'Content-Type': 'application/json' },
+                    headers: {
+                        'x-auth-token': subsystemToken,
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({ is_active: activate })
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     showNotification(`Agent ${action} avec succès`, 'success');
+                    
                     loadDashboardData();
                     loadRecentAgents();
                     loadAllAgents();
@@ -3187,15 +3345,20 @@
                 showNotification('Erreur de connexion au serveur', 'error');
             }
         };
-
+        
         window.deleteUser = async function(userId) {
-            if (!confirm('Êtes-vous sûr de vouloir supprimer cet agent ? Cette action est irréversible.')) return;
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cet agent ?\n\nCette action est irréversible.')) {
+                return;
+            }
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/subsystem/users/${userId}`, {
                     method: 'DELETE',
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     showNotification('Agent supprimé avec succès', 'success');
                     loadAllAgents();
@@ -3207,29 +3370,36 @@
                 showNotification('Erreur de connexion au serveur', 'error');
             }
         };
-
+        
         window.viewTicketDetails = async function(ticketId) {
             const modal = document.getElementById('view-ticket-modal');
             const loading = document.getElementById('ticket-details-loading');
             const details = document.getElementById('ticket-details');
-            if (!modal || !loading || !details) return;
+            
             modal.classList.add('active');
             loading.style.display = 'flex';
             details.style.display = 'none';
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     const ticket = data.ticket;
+                    
                     const betsByType = {};
                     if (ticket.bets && Array.isArray(ticket.bets)) {
                         ticket.bets.forEach(bet => {
-                            if (!betsByType[bet.type]) betsByType[bet.type] = 0;
+                            if (!betsByType[bet.type]) {
+                                betsByType[bet.type] = 0;
+                            }
                             betsByType[bet.type] += bet.amount || 0;
                         });
                     }
+                    
                     details.innerHTML = `
                         <div style="margin-bottom: 25px;">
                             <h3 style="color: var(--dark-color); margin-bottom: 15px;">Ticket #${ticket.number}</h3>
@@ -3244,16 +3414,22 @@
                                 </div>
                                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px;">
                                     <div style="font-size: 0.9rem; color: #6c757d; margin-bottom: 5px;">Date</div>
-                                    <div style="font-weight: bold; color: var(--dark-color);">${new Date(ticket.date).toLocaleString('fr-FR')}</div>
+                                    <div style="font-weight: bold; color: var(--dark-color);">
+                                        ${new Date(ticket.date).toLocaleString('fr-FR')}
+                                    </div>
                                 </div>
                                 <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px;">
                                     <div style="font-size: 0.9rem; color: #6c757d; margin-bottom: 5px;">Montant total</div>
-                                    <div style="font-weight: bold; color: var(--dark-color);">${ticket.total.toLocaleString()} HTG</div>
+                                    <div style="font-weight: bold; color: var(--dark-color);">
+                                        ${ticket.total.toLocaleString()} HTG
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                        
                         <h4 style="color: var(--dark-color); margin-bottom: 15px;">Détails des paris</h4>
                     `;
+                    
                     for (const type in betsByType) {
                         let typeName = type;
                         if (type === 'borlette') typeName = 'Borlette';
@@ -3262,6 +3438,7 @@
                         if (type === 'lotto5') typeName = 'Lotto 5';
                         if (type === 'grap') typeName = 'Grap';
                         if (type === 'marriage') typeName = 'Marriage';
+                        
                         details.innerHTML += `
                             <div style="display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee;">
                                 <span>${typeName}</span>
@@ -3269,6 +3446,7 @@
                             </div>
                         `;
                     }
+                    
                     loading.style.display = 'none';
                     details.style.display = 'block';
                 } else {
@@ -3281,11 +3459,11 @@
                 hideViewTicketModal();
             }
         };
-
+        
         function hideViewTicketModal() {
-            document.getElementById('view-ticket-modal')?.classList.remove('active');
+            document.getElementById('view-ticket-modal').classList.remove('active');
         }
-
+        
         window.syncTicket = async function(ticketId) {
             try {
                 const response = await fetch(`${API_BASE_URL}/api/tickets/${ticketId}/sync`, {
@@ -3294,11 +3472,17 @@
                         'x-auth-token': subsystemToken,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ is_synced: true, synced_at: new Date().toISOString() })
+                    body: JSON.stringify({
+                        is_synced: true,
+                        synced_at: new Date().toISOString()
+                    })
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     showNotification('Ticket synchronisé avec succès', 'success');
+                    
                     loadRecentTickets();
                     loadTodayTickets();
                     loadPendingTickets();
@@ -3310,15 +3494,23 @@
                 showNotification('Erreur de connexion au serveur', 'error');
             }
         };
-
+        
         window.markAsPaid = async function(winnerId) {
-            if (!confirm('Marquer ce ticket gagnant comme payé ?')) return;
+            if (!confirm('Marquer ce ticket gagnant comme payé ?')) {
+                return;
+            }
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/winners/${winnerId}/pay`, {
                     method: 'PUT',
-                    headers: { 'x-auth-token': subsystemToken, 'Content-Type': 'application/json' }
+                    headers: {
+                        'x-auth-token': subsystemToken,
+                        'Content-Type': 'application/json'
+                    }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     showNotification('Ticket marqué comme payé', 'success');
                     loadWinningTickets();
@@ -3330,7 +3522,7 @@
                 showNotification('Erreur de connexion au serveur', 'error');
             }
         };
-
+        
         window.printTicket = function(ticketId) {
             fetch(`${API_BASE_URL}/api/tickets/${ticketId}`, {
                 headers: { 'x-auth-token': subsystemToken }
@@ -3348,6 +3540,7 @@
                     } else {
                         betsHtml = '<p>Aucun pari détaillé</p>';
                     }
+                    
                     printWindow.document.write(`
                         <html>
                         <head>
@@ -3403,31 +3596,38 @@
                 showNotification('Erreur de connexion', 'error');
             });
         };
-
+        
+        // ========== NOUVELLES FONCTIONS RESULT ==========
         window.enterResult = function(draw, time) {
             const modal = document.getElementById('enter-result-modal');
             const title = document.getElementById('result-modal-title');
-            if (!modal || !title) return;
+            
             let drawName = draw;
             if (draw === 'borlette') drawName = 'Borlette';
             if (draw === 'lotto3') drawName = 'Lotto 3';
             if (draw === 'lotto4') drawName = 'Lotto 4';
             if (draw === 'lotto5') drawName = 'Lotto 5';
+            
             let timeName = time === 'morning' ? 'Matin' : 'Soir';
             title.textContent = `Résultat ${drawName} - ${timeName}`;
+            
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('result-date').value = today;
+            
             document.getElementById('result-draw').value = draw;
             document.getElementById('result-time').value = time;
+            
             document.getElementById('result-lotto3').value = '';
             document.getElementById('result-lot2').value = '';
             document.getElementById('result-lot3').value = '';
             document.getElementById('result-verified').checked = false;
+            
             modal.classList.add('active');
         };
-
+        
         async function saveResult(e) {
             e.preventDefault();
+            
             const draw = document.getElementById('result-draw').value;
             const time = document.getElementById('result-time').value;
             const date = document.getElementById('result-date').value;
@@ -3435,10 +3635,12 @@
             const lot2 = document.getElementById('result-lot2').value.trim();
             const lot3 = document.getElementById('result-lot3').value.trim();
             const verified = document.getElementById('result-verified').checked;
+            
             if (!draw || !time || !date || !lotto3 || !lot2 || !lot3) {
                 showNotification('Veuillez remplir tous les champs', 'warning');
                 return;
             }
+            
             if (!/^\d{3}$/.test(lotto3)) {
                 showNotification('Le Lotto 3 doit être composé de 3 chiffres', 'warning');
                 return;
@@ -3451,12 +3653,15 @@
                 showNotification('Le 3e lot doit être composé de 2 chiffres', 'warning');
                 return;
             }
+            
             const lot1 = lotto3.slice(-2);
+            
             try {
                 const submitBtn = e.target.querySelector('button[type="submit"]');
                 const originalText = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
                 submitBtn.disabled = true;
+                
                 const response = await fetch(`${API_BASE_URL}/api/results`, {
                     method: 'POST',
                     headers: {
@@ -3464,11 +3669,19 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        draw, time, date: new Date(date), lot1, lot2, lot3, verified,
+                        draw,
+                        time,
+                        date,
+                        lot1,
+                        lot2,
+                        lot3,
+                        verified,
                         subsystemId: currentSubsystem._id
                     })
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     showNotification('Résultat enregistré avec succès !', 'success');
                     hideEnterResultModal();
@@ -3485,13 +3698,14 @@
                 submitBtn.disabled = false;
             }
         }
-
+        
         function hideEnterResultModal() {
-            document.getElementById('enter-result-modal')?.classList.remove('active');
+            document.getElementById('enter-result-modal').classList.remove('active');
         }
-
+        
         window.editResult = function(draw, time, date) {
             enterResult(draw, time);
+            
             fetch(`${API_BASE_URL}/api/results?draw=${draw}&time=${time}&date=${date}`, {
                 headers: { 'x-auth-token': subsystemToken }
             })
@@ -3499,23 +3713,31 @@
             .then(data => {
                 if (data.success && data.result) {
                     const result = data.result;
+                    // On doit remplir les champs : lotto3 doit être reconstitué ? Le backend ne stocke que lot1,lot2,lot3.
+                    // Pour simplifier, on ne pré-remplit pas, l'utilisateur ressaisit.
                     document.getElementById('result-date').value = result.date.split('T')[0];
                     document.getElementById('result-lot2').value = result.lot2 || '';
                     document.getElementById('result-lot3').value = result.lot3 || '';
                     document.getElementById('result-verified').checked = result.verified;
+                    // On ne peut pas remplir lotto3 car on n'a que lot1 (2 chiffres). On laisse vide.
                 }
             })
             .catch(error => console.error('Erreur chargement résultat:', error));
         };
-
+        
         window.deleteResult = async function(draw, time, date) {
-            if (!confirm('Êtes-vous sûr de vouloir supprimer ce résultat ?')) return;
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce résultat ?')) {
+                return;
+            }
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/results?draw=${draw}&time=${time}&date=${date}`, {
                     method: 'DELETE',
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     showNotification('Résultat supprimé avec succès', 'success');
                     loadRecentResults();
@@ -3527,46 +3749,78 @@
                 showNotification('Erreur de connexion au serveur', 'error');
             }
         };
-
+        
         function switchTicketTab(tabId) {
-            document.querySelectorAll('[data-ticket-tab]').forEach(tab => tab.classList.remove('active'));
-            document.querySelector(`[data-ticket-tab="${tabId}"]`)?.classList.add('active');
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(`${tabId}-tab`)?.classList.add('active');
+            document.querySelectorAll('[data-ticket-tab]').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-ticket-tab="${tabId}"]`).classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+            
             switch(tabId) {
-                case 'today': loadTodayTickets(); break;
-                case 'pending': loadPendingTickets(); break;
-                case 'winning': loadWinningTickets(); break;
-                case 'all': loadAllTickets(); break;
+                case 'today':
+                    loadTodayTickets();
+                    break;
+                case 'pending':
+                    loadPendingTickets();
+                    break;
+                case 'winning':
+                    loadWinningTickets();
+                    break;
+                case 'all':
+                    loadAllTickets();
+                    break;
             }
         }
-
+        
         function switchSettingTab(tabId) {
-            document.querySelectorAll('[data-setting-tab]').forEach(tab => tab.classList.remove('active'));
-            document.querySelector(`[data-setting-tab="${tabId}"]`)?.classList.add('active');
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(`${tabId}-tab`)?.classList.add('active');
+            document.querySelectorAll('[data-setting-tab]').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-setting-tab="${tabId}"]`).classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabId}-tab`).classList.add('active');
         }
-
+        
         function switchReportTab(tabId) {
-            document.querySelectorAll('[data-report-tab]').forEach(tab => tab.classList.remove('active'));
-            document.querySelector(`[data-report-tab="${tabId}"]`)?.classList.add('active');
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            document.getElementById(`${tabId}-tab`)?.classList.add('active');
-            if (tabId === 'agents') loadAgentsForReport();
+            document.querySelectorAll('[data-report-tab]').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-report-tab="${tabId}"]`).classList.add('active');
+            
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+            
+            if (tabId === 'agents') {
+                loadAgentsForReport();
+            }
         }
-
+        
         async function loadAgentsForReport() {
             const agentSelect = document.getElementById('report-agent-select');
-            if (!agentSelect) return;
+            
             if (agentSelect.options.length <= 1) {
                 try {
                     const response = await fetch(`${API_BASE_URL}/api/subsystem/users`, {
                         headers: { 'x-auth-token': subsystemToken }
                     });
+                    
                     const data = await response.json();
+                    
                     if (data.success) {
-                        while (agentSelect.options.length > 1) agentSelect.remove(1);
+                        while (agentSelect.options.length > 1) {
+                            agentSelect.remove(1);
+                        }
+                        
                         data.users.forEach(agent => {
                             const option = document.createElement('option');
                             option.value = agent._id;
@@ -3579,25 +3833,31 @@
                 }
             }
         }
-
+        
         async function saveMultipliers() {
             try {
                 const multipliers = {
-                    borlette_first: parseInt(document.getElementById('borlette-first')?.value) || 60,
-                    borlette_second: parseInt(document.getElementById('borlette-second')?.value) || 20,
-                    borlette_third: parseInt(document.getElementById('borlette-third')?.value) || 10,
-                    lotto3: parseInt(document.getElementById('lotto3')?.value) || 500,
-                    lotto4: parseInt(document.getElementById('lotto4')?.value) || 1000,
-                    lotto5: parseInt(document.getElementById('lotto5')?.value) || 5000,
-                    grap: parseInt(document.getElementById('grap')?.value) || 500,
-                    marriage: parseInt(document.getElementById('marriage')?.value) || 1000
+                    borlette_first: parseInt(document.getElementById('borlette-first').value),
+                    borlette_second: parseInt(document.getElementById('borlette-second').value),
+                    borlette_third: parseInt(document.getElementById('borlette-third').value),
+                    lotto3: parseInt(document.getElementById('lotto3').value),
+                    lotto4: parseInt(document.getElementById('lotto4').value),
+                    lotto5: parseInt(document.getElementById('lotto5').value),
+                    grap: parseInt(document.getElementById('grap').value),
+                    marriage: parseInt(document.getElementById('marriage').value)
                 };
+                
                 const response = await fetch(`${API_BASE_URL}/api/system/settings/multipliers`, {
                     method: 'POST',
-                    headers: { 'x-auth-token': subsystemToken, 'Content-Type': 'application/json' },
+                    headers: {
+                        'x-auth-token': subsystemToken,
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify(multipliers)
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     showNotification('Multiplicateurs sauvegardés avec succès !', 'success');
                 } else {
@@ -3608,21 +3868,26 @@
                 showNotification('Erreur de connexion au serveur', 'error');
             }
         }
-
+        
         async function generateDailyReport() {
             const loading = document.getElementById('daily-report-loading');
             const results = document.getElementById('daily-report-results');
-            if (!loading || !results) return;
+            
             loading.style.display = 'flex';
             results.style.display = 'none';
+            
             try {
                 const date = document.getElementById('report-daily-date').value || new Date().toISOString().split('T')[0];
+                
                 const response = await fetch(`${API_BASE_URL}/api/reports/daily?date=${date}`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     const report = data.report;
+                    
                     let html = `
                         <div style="margin-bottom: 25px;">
                             <h3 style="color: var(--dark-color); margin-bottom: 15px;">Rapport quotidien - ${date}</h3>
@@ -3638,20 +3903,43 @@
                             </div>
                         </div>
                     `;
+                    
                     if (report.agents && report.agents.length > 0) {
                         html += `
                             <h4 style="color: var(--dark-color); margin-bottom: 15px;">Détails par agent</h4>
                             <table class="table" style="margin-bottom: 25px;">
-                                <thead><tr><th>Agent</th><th>Tickets</th><th>Ventes</th><th>Moyenne par ticket</th></tr></thead>
+                                <thead>
+                                    <tr>
+                                        <th>Agent</th>
+                                        <th>Tickets</th>
+                                        <th>Ventes</th>
+                                        <th>Moyenne par ticket</th>
+                                    </tr>
+                                </thead>
                                 <tbody>
                         `;
+                        
                         report.agents.forEach(agent => {
                             const avg = agent.tickets > 0 ? agent.sales / agent.tickets : 0;
-                            html += `<tr><td>${agent.name}</td><td>${agent.tickets}</td><td>${agent.sales.toLocaleString()} HTG</td><td>${avg.toLocaleString()} HTG</td></tr>`;
+                            html += `
+                                <tr>
+                                    <td>${agent.name}</td>
+                                    <td>${agent.tickets}</td>
+                                    <td>${agent.sales.toLocaleString()} HTG</td>
+                                    <td>${avg.toLocaleString()} HTG</td>
+                                </tr>
+                            `;
                         });
+                        
                         html += `</tbody></table>`;
                     }
-                    html += `<div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #dee2e6; font-size: 0.9rem; color: #6c757d;">Rapport généré le ${new Date().toLocaleString('fr-FR')}</div>`;
+                    
+                    html += `
+                        <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #dee2e6; font-size: 0.9rem; color: #6c757d;">
+                            Rapport généré le ${new Date().toLocaleString('fr-FR')}
+                        </div>
+                    `;
+                    
                     results.innerHTML = html;
                     loading.style.display = 'none';
                     results.style.display = 'block';
@@ -3665,39 +3953,78 @@
                 showNotification('Erreur de connexion au serveur', 'error');
             }
         }
-
+        
         async function generateMonthlyReport() {
             const loading = document.getElementById('monthly-report-loading');
             const results = document.getElementById('monthly-report-results');
-            if (!loading || !results) return;
+            
             loading.style.display = 'flex';
             results.style.display = 'none';
+            
             try {
                 const month = document.getElementById('report-monthly-date').value || new Date().toISOString().slice(0, 7);
+                
                 const response = await fetch(`${API_BASE_URL}/api/reports/monthly?month=${month}`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     const report = data.report;
+                    
                     let html = `
                         <div style="margin-bottom: 25px;">
                             <h3 style="color: var(--dark-color); margin-bottom: 15px;">Rapport mensuel - ${month}</h3>
                             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
-                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px;"><div style="font-size: 0.9rem; color: #6c757d; margin-bottom: 5px;">Tickets vendus</div><div style="font-weight: bold; color: var(--dark-color);">${report.totalTickets}</div></div>
-                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px;"><div style="font-size: 0.9rem; color: #6c757d; margin-bottom: 5px;">Ventes totales</div><div style="font-weight: bold; color: var(--dark-color);">${report.totalSales.toLocaleString()} HTG</div></div>
+                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px;">
+                                    <div style="font-size: 0.9rem; color: #6c757d; margin-bottom: 5px;">Tickets vendus</div>
+                                    <div style="font-weight: bold; color: var(--dark-color);">${report.totalTickets}</div>
+                                </div>
+                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px;">
+                                    <div style="font-size: 0.9rem; color: #6c757d; margin-bottom: 5px;">Ventes totales</div>
+                                    <div style="font-weight: bold; color: var(--dark-color);">${report.totalSales.toLocaleString()} HTG</div>
+                                </div>
                             </div>
                         </div>
                     `;
+                    
                     if (report.daily && report.daily.length > 0) {
-                        html += `<h4 style="color: var(--dark-color); margin-bottom: 15px;">Évolution quotidienne</h4><table class="table" style="margin-bottom: 25px;"><thead><tr><th>Date</th><th>Tickets</th><th>Ventes</th><th>Moyenne</th></tr></thead><tbody>`;
+                        html += `
+                            <h4 style="color: var(--dark-color); margin-bottom: 15px;">Évolution quotidienne</h4>
+                            <table class="table" style="margin-bottom: 25px;">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Tickets</th>
+                                        <th>Ventes</th>
+                                        <th>Moyenne</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        
                         report.daily.forEach(day => {
                             const avg = day.tickets > 0 ? day.sales / day.tickets : 0;
-                            html += `<tr><td>${day.date}</td><td>${day.tickets}</td><td>${day.sales.toLocaleString()} HTG</td><td>${avg.toLocaleString()} HTG</td></tr>`;
+                            html += `
+                                <tr>
+                                    <td>${day.date}</td>
+                                    <td>${day.tickets}</td>
+                                    <td>${day.sales.toLocaleString()} HTG</td>
+                                    <td>${avg.toLocaleString()} HTG</td>
+                                </tr>
+                            `;
                         });
+                        
                         html += `</tbody></table>`;
                     }
-                    html += `<div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #dee2e6; font-size: 0.9rem; color: #6c757d;">Rapport généré le ${new Date().toLocaleString('fr-FR')}</div>`;
+                    
+                    html += `
+                        <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #dee2e6; font-size: 0.9rem; color: #6c757d;">
+                            Rapport généré le ${new Date().toLocaleString('fr-FR')}
+                        </div>
+                    `;
+                    
                     results.innerHTML = html;
                     loading.style.display = 'none';
                     results.style.display = 'block';
@@ -3711,54 +4038,107 @@
                 showNotification('Erreur de connexion au serveur', 'error');
             }
         }
-
+        
         async function generateAgentReport() {
             const loading = document.getElementById('agent-report-loading');
             const results = document.getElementById('agent-report-results');
-            if (!loading || !results) return;
+            
             loading.style.display = 'flex';
             results.style.display = 'none';
+            
             try {
                 const agentId = document.getElementById('report-agent-select').value;
                 const period = document.getElementById('report-agent-period').value;
+                
                 if (!agentId) {
                     showNotification('Veuillez sélectionner un agent', 'warning');
                     loading.style.display = 'none';
                     return;
                 }
+                
                 const response = await fetch(`${API_BASE_URL}/api/reports/agent?agentId=${agentId}&period=${period}`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     const report = data.report;
+                    
                     let html = `
                         <div style="margin-bottom: 25px;">
                             <h3 style="color: var(--dark-color); margin-bottom: 15px;">Rapport agent - ${report.agent.name}</h3>
                             <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 20px;">
-                                <div style="width: 60px; height: 60px; background-color: #f8f9fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--primary-color);"><i class="fas fa-user"></i></div>
+                                <div style="width: 60px; height: 60px; background-color: #f8f9fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--primary-color);">
+                                    <i class="fas fa-user"></i>
+                                </div>
                                 <div>
                                     <h4 style="margin: 0 0 5px 0; color: var(--dark-color);">${report.agent.name}</h4>
-                                    <p style="margin: 0; color: #6c757d;"><i class="fas fa-user-tag"></i> ${report.agent.username}<br><i class="fas fa-calendar"></i> Période: ${period === 'today' ? 'Aujourd\'hui' : period === 'week' ? 'Cette semaine' : 'Ce mois'}</p>
+                                    <p style="margin: 0; color: #6c757d;">
+                                        <i class="fas fa-user-tag"></i> ${report.agent.username}
+                                        <br>
+                                        <i class="fas fa-calendar"></i> Période: ${period === 'today' ? 'Aujourd\'hui' : period === 'week' ? 'Cette semaine' : 'Ce mois'}
+                                    </p>
                                 </div>
                             </div>
                             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-bottom: 20px;">
-                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px;"><div style="font-size: 0.9rem; color: #6c757d; margin-bottom: 5px;">Tickets vendus</div><div style="font-weight: bold; color: var(--dark-color);">${report.totalTickets}</div></div>
-                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px;"><div style="font-size: 0.9rem; color: #6c757d; margin-bottom: 5px;">Ventes totales</div><div style="font-weight: bold; color: var(--dark-color);">${report.totalSales.toLocaleString()} HTG</div></div>
+                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px;">
+                                    <div style="font-size: 0.9rem; color: #6c757d; margin-bottom: 5px;">Tickets vendus</div>
+                                    <div style="font-weight: bold; color: var(--dark-color);">${report.totalTickets}</div>
+                                </div>
+                                <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px;">
+                                    <div style="font-size: 0.9rem; color: #6c757d; margin-bottom: 5px;">Ventes totales</div>
+                                    <div style="font-weight: bold; color: var(--dark-color);">${report.totalSales.toLocaleString()} HTG</div>
+                                </div>
                             </div>
                         </div>
                     `;
+                    
                     if (report.tickets && report.tickets.length > 0) {
-                        html += `<h4 style="color: var(--dark-color); margin-bottom: 15px;">Détails des tickets</h4><table class="table" style="margin-bottom: 25px;"><thead><tr><th>Numéro</th><th>Tirage</th><th>Date</th><th>Montant</th></tr></thead><tbody>`;
+                        html += `
+                            <h4 style="color: var(--dark-color); margin-bottom: 15px;">Détails des tickets</h4>
+                            <table class="table" style="margin-bottom: 25px;">
+                                <thead>
+                                    <tr>
+                                        <th>Numéro</th>
+                                        <th>Tirage</th>
+                                        <th>Date</th>
+                                        <th>Montant</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+                        
                         report.tickets.slice(0, 10).forEach(ticket => {
-                            html += `<tr><td>#${ticket.number}</td><td>${ticket.draw} (${ticket.draw_time})</td><td>${new Date(ticket.date).toLocaleDateString('fr-FR')}</td><td>${ticket.total.toLocaleString()} HTG</td></tr>`;
+                            html += `
+                                <tr>
+                                    <td>#${ticket.number}</td>
+                                    <td>${ticket.draw} (${ticket.draw_time})</td>
+                                    <td>${new Date(ticket.date).toLocaleDateString('fr-FR')}</td>
+                                    <td>${ticket.total.toLocaleString()} HTG</td>
+                                </tr>
+                            `;
                         });
+                        
                         if (report.tickets.length > 10) {
-                            html += `<tr><td colspan="4" style="text-align: center; color: #6c757d;">... et ${report.tickets.length - 10} autres tickets</td></tr>`;
+                            html += `
+                                <tr>
+                                    <td colspan="4" style="text-align: center; color: #6c757d;">
+                                        ... et ${report.tickets.length - 10} autres tickets
+                                    </td>
+                                </tr>
+                            `;
                         }
+                        
                         html += `</tbody></table>`;
                     }
-                    html += `<div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #dee2e6; font-size: 0.9rem; color: #6c757d;">Rapport généré le ${new Date().toLocaleString('fr-FR')}</div>`;
+                    
+                    html += `
+                        <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #dee2e6; font-size: 0.9rem; color: #6c757d;">
+                            Rapport généré le ${new Date().toLocaleString('fr-FR')}
+                        </div>
+                    `;
+                    
                     results.innerHTML = html;
                     loading.style.display = 'none';
                     results.style.display = 'block';
@@ -3772,59 +4152,46 @@
                 showNotification('Erreur de connexion au serveur', 'error');
             }
         }
-
+        
         function filterUsers() {
-            const searchTerm = document.getElementById('search-users')?.value.toLowerCase() || '';
+            const searchTerm = document.getElementById('search-users').value.toLowerCase();
             const rows = document.querySelectorAll('#users-table-body tr');
+            
             rows.forEach(row => {
-                row.style.display = row.textContent.toLowerCase().includes(searchTerm) ? '' : 'none';
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
             });
         }
-
+        
         function filterTickets() {
-            const searchTerm = document.getElementById('search-tickets')?.value.toLowerCase() || '';
+            const searchTerm = document.getElementById('search-tickets').value.toLowerCase();
             const rows = document.querySelectorAll('#tickets-table-body tr');
+            
             rows.forEach(row => {
-                row.style.display = row.textContent.toLowerCase().includes(searchTerm) ? '' : 'none';
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
             });
         }
-
+        
         function filterAgents() {
-            const searchTerm = document.getElementById('search-agents')?.value.toLowerCase() || '';
+            const searchTerm = document.getElementById('search-agents').value.toLowerCase();
             const rows = document.querySelectorAll('#agents-list-table-body tr');
+            
             rows.forEach(row => {
-                row.style.display = row.textContent.toLowerCase().includes(searchTerm) ? '' : 'none';
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
             });
         }
-
-        function setupMultiplierSliders() {
-            const sliders = [
-                { id: 'borlette-first', valueId: 'borlette-first-value' },
-                { id: 'borlette-second', valueId: 'borlette-second-value' },
-                { id: 'borlette-third', valueId: 'borlette-third-value' },
-                { id: 'lotto3', valueId: 'lotto3-value' },
-                { id: 'lotto4', valueId: 'lotto4-value' },
-                { id: 'lotto5', valueId: 'lotto5-value' },
-                { id: 'grap', valueId: 'grap-value' },
-                { id: 'marriage', valueId: 'marriage-value' }
-            ];
-            sliders.forEach(slider => {
-                const sliderElement = document.getElementById(slider.id);
-                const valueElement = document.getElementById(slider.valueId);
-                if (sliderElement && valueElement) {
-                    sliderElement.addEventListener('input', function() {
-                        valueElement.textContent = this.value;
-                    });
-                }
-            });
-        }
-
+        
         function refreshData() {
             const refreshBtn = document.getElementById('refresh-btn');
             const originalHtml = refreshBtn.innerHTML;
+            
             refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             refreshBtn.disabled = true;
-            const activeSection = document.querySelector('.section-content.active')?.id;
+            
+            const activeSection = document.querySelector('.section-content.active').id;
+            
             switch(activeSection) {
                 case 'dashboard-section':
                     loadDashboardData();
@@ -3839,10 +4206,18 @@
                     if (activeTab) {
                         const tabId = activeTab.getAttribute('data-ticket-tab');
                         switch(tabId) {
-                            case 'today': loadTodayTickets(); break;
-                            case 'pending': loadPendingTickets(); break;
-                            case 'winning': loadWinningTickets(); break;
-                            case 'all': loadAllTickets(); break;
+                            case 'today':
+                                loadTodayTickets();
+                                break;
+                            case 'pending':
+                                loadPendingTickets();
+                                break;
+                            case 'winning':
+                                loadWinningTickets();
+                                break;
+                            case 'all':
+                                loadAllTickets();
+                                break;
                         }
                     }
                     break;
@@ -3856,13 +4231,43 @@
                     loadActivities();
                     break;
             }
+            
             setTimeout(() => {
                 refreshBtn.innerHTML = originalHtml;
                 refreshBtn.disabled = false;
                 showNotification('Données rafraîchies', 'success');
             }, 2000);
         }
-
+        
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            
+            let icon = 'fas fa-info-circle';
+            if (type === 'success') icon = 'fas fa-check-circle';
+            if (type === 'error') icon = 'fas fa-times-circle';
+            if (type === 'warning') icon = 'fas fa-exclamation-triangle';
+            
+            notification.innerHTML = `
+                <i class="${icon}"></i>
+                <span>${message}</span>
+                <button style="background: none; border: none; color: inherit; margin-left: auto; cursor: pointer;" 
+                        onclick="this.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            container.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+        
         function logout() {
             if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
                 localStorage.removeItem('nova_token');
@@ -3871,36 +4276,44 @@
                 redirectToLogin();
             }
         }
-
+        
         // --- Fonctions pour les restrictions (inchangées) ---
+        
         async function loadRestrictions() {
             const loading = document.getElementById('restrictions-loading');
             const table = document.getElementById('restrictions-table');
             const empty = document.getElementById('restrictions-empty');
             const tbody = document.getElementById('restrictions-table-body');
-            if (!loading || !table || !empty || !tbody) return;
+            
             loading.style.display = 'flex';
             table.style.display = 'none';
             empty.style.display = 'none';
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/restrictions?subsystemId=${currentSubsystem._id}`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     restrictionsList = data.restrictions || [];
+                    
                     if (restrictionsList.length === 0) {
                         loading.style.display = 'none';
                         empty.style.display = 'block';
                         return;
                     }
+                    
                     tbody.innerHTML = '';
+                    
                     restrictionsList.forEach(restriction => {
                         const row = document.createElement('tr');
                         const typeText = restriction.type === 'block' ? 'Bloqué' : 'Limité';
                         const limitDisplay = restriction.type === 'limit' ? restriction.limitAmount + ' HTG' : '—';
                         const drawText = restriction.draw === 'all' ? 'Tous' : restriction.draw;
                         const timeText = restriction.time === 'all' ? 'Toutes' : (restriction.time === 'morning' ? 'Matin' : 'Soir');
+                        
                         row.innerHTML = `
                             <td><strong>${restriction.number}</strong></td>
                             <td>${typeText}</td>
@@ -3910,13 +4323,19 @@
                             <td>${new Date(restriction.createdAt).toLocaleDateString('fr-FR')}</td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="action-btn edit" onclick="editRestriction('${restriction._id}')" title="Modifier"><i class="fas fa-edit"></i></button>
-                                    <button class="action-btn delete" onclick="deleteRestriction('${restriction._id}')" title="Supprimer"><i class="fas fa-trash"></i></button>
+                                    <button class="action-btn edit" onclick="editRestriction('${restriction._id}')" title="Modifier">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="action-btn delete" onclick="deleteRestriction('${restriction._id}')" title="Supprimer">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
                             </td>
                         `;
+                        
                         tbody.appendChild(row);
                     });
+                    
                     loading.style.display = 'none';
                     table.style.display = 'table';
                 } else {
@@ -3931,87 +4350,82 @@
                 showNotification('Erreur de connexion au serveur', 'error');
             }
         }
-
+        
         function showAddRestrictionModal() {
-            document.getElementById('add-restriction-modal')?.classList.add('active');
-            document.getElementById('add-restriction-form')?.reset();
+            document.getElementById('add-restriction-modal').classList.add('active');
+            document.getElementById('add-restriction-form').reset();
             toggleRestrictionLimitField();
         }
-
+        
         function hideAddRestrictionModal() {
-            document.getElementById('add-restriction-modal')?.classList.remove('active');
+            document.getElementById('add-restriction-modal').classList.remove('active');
         }
-
+        
         window.editRestriction = async function(restrictionId) {
             const restriction = restrictionsList.find(r => r._id === restrictionId);
             if (!restriction) {
                 showNotification('Restriction non trouvée', 'error');
                 return;
             }
+            
             document.getElementById('edit-restriction-id').value = restriction._id;
             document.getElementById('edit-restriction-number').value = restriction.number;
             document.getElementById('edit-restriction-type').value = restriction.type;
             document.getElementById('edit-restriction-limit').value = restriction.limitAmount || '';
             document.getElementById('edit-restriction-draw').value = restriction.draw || 'all';
             document.getElementById('edit-restriction-time').value = restriction.time || 'all';
+            
             toggleEditRestrictionLimitField();
-            document.getElementById('edit-restriction-modal')?.classList.add('active');
+            document.getElementById('edit-restriction-modal').classList.add('active');
         };
-
+        
         function hideEditRestrictionModal() {
-            document.getElementById('edit-restriction-modal')?.classList.remove('active');
+            document.getElementById('edit-restriction-modal').classList.remove('active');
         }
-
-        function toggleRestrictionLimitField() {
-            const type = document.getElementById('restriction-type')?.value;
-            const limitGroup = document.getElementById('restriction-limit-group');
-            if (type === 'limit') {
-                limitGroup.style.display = 'block';
-                document.getElementById('restriction-limit').setAttribute('required', 'required');
-            } else {
-                limitGroup.style.display = 'none';
-                document.getElementById('restriction-limit').removeAttribute('required');
-            }
-        }
-
-        function toggleEditRestrictionLimitField() {
-            const type = document.getElementById('edit-restriction-type')?.value;
-            const limitGroup = document.getElementById('edit-restriction-limit-group');
-            if (type === 'limit') {
-                limitGroup.style.display = 'block';
-                document.getElementById('edit-restriction-limit').setAttribute('required', 'required');
-            } else {
-                limitGroup.style.display = 'none';
-                document.getElementById('edit-restriction-limit').removeAttribute('required');
-            }
-        }
-
+        
         async function createRestriction(e) {
             e.preventDefault();
+            
             const number = document.getElementById('restriction-number').value.trim();
             const type = document.getElementById('restriction-type').value;
             const limit = type === 'limit' ? document.getElementById('restriction-limit').value : null;
             const draw = document.getElementById('restriction-draw').value;
             const time = document.getElementById('restriction-time').value;
+            
             if (!number) {
                 showNotification('Veuillez saisir un numéro', 'warning');
                 return;
             }
+            
             if (type === 'limit' && (!limit || limit <= 0)) {
                 showNotification('Veuillez saisir une limite valide', 'warning');
                 return;
             }
+            
             try {
                 const submitBtn = e.target.querySelector('button[type="submit"]');
                 const originalText = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
                 submitBtn.disabled = true;
+                
                 const response = await fetch(`${API_BASE_URL}/api/restrictions`, {
                     method: 'POST',
-                    headers: { 'x-auth-token': subsystemToken, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ number, type, limitAmount: limit, draw, time, subsystemId: currentSubsystem._id })
+                    headers: {
+                        'x-auth-token': subsystemToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        number,
+                        type,
+                        limitAmount: limit,
+                        draw,
+                        time,
+                        subsystemId: currentSubsystem._id
+                    })
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     showNotification('Restriction créée avec succès', 'success');
                     hideAddRestrictionModal();
@@ -4028,34 +4442,50 @@
                 submitBtn.disabled = false;
             }
         }
-
+        
         async function updateRestriction(e) {
             e.preventDefault();
+            
             const id = document.getElementById('edit-restriction-id').value;
             const number = document.getElementById('edit-restriction-number').value.trim();
             const type = document.getElementById('edit-restriction-type').value;
             const limit = type === 'limit' ? document.getElementById('edit-restriction-limit').value : null;
             const draw = document.getElementById('edit-restriction-draw').value;
             const time = document.getElementById('edit-restriction-time').value;
+            
             if (!number) {
                 showNotification('Veuillez saisir un numéro', 'warning');
                 return;
             }
+            
             if (type === 'limit' && (!limit || limit <= 0)) {
                 showNotification('Veuillez saisir une limite valide', 'warning');
                 return;
             }
+            
             try {
                 const submitBtn = e.target.querySelector('button[type="submit"]');
                 const originalText = submitBtn.innerHTML;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sauvegarde...';
                 submitBtn.disabled = true;
+                
                 const response = await fetch(`${API_BASE_URL}/api/restrictions/${id}`, {
                     method: 'PUT',
-                    headers: { 'x-auth-token': subsystemToken, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ number, type, limitAmount: limit, draw, time })
+                    headers: {
+                        'x-auth-token': subsystemToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        number,
+                        type,
+                        limitAmount: limit,
+                        draw,
+                        time
+                    })
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     showNotification('Restriction modifiée avec succès', 'success');
                     hideEditRestrictionModal();
@@ -4072,15 +4502,20 @@
                 submitBtn.disabled = false;
             }
         }
-
+        
         window.deleteRestriction = async function(restrictionId) {
-            if (!confirm('Êtes-vous sûr de vouloir supprimer cette restriction ?')) return;
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette restriction ?')) {
+                return;
+            }
+            
             try {
                 const response = await fetch(`${API_BASE_URL}/api/restrictions/${restrictionId}`, {
                     method: 'DELETE',
                     headers: { 'x-auth-token': subsystemToken }
                 });
+                
                 const data = await response.json();
+                
                 if (data.success) {
                     showNotification('Restriction supprimée', 'success');
                     loadRestrictions();
@@ -4092,6 +4527,14 @@
                 showNotification('Erreur de connexion au serveur', 'error');
             }
         };
+        
+        document.getElementById('export-daily-report').addEventListener('click', function() {
+            showNotification('Fonctionnalité d\'export à implémenter', 'info');
+        });
+        
+        document.getElementById('export-monthly-report').addEventListener('click', function() {
+            showNotification('Fonctionnalité d\'export à implémenter', 'info');
+        });
     </script>
 </body>
 </html>
