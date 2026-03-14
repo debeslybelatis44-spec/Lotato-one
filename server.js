@@ -608,53 +608,99 @@ app.get('/api/subsystem/users', auth, authorize('subsystem'), async (req, res) =
   }
 });
 
-// *** Route de création d'agent ***
+// ==================== SUBSYSTEM - CRÉATION D'AGENT ====================
 app.post('/api/subsystem/users/create', auth, authorize('subsystem'), async (req, res) => {
   try {
     const { name, username, email, password } = req.body;
+    console.log('=== Création agent ===');
+    console.log('Données reçues:', { name, username, email, password: password ? '***' : undefined });
+
+    // Validation des champs obligatoires
     if (!name || !username || !password) {
+      console.log('Champs manquants');
       return res.status(400).json({ success: false, error: 'Champs manquants (nom, identifiant, mot de passe).' });
     }
 
+    // Vérifier que l'utilisateur connecté a un subsystem_id
+    if (!req.user.subsystem_id) {
+      console.error('Utilisateur connecté sans subsystem_id:', req.user._id);
+      return res.status(403).json({ success: false, error: 'Accès interdit : vous n\'êtes pas associé à un sous-système.' });
+    }
+
+    // Récupérer le sous-système
     const subsystem = await Subsystem.findById(req.user.subsystem_id);
-    if (!subsystem) return res.status(404).json({ success: false, error: 'Sous-système non trouvé.' });
+    if (!subsystem) {
+      console.error('Sous-système non trouvé pour id:', req.user.subsystem_id);
+      return res.status(404).json({ success: false, error: 'Sous-système non trouvé.' });
+    }
+    console.log('Sous-système trouvé:', subsystem.name, '| max_users =', subsystem.max_users);
 
-    // Vérifier le quota d'agents actifs
+    // Compter les agents actifs
     const activeCount = await User.countDocuments({ subsystem_id: subsystem._id, role: 'agent', is_active: true });
+    console.log('Agents actifs actuels:', activeCount);
+
+    // Vérifier le quota
     if (activeCount >= subsystem.max_users) {
-      return res.status(400).json({ success: false, error: 'Quota d\'agents atteint.' });
+      console.log('Quota atteint');
+      return res.status(400).json({ success: false, error: `Quota d'agents atteint (maximum: ${subsystem.max_users}).` });
     }
 
-    // Vérifier l'unicité du username
-    const existing = await User.findOne({ username });
-    if (existing) {
-      return res.status(400).json({ success: false, error: 'Nom d\'utilisateur déjà pris.' });
+    // Vérifier l'unicité du username (global)
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      console.log('Username déjà utilisé:', username);
+      return res.status(400).json({ success: false, error: `Le nom d'utilisateur "${username}" est déjà pris.` });
     }
 
+    // Hacher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({
+
+    // Créer l'agent
+    const newUser = new User({
       username,
       password: hashedPassword,
       name,
       email: email || '',
       role: 'agent',
       subsystem_id: subsystem._id,
-      is_active: true
+      is_active: true,
+      created_at: new Date()
     });
-    await user.save();
+
+    // Sauvegarder
+    await newUser.save();
+    console.log('Agent créé avec succès, ID:', newUser._id);
 
     // Mettre à jour les stats du sous-système (optionnel)
     subsystem.stats.active_users = activeCount + 1;
     await subsystem.save();
 
-    res.json({ 
-      success: true, 
-      user: { id: user._id, username, name, email, created_at: user.created_at },
+    // Répondre avec les informations (sans mot de passe)
+    res.json({
+      success: true,
+      user: {
+        id: newUser._id,
+        username: newUser.username,
+        name: newUser.name,
+        email: newUser.email,
+        created_at: newUser.created_at
+      },
       message: 'Agent créé avec succès'
     });
+
   } catch (err) {
-    console.error('Erreur création agent:', err);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
+    console.error('ERREUR dans création agent:', err);
+    // Gestion des erreurs MongoDB (duplication, validation)
+    if (err.code === 11000) {
+      // Erreur de duplication (peut-être sur username ou email si unique)
+      const field = Object.keys(err.keyPattern)[0];
+      return res.status(400).json({ success: false, error: `Le champ ${field} est déjà utilisé.` });
+    }
+    if (err.name === 'ValidationError') {
+      const messages = Object.values(err.errors).map(e => e.message);
+      return res.status(400).json({ success: false, error: messages.join(', ') });
+    }
+    res.status(500).json({ success: false, error: 'Erreur serveur interne.' });
   }
 });
 
