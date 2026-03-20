@@ -2016,6 +2016,7 @@
                 <form id="enter-result-form">
                     <input type="hidden" id="result-draw">
                     <input type="hidden" id="result-time">
+                    <input type="hidden" id="result-id" value=""> <!-- Pour stocker l'ID en édition -->
                     
                     <div class="form-group">
                         <label class="form-label">Date *</label>
@@ -2238,6 +2239,9 @@
             checkSessionAndLoadData();
             setupEventListeners();
             setupMultiplierSliders();
+            
+            // Charger les multiplicateurs sauvegardés
+            loadMultipliers();
         });
         
         function updateUserInfo() {
@@ -2431,6 +2435,52 @@
                     });
                 }
             });
+        }
+        
+        async function loadMultipliers() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/system/settings/multipliers`, {
+                    headers: { 'x-auth-token': subsystemToken }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    const m = data.multipliers;
+                    if (m.borlette_first) {
+                        document.getElementById('borlette-first').value = m.borlette_first;
+                        document.getElementById('borlette-first-value').textContent = m.borlette_first;
+                    }
+                    if (m.borlette_second) {
+                        document.getElementById('borlette-second').value = m.borlette_second;
+                        document.getElementById('borlette-second-value').textContent = m.borlette_second;
+                    }
+                    if (m.borlette_third) {
+                        document.getElementById('borlette-third').value = m.borlette_third;
+                        document.getElementById('borlette-third-value').textContent = m.borlette_third;
+                    }
+                    if (m.lotto3) {
+                        document.getElementById('lotto3').value = m.lotto3;
+                        document.getElementById('lotto3-value').textContent = m.lotto3;
+                    }
+                    if (m.lotto4) {
+                        document.getElementById('lotto4').value = m.lotto4;
+                        document.getElementById('lotto4-value').textContent = m.lotto4;
+                    }
+                    if (m.lotto5) {
+                        document.getElementById('lotto5').value = m.lotto5;
+                        document.getElementById('lotto5-value').textContent = m.lotto5;
+                    }
+                    if (m.grap) {
+                        document.getElementById('grap').value = m.grap;
+                        document.getElementById('grap-value').textContent = m.grap;
+                    }
+                    if (m.marriage) {
+                        document.getElementById('marriage').value = m.marriage;
+                        document.getElementById('marriage-value').textContent = m.marriage;
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur chargement multiplicateurs:', error);
+            }
         }
         
         function showSection(sectionId) {
@@ -2710,10 +2760,10 @@
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="action-btn view" onclick="viewTicketDetails('${ticket.id}')" title="Voir détails">
+                                    <button class="action-btn view" onclick="viewTicketDetails('${ticket._id}')" title="Voir détails">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button class="action-btn" onclick="syncTicket('${ticket.id}')" title="Synchroniser">
+                                    <button class="action-btn" onclick="syncTicket('${ticket._id}')" title="Synchroniser">
                                         <i class="fas fa-sync-alt"></i>
                                     </button>
                                 </div>
@@ -2801,10 +2851,10 @@
                             <td>${ticket.total.toLocaleString()} HTG</td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="action-btn view" onclick="viewTicketDetails('${ticket.id}')" title="Voir détails">
+                                    <button class="action-btn view" onclick="viewTicketDetails('${ticket._id}')" title="Voir détails">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button class="action-btn" onclick="printTicket('${ticket.id}')" title="Imprimer">
+                                    <button class="action-btn" onclick="printTicket('${ticket._id}')" title="Imprimer">
                                         <i class="fas fa-print"></i>
                                     </button>
                                 </div>
@@ -2872,10 +2922,10 @@
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="action-btn view" onclick="viewTicketDetails('${ticket.id}')" title="Voir détails">
+                                    <button class="action-btn view" onclick="viewTicketDetails('${ticket._id}')" title="Voir détails">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button class="action-btn" onclick="syncTicket('${ticket.id}')" title="Synchroniser">
+                                    <button class="action-btn" onclick="syncTicket('${ticket._id}')" title="Synchroniser">
                                         <i class="fas fa-sync-alt"></i>
                                     </button>
                                 </div>
@@ -2959,13 +3009,13 @@
                             </td>
                             <td>
                                 <div class="action-buttons">
-                                    <button class="action-btn view" onclick="viewTicketDetails('${ticket.id}')" title="Voir détails">
+                                    <button class="action-btn view" onclick="viewTicketDetails('${ticket._id}')" title="Voir détails">
                                         <i class="fas fa-eye"></i>
                                     </button>
-                                    <button class="action-btn" onclick="printTicket('${ticket.id}')" title="Imprimer">
+                                    <button class="action-btn" onclick="printTicket('${ticket._id}')" title="Imprimer">
                                         <i class="fas fa-print"></i>
                                     </button>
-                                    <button class="action-btn delete" onclick="deleteTicket('${ticket.id}')" title="Supprimer">
+                                    <button class="action-btn delete" onclick="deleteTicket('${ticket._id}')" title="Supprimer">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -3022,7 +3072,8 @@
             empty.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_BASE_URL}/api/results?subsystemId=${currentSubsystem._id}&limit=10`, {
+                // On n'envoie plus subsystemId (inutile)
+                const response = await fetch(`${API_BASE_URL}/api/results?limit=10`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
                 
@@ -3115,7 +3166,7 @@
                                 <i class="${icon}"></i>
                             </div>
                             <div class="activity-content">
-                                <div class="activity-title">${activity.user} - ${activity.action}</div>
+                                <div class="activity-title">${activity.username || 'Inconnu'} - ${activity.action}</div>
                                 <div class="activity-details">${activity.details}</div>
                                 <div class="activity-time">
                                     ${new Date(activity.timestamp).toLocaleString('fr-FR')}
@@ -3144,68 +3195,60 @@
         
         // ========== FONCTION CREATEUSER AMÉLIORÉE ==========
         async function createUser(e) {
-  e.preventDefault();
-  
-  const name = document.getElementById('user-name-input').value.trim();
-  const username = document.getElementById('user-username').value.trim();
-  const email = document.getElementById('user-email').value.trim();
-  const password = document.getElementById('user-password').value;
-  const passwordConfirm = document.getElementById('user-password-confirm').value;
-  
-  if (!name || !username || !password) {
-    alert('Veuillez remplir tous les champs obligatoires');
-    return;
-  }
-  
-  if (password !== passwordConfirm) {
-    alert('Les mots de passe ne correspondent pas');
-    return;
-  }
-  
-  try {
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
-    submitBtn.disabled = true;
-    
-    const response = await fetch(`${API_BASE_URL}/api/subsystem/users/create`, {
-      method: 'POST',
-      headers: {
-        'x-auth-token': subsystemToken,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ name, username, email, password })
-    });
-    
-    // Vérifier le type de contenu
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const text = await response.text();
-      alert('Réponse non JSON reçue : ' + text);
-      return;
-    }
-    
-    const data = await response.json();
-    alert('Réponse du serveur : ' + JSON.stringify(data));
-    
-    if (data.success) {
-      alert(`✅ Agent créé !\nIdentifiant: ${username}\nMot de passe: ${password}`);
-      hideAddUserModal();
-      loadDashboardData();
-      loadRecentAgents();
-      loadAllAgents();
-    } else {
-      alert('Erreur: ' + (data.error || 'Erreur inconnue'));
-    }
-  } catch (error) {
-    console.error('Erreur:', error);
-    alert('Erreur de connexion : ' + error.message);
-  } finally {
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-    submitBtn.innerHTML = originalText;
-    submitBtn.disabled = false;
-  }
-}
+            e.preventDefault();
+            
+            const name = document.getElementById('user-name-input').value.trim();
+            const username = document.getElementById('user-username').value.trim();
+            const email = document.getElementById('user-email').value.trim();
+            const password = document.getElementById('user-password').value;
+            const passwordConfirm = document.getElementById('user-password-confirm').value;
+            
+            if (!name || !username || !password) {
+                showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
+                return;
+            }
+            
+            if (password !== passwordConfirm) {
+                showNotification('Les mots de passe ne correspondent pas', 'warning');
+                return;
+            }
+            
+            try {
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
+                submitBtn.disabled = true;
+                
+                const response = await fetch(`${API_BASE_URL}/api/subsystem/users/create`, {
+                    method: 'POST',
+                    headers: {
+                        'x-auth-token': subsystemToken,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, username, email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification(`✅ Agent créé avec succès ! Identifiant: ${username}`, 'success');
+                    hideAddUserModal();
+                    loadDashboardData();
+                    loadRecentAgents();
+                    loadAllAgents();
+                } else {
+                    showNotification('Erreur: ' + (data.error || 'Erreur inconnue'), 'error');
+                }
+            } catch (error) {
+                console.error('Erreur:', error);
+                showNotification('Erreur de connexion : ' + error.message, 'error');
+            } finally {
+                const submitBtn = e.target.querySelector('button[type="submit"]');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        }
+        
         window.editUser = async function(userId) {
             try {
                 const user = agentsList.find(u => u._id === userId);
@@ -3517,7 +3560,7 @@
                     let betsHtml = '';
                     if (ticket.bets && ticket.bets.length) {
                         ticket.bets.forEach(bet => {
-                            betsHtml += `<div class="bet-item">${bet.type}: ${bet.numbers} - ${bet.amount} HTG</div>`;
+                            betsHtml += `<div class="bet-item">${bet.type}: ${bet.number} - ${bet.amount} HTG</div>`;
                         });
                     } else {
                         betsHtml = '<p>Aucun pari détaillé</p>';
@@ -3598,6 +3641,7 @@
             
             document.getElementById('result-draw').value = draw;
             document.getElementById('result-time').value = time;
+            document.getElementById('result-id').value = ''; // Réinitialiser l'ID d'édition
             
             document.getElementById('result-lotto3').value = '';
             document.getElementById('result-lot2').value = '';
@@ -3617,6 +3661,7 @@
             const lot2 = document.getElementById('result-lot2').value.trim();
             const lot3 = document.getElementById('result-lot3').value.trim();
             const verified = document.getElementById('result-verified').checked;
+            const resultId = document.getElementById('result-id').value; // Si présent, c'est une édition
             
             if (!draw || !time || !date || !lotto3 || !lot2 || !lot3) {
                 showNotification('Veuillez remplir tous les champs', 'warning');
@@ -3644,8 +3689,18 @@
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
                 submitBtn.disabled = true;
                 
-                const response = await fetch(`${API_BASE_URL}/api/results`, {
-                    method: 'POST',
+                let url = `${API_BASE_URL}/api/results`;
+                let method = 'POST';
+                
+                // Si on a un ID, on utilise PUT pour modifier
+                if (resultId) {
+                    method = 'PUT';
+                    // Note : la route PUT du backend attend les critères dans le body, pas l'ID
+                    // On utilise donc la même URL et on envoie les champs d'identification
+                }
+                
+                const response = await fetch(url, {
+                    method: method,
                     headers: {
                         'x-auth-token': subsystemToken,
                         'Content-Type': 'application/json'
@@ -3657,8 +3712,8 @@
                         lot1,
                         lot2,
                         lot3,
-                        verified,
-                        subsystemId: currentSubsystem._id
+                        verified
+                        // subsystemId n'est pas nécessaire
                     })
                 });
                 
@@ -3693,15 +3748,15 @@
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success && data.result) {
-                    const result = data.result;
-                    // On doit remplir les champs : lotto3 doit être reconstitué ? Le backend ne stocke que lot1,lot2,lot3.
-                    // Pour simplifier, on ne pré-remplit pas, l'utilisateur ressaisit.
+                if (data.success && data.results.length > 0) {
+                    const result = data.results[0];
                     document.getElementById('result-date').value = result.date.split('T')[0];
                     document.getElementById('result-lot2').value = result.lot2 || '';
                     document.getElementById('result-lot3').value = result.lot3 || '';
                     document.getElementById('result-verified').checked = result.verified;
                     // On ne peut pas remplir lotto3 car on n'a que lot1 (2 chiffres). On laisse vide.
+                    // On stocke l'ID pour l'édition (même si non utilisé par le PUT)
+                    document.getElementById('result-id').value = result._id || 'edit';
                 }
             })
             .catch(error => console.error('Erreur chargement résultat:', error));
@@ -4272,7 +4327,8 @@
             empty.style.display = 'none';
             
             try {
-                const response = await fetch(`${API_BASE_URL}/api/restrictions?subsystemId=${currentSubsystem._id}`, {
+                // Plus de paramètre subsystemId
+                const response = await fetch(`${API_BASE_URL}/api/restrictions`, {
                     headers: { 'x-auth-token': subsystemToken }
                 });
                 
@@ -4401,8 +4457,8 @@
                         type,
                         limitAmount: limit,
                         draw,
-                        time,
-                        subsystemId: currentSubsystem._id
+                        time
+                        // subsystemId non nécessaire
                     })
                 });
                 
