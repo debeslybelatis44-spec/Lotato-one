@@ -325,7 +325,7 @@ function handleLogout() {
 }
 
 // ==========================================
-// 2. Sauvegarde d'un ticket (corrigée)
+// 2. Sauvegarde d'un ticket (corrigée avec gestion d'erreur)
 // ==========================================
 async function saveTicketAPI(ticket) {
     try {
@@ -440,7 +440,7 @@ async function saveHistoryAPI(historyRecord) {
 }
 
 // ==========================================
-// 3. Sauvegarde locale
+// 3. Sauvegarde locale (corrigée avec vérification de la réponse)
 // ==========================================
 async function saveTicket() {
     console.log("Sauvegarder fiche via API");
@@ -448,7 +448,13 @@ async function saveTicket() {
         showNotification("Pa gen okenn parye pou sove nan fiche a", "warning");
         return;
     }
-    
+
+    // Vérifier que currentAdmin est bien défini
+    if (!currentAdmin || !currentAdmin.id) {
+        showNotification("Erreur: utilisateur non identifié", "error");
+        return;
+    }
+
     const ticket = {
         id: Date.now().toString(),
         number: ticketNumber,
@@ -457,30 +463,34 @@ async function saveTicket() {
         drawTime: currentDrawTime,
         bets: [...activeBets],
         total: activeBets.reduce((sum, bet) => sum + bet.amount, 0),
-        agentName: currentAdmin ? currentAdmin.name : 'Agent',
-        agentId: currentAdmin ? currentAdmin.id : 1
+        agentName: currentAdmin.name,
+        agentId: currentAdmin.id
     };
-    
+
     try {
         const response = await saveTicketAPI(ticket);
-        
-        if (response && response.success && response.ticket && response.ticket._id) {
-            ticket._id = response.ticket._id;
+        console.log("Réponse API:", response);
+
+        // Vérifier explicitement le succès
+        if (response && response.success === true) {
+            // Sauvegarde locale seulement si l'API a réussi
+            if (response.ticket && response.ticket._id) {
+                ticket._id = response.ticket._id;
+            }
+            savedTickets.push(ticket);
+            ticketNumber++;
+            showNotification("Fiche sove avèk siksè!", "success");
+            activeBets = [];
+            updateBetsList();
+        } else {
+            // L'API a retourné une erreur
+            const errorMsg = response?.error || "Erreur inconnue du serveur";
+            showNotification(`Erreur: ${errorMsg}`, "error");
+            console.error("Erreur API:", response);
         }
-        
-        savedTickets.push(ticket);
-        ticketNumber++;
-        
-        showNotification("Fiche sove avèk siksè!", "success");
-        
-        activeBets = [];
-        updateBetsList();
-        
-        return response;
     } catch (error) {
         console.error('Erreur lors de la sauvegarde du ticket:', error);
-        showNotification("Erreur lors de la sauvegarde du ticket", "error");
-        throw error;
+        showNotification("Erreur de connexion au serveur", "error");
     }
 }
 
