@@ -94,20 +94,14 @@ const resultSchema = new mongoose.Schema({
 resultSchema.index({ subsystem_id: 1, draw_id: 1, draw_time: 1, date: 1 }, { unique: true });
 
 // Ticket
-const betSchema = new mongoose.Schema({
-  type: String, name: String, number: String, amount: Number, multiplier: Number,
-  isGroup: Boolean, details: Array, options: Object, perOptionAmount: Number,
-  isLotto4: Boolean, isLotto5: Boolean, isAuto: Boolean
-}, { _id: false });
-
 const ticketSchema = new mongoose.Schema({
   subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true },
   agent_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   agent_name: String,
   number: { type: Number, required: true },
   date: { type: Date, default: Date.now },
-  draw_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Draw' },
-  draw_time: String,
+  draw: String,          // nom du tirage (ex: "miami")
+  draw_time: String,     // "morning" ou "evening"
   bets: [betSchema],
   total: Number,
   status: { type: String, default: 'active' },
@@ -115,8 +109,6 @@ const ticketSchema = new mongoose.Schema({
   is_synced: { type: Boolean, default: true },
   synced_at: Date
 });
-ticketSchema.index({ subsystem_id: 1, date: -1 });
-ticketSchema.index({ agent_id: 1, date: -1 });
 
 // Multi‑tirage ticket
 const multiDrawTicketSchema = new mongoose.Schema({
@@ -1195,7 +1187,7 @@ app.get('/api/subsystem/reports', auth, authorize('subsystem'), async (req, res)
 // --- TICKETS (agents et sous-systèmes) ---
 app.post('/api/tickets', auth, authorize('agent', 'subsystem'), async (req, res) => {
   try {
-    const { subsystem_id, agent_id, agent_name, number, draw_id, draw_time, bets, total } = req.body;
+    const { subsystem_id, agent_id, agent_name, number, draw, draw_time, bets, total } = req.body;
     if (req.user.role === 'agent' && req.user._id.toString() !== agent_id) {
       return res.status(403).json({ success: false, error: 'Accès interdit.' });
     }
@@ -1208,7 +1200,7 @@ app.post('/api/tickets', auth, authorize('agent', 'subsystem'), async (req, res)
       agent_id,
       agent_name,
       number,
-      draw_id,
+      draw,
       draw_time,
       bets,
       total,
