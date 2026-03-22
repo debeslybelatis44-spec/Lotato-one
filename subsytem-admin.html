@@ -2312,6 +2312,13 @@
     }
 
     function setupEventListeners() {
+        // Vérification token au démarrage
+        if (!subsystemToken) {
+            console.warn('Aucun token trouvé, redirection...');
+            redirectToLogin();
+            return;
+        }
+
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -2373,7 +2380,17 @@
         document.getElementById('restriction-type').addEventListener('change', toggleRestrictionLimitField);
         document.getElementById('edit-restriction-type').addEventListener('change', toggleEditRestrictionLimitField);
 
-        document.getElementById('add-user-form').addEventListener('submit', createUser);
+        // Formulaire de création d'agent : écouteur renforcé
+        const addUserForm = document.getElementById('add-user-form');
+        if (addUserForm) {
+            addUserForm.addEventListener('submit', function(e) {
+                console.log('▶️ Formulaire d’ajout soumis');
+                createUser(e);
+            });
+        } else {
+            console.error('Formulaire add-user-form introuvable');
+        }
+
         document.getElementById('edit-user-form').addEventListener('submit', updateUser);
         document.getElementById('enter-result-form').addEventListener('submit', saveResult);
         document.getElementById('add-restriction-form').addEventListener('submit', createRestriction);
@@ -3069,7 +3086,6 @@
         empty.style.display = 'none';
 
         try {
-            // On n'envoie plus subsystemId (inutile)
             const response = await fetch(`${API_BASE_URL}/api/results?limit=10`, {
                 headers: { 'x-auth-token': subsystemToken }
             });
@@ -3190,9 +3206,16 @@
         document.getElementById('add-user-modal').classList.remove('active');
     }
 
-    // ========== FONCTION CREATEUSER AVEC LOGS DÉTAILLÉS ==========
+    // ========== FONCTION CREATEUSER CORRIGÉE ==========
     async function createUser(e) {
         e.preventDefault();
+
+        console.log('▶️ createUser déclenchée');
+
+        if (!subsystemToken) {
+            showNotification('Token d’authentification manquant. Veuillez vous reconnecter.', 'error');
+            return;
+        }
 
         const name = document.getElementById('user-name-input').value.trim();
         const username = document.getElementById('user-username').value.trim();
@@ -3200,7 +3223,7 @@
         const password = document.getElementById('user-password').value;
         const passwordConfirm = document.getElementById('user-password-confirm').value;
 
-        console.log('Création agent - données saisies:', { name, username, email, password: password ? '***' : undefined });
+        console.log('Données saisies :', { name, username, email, password: password ? '***' : undefined });
 
         if (!name || !username || !password) {
             showNotification('Veuillez remplir tous les champs obligatoires', 'warning');
@@ -3212,13 +3235,19 @@
             return;
         }
 
-        try {
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
-            submitBtn.disabled = true;
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (!submitBtn) {
+            console.error('Bouton submit non trouvé dans le formulaire');
+            showNotification('Erreur technique : bouton introuvable', 'error');
+            return;
+        }
 
-            console.log('Envoi de la requête vers /api/subsystem/users/create');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création...';
+        submitBtn.disabled = true;
+
+        try {
+            console.log('Envoi requête vers /api/subsystem/users/create');
             const response = await fetch(`${API_BASE_URL}/api/subsystem/users/create`, {
                 method: 'POST',
                 headers: {
@@ -3228,16 +3257,16 @@
                 body: JSON.stringify({ name, username, email, password })
             });
 
-            console.log('Statut de la réponse:', response.status);
+            console.log('Statut HTTP :', response.status);
             const responseText = await response.text();
-            console.log('Réponse brute du serveur:', responseText);
+            console.log('Réponse brute :', responseText);
 
             let data;
             try {
                 data = JSON.parse(responseText);
             } catch (parseError) {
-                console.error('Impossible de parser la réponse JSON:', parseError);
-                showNotification('Réponse serveur invalide (non JSON). Consultez la console.', 'error');
+                console.error('Erreur de parsing JSON :', parseError);
+                showNotification('Réponse serveur invalide (non JSON). Voir console.', 'error');
                 return;
             }
 
@@ -3248,14 +3277,13 @@
                 loadRecentAgents();
                 loadAllAgents();
             } else {
-                console.error('Erreur retournée par le serveur:', data.error);
-                showNotification('Erreur: ' + (data.error || 'Erreur inconnue'), 'error');
+                console.error('Erreur serveur :', data.error);
+                showNotification('Erreur : ' + (data.error || 'Erreur inconnue'), 'error');
             }
         } catch (error) {
-            console.error('Erreur réseau / exception:', error);
+            console.error('Erreur réseau / exception :', error);
             showNotification('Erreur de connexion : ' + error.message, 'error');
         } finally {
-            const submitBtn = e.target.querySelector('button[type="submit"]');
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
         }
@@ -3673,7 +3701,7 @@
         const lot2 = document.getElementById('result-lot2').value.trim();
         const lot3 = document.getElementById('result-lot3').value.trim();
         const verified = document.getElementById('result-verified').checked;
-        const resultId = document.getElementById('result-id').value; // Si présent, c'est une édition
+        const resultId = document.getElementById('result-id').value;
 
         if (!draw || !time || !date || !lotto3 || !lot2 || !lot3) {
             showNotification('Veuillez remplir tous les champs', 'warning');
@@ -3704,11 +3732,8 @@
             let url = `${API_BASE_URL}/api/results`;
             let method = 'POST';
 
-            // Si on a un ID, on utilise PUT pour modifier
             if (resultId) {
                 method = 'PUT';
-                // Note : la route PUT du backend attend les critères dans le body, pas l'ID
-                // On utilise donc la même URL et on envoie les champs d'identification
             }
 
             const response = await fetch(url, {
@@ -3725,7 +3750,6 @@
                     lot2,
                     lot3,
                     verified
-                    // subsystemId n'est pas nécessaire
                 })
             });
 
@@ -3766,8 +3790,6 @@
                 document.getElementById('result-lot2').value = result.lot2 || '';
                 document.getElementById('result-lot3').value = result.lot3 || '';
                 document.getElementById('result-verified').checked = result.verified;
-                // On ne peut pas remplir lotto3 car on n'a que lot1 (2 chiffres). On laisse vide.
-                // On stocke l'ID pour l'édition (même si non utilisé par le PUT)
                 document.getElementById('result-id').value = result._id || 'edit';
             }
         })
@@ -4338,7 +4360,6 @@
         empty.style.display = 'none';
 
         try {
-            // Plus de paramètre subsystemId
             const response = await fetch(`${API_BASE_URL}/api/restrictions`, {
                 headers: { 'x-auth-token': subsystemToken }
             });
@@ -4469,7 +4490,6 @@
                     limitAmount: limit,
                     draw,
                     time
-                    // subsystemId non nécessaire
                 })
             });
 
