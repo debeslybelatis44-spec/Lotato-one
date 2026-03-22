@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const path = require('path');
-const compression = require('compression'); // ajout compression gzip
+const compression = require('compression');
 
 // ==================== MODÈLES ====================
 
@@ -71,8 +71,8 @@ const subsystemSettingsSchema = new mongoose.Schema({
 
 // Tirage global (partagé)
 const drawSchema = new mongoose.Schema({
-  name: { type: String, required: true },      // ex: "Miami (Florida)"
-  key: { type: String, required: true, unique: true }, // ex: "miami"
+  name: { type: String, required: true },
+  key: { type: String, required: true, unique: true },
   times: {
     morning: { type: String, default: '12:00' },
     evening: { type: String, default: '18:00' }
@@ -93,7 +93,14 @@ const resultSchema = new mongoose.Schema({
 });
 resultSchema.index({ subsystem_id: 1, draw_id: 1, draw_time: 1, date: 1 }, { unique: true });
 
-// Ticket
+// Schéma de pari (betSchema) – doit être défini avant ticketSchema
+const betSchema = new mongoose.Schema({
+  type: String, name: String, number: String, amount: Number, multiplier: Number,
+  isGroup: Boolean, details: Array, options: Object, perOptionAmount: Number,
+  isLotto4: Boolean, isLotto5: Boolean, isAuto: Boolean
+}, { _id: false });
+
+// Ticket (modifié pour utiliser draw (string) au lieu de draw_id)
 const ticketSchema = new mongoose.Schema({
   subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true },
   agent_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -109,6 +116,8 @@ const ticketSchema = new mongoose.Schema({
   is_synced: { type: Boolean, default: true },
   synced_at: Date
 });
+ticketSchema.index({ subsystem_id: 1, date: -1 });
+ticketSchema.index({ agent_id: 1, date: -1 });
 
 // Multi‑tirage ticket
 const multiDrawTicketSchema = new mongoose.Schema({
@@ -150,7 +159,7 @@ const restrictionSchema = new mongoose.Schema({
   created_at: { type: Date, default: Date.now }
 });
 
-// CompanyInfo (peut être remplacé par SubsystemSettings, mais gardons pour compatibilité)
+// CompanyInfo (pour compatibilité)
 const companyInfoSchema = new mongoose.Schema({
   subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', unique: true },
   name: String,
@@ -161,7 +170,7 @@ const companyInfoSchema = new mongoose.Schema({
   logoUrl: String
 });
 
-// Settings global (pour master)
+// Settings global
 const settingsSchema = new mongoose.Schema({
   key: { type: String, required: true, unique: true },
   value: mongoose.Schema.Types.Mixed
@@ -203,10 +212,10 @@ const authorize = (...roles) => (req, res, next) => {
 // ==================== EXPRESS APP ====================
 const app = express();
 app.use(cors());
-app.use(compression()); // activation gzip
+app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname))); // sert les fichiers statiques
+app.use(express.static(path.join(__dirname)));
 
 // ==================== ROUTES ====================
 
@@ -252,7 +261,7 @@ app.get('/api/auth/check', auth, async (req, res) => {
 
 // --- MASTER ROUTES (gestion des sous-systèmes, statistiques globales) ---
 
-// Créer un sous-système (déjà présent, adapté)
+// Créer un sous-système
 app.post('/api/master/subsystems', auth, authorize('master'), async (req, res) => {
   try {
     const { name, subdomain, contact_email, contact_phone, max_users = 10, subscription_type = 'basic', subscription_months = 1 } = req.body;
@@ -266,7 +275,6 @@ app.post('/api/master/subsystems', auth, authorize('master'), async (req, res) =
     const subsystem = new Subsystem({ name, subdomain, contact_email, contact_phone, max_users, subscription_type, subscription_expires });
     await subsystem.save();
 
-    // Créer l'admin du sous-système
     const adminUsername = `admin_${subdomain.replace(/[^a-z0-9]/g, '')}`;
     const adminPassword = Math.random().toString(36).slice(-8);
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
@@ -280,7 +288,6 @@ app.post('/api/master/subsystems', auth, authorize('master'), async (req, res) =
     });
     await adminUser.save();
 
-    // Créer les paramètres par défaut pour ce sous-système
     const defaultSettings = new SubsystemSettings({
       subsystem_id: subsystem._id,
       name: name,
@@ -493,7 +500,6 @@ app.get('/api/master/subsystems/stats', auth, authorize('master'), async (req, r
         { $group: { _id: null, total: { $sum: '$total' } } }
       ]);
       const totalSales = totalSalesAgg.length ? totalSalesAgg[0].total : 0;
-      // Pour l'instant, on met payout à 0 (à calculer plus tard)
       result.push({
         id: sub._id,
         name: sub.name,
@@ -652,7 +658,6 @@ app.get('/api/subsystem/settings', auth, authorize('subsystem'), async (req, res
   try {
     let settings = await SubsystemSettings.findOne({ subsystem_id: req.user.subsystem_id });
     if (!settings) {
-      // Créer des paramètres par défaut
       const subsystem = await Subsystem.findById(req.user.subsystem_id);
       settings = new SubsystemSettings({
         subsystem_id: req.user.subsystem_id,
@@ -829,17 +834,15 @@ app.get('/api/subsystem/results', auth, authorize('subsystem', 'agent'), async (
 // Publier un résultat (sous-système)
 app.post('/api/subsystem/publish-results', auth, authorize('subsystem'), async (req, res) => {
   try {
-    const { drawId, numbers, lotto3 } = req.body; // numbers = [lot1_last2, lot2, lot3]
+    const { drawId, numbers, lotto3 } = req.body;
     if (!drawId || !numbers || numbers.length !== 3) return res.status(400).json({ success: false, error: 'Données incomplètes.' });
     const draw = await Draw.findById(drawId);
     if (!draw) return res.status(404).json({ success: false, error: 'Tirage non trouvé.' });
 
-    // On suppose que la date est aujourd'hui, mais on pourrait la passer
     const today = new Date();
     today.setHours(0,0,0,0);
-    const time = 'morning'; // À adapter si nécessaire
+    const time = 'morning';
 
-    // Vérifier si un résultat existe déjà
     const existing = await Result.findOne({
       subsystem_id: req.user.subsystem_id,
       draw_id: drawId,
@@ -855,7 +858,7 @@ app.post('/api/subsystem/publish-results', auth, authorize('subsystem'), async (
       draw_id: drawId,
       draw_time: time,
       date: today,
-      lot1: lotto3,  // stocke les 3 chiffres
+      lot1: lotto3,
       lot2: numbers[1],
       lot3: numbers[2],
       verified: false
@@ -871,7 +874,6 @@ app.post('/api/subsystem/publish-results', auth, authorize('subsystem'), async (
 
 // Récupérer les superviseurs et agents pour les rapports (pour le front-end subsystem)
 app.get('/api/subsystem/supervisors', auth, authorize('subsystem'), async (req, res) => {
-  // Actuellement, le rôle "supervisor" n'est pas utilisé. On peut retourner une liste vide.
   res.json([]);
 });
 
@@ -1016,7 +1018,6 @@ app.get('/api/subsystem/blocked-draws', auth, authorize('subsystem'), async (req
       draw_id: { $ne: null }
     }).populate('draw_id', 'name key');
     const blockedDraws = restrictions.map(r => ({ drawId: r.draw_id._id, drawName: r.draw_id.name }));
-    // Pour simplifier, on renvoie la liste unique des tirages bloqués (sans distinction de numéro)
     const unique = {};
     blockedDraws.forEach(b => { unique[b.drawId] = b; });
     res.json(Object.values(unique));
@@ -1030,7 +1031,6 @@ app.post('/api/subsystem/block-draw', auth, authorize('subsystem'), async (req, 
     const { drawId, block } = req.body;
     if (!drawId) return res.status(400).json({ success: false, error: 'Tirage manquant.' });
     if (block) {
-      // Bloquer le tirage : créer une restriction "block" avec un numéro fictif (par exemple 'ALL')
       await Restriction.create({
         subsystem_id: req.user.subsystem_id,
         number: 'ALL',
@@ -1055,29 +1055,23 @@ app.get('/api/subsystem/dashboard', auth, authorize('subsystem'), async (req, re
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
 
-    // Agents connectés (tous agents du sous-système)
     const agents = await User.find({ subsystem_id: subsystemId, role: 'agent' }).select('name is_online');
     const onlineAgents = agents.filter(a => a.is_online);
     const onlineAgentsList = onlineAgents.map(a => ({ name: a.name }));
-    // Superviseurs : actuellement pas de rôle superviseur, on renvoie vide
     const supervisors = [];
     const onlineSupervisors = [];
 
-    // Statistiques du jour
     const ticketsToday = await Ticket.find({
       subsystem_id: subsystemId,
       date: { $gte: today, $lt: tomorrow }
     });
     const totalBets = ticketsToday.reduce((sum, t) => sum + (t.total || 0), 0);
     const totalTickets = ticketsToday.length;
-    // Gains : il faudrait calculer les gains réels, on les laisse à 0 pour l'instant (à améliorer)
     const totalWins = 0;
     const netResult = totalBets - totalWins;
 
-    // Progression des limites (à construire)
-    const limitsProgress = []; // à implémenter plus tard
+    const limitsProgress = [];
 
-    // Agents avec gains/pertes du jour (simplifié)
     const agentStats = {};
     for (let ticket of ticketsToday) {
       if (!agentStats[ticket.agent_id]) agentStats[ticket.agent_id] = { name: ticket.agent_name, total_bets: 0, total_wins: 0 };
@@ -1100,7 +1094,6 @@ app.get('/api/subsystem/dashboard', auth, authorize('subsystem'), async (req, re
       },
       limits_progress: limitsProgress,
       agents_gain_loss: agentsGainLoss,
-      // stats du jour
       total_bets: totalBets,
       total_tickets: totalTickets,
       total_wins: totalWins,
@@ -1139,15 +1132,14 @@ app.get('/api/subsystem/reports', auth, authorize('subsystem'), async (req, res)
 
     const query = { subsystem_id: req.user.subsystem_id, date: { $gte: start, $lte: end } };
     if (agentId && agentId !== 'all') query.agent_id = agentId;
-    if (drawId && drawId !== 'all') query.draw_id = drawId;
+    if (drawId && drawId !== 'all') query.draw = drawId; // utilisera le champ draw (string)
 
-    const tickets = await Ticket.find(query).populate('draw_id', 'name');
+    const tickets = await Ticket.find(query);
     const total_tickets = tickets.length;
     const total_bets = tickets.reduce((sum, t) => sum + (t.total || 0), 0);
-    const total_wins = 0; // à calculer plus tard
+    const total_wins = 0;
     const net_result = total_bets - total_wins;
 
-    // Détail par agent
     const detailMap = new Map();
     for (let ticket of tickets) {
       const key = ticket.agent_id ? ticket.agent_id.toString() : 'unknown';
@@ -1165,7 +1157,6 @@ app.get('/api/subsystem/reports', auth, authorize('subsystem'), async (req, res)
     }
     const detail = Array.from(detailMap.values());
 
-    // Filtre gain/loss
     let filteredDetail = detail;
     if (gainLoss === 'gain') {
       filteredDetail = detail.filter(d => (d.bets - d.wins) > 0);
@@ -1258,7 +1249,6 @@ app.delete('/api/tickets/:id', auth, authorize('subsystem'), async (req, res) =>
   }
 });
 
-// Tickets en attente (offline)
 app.get('/api/tickets/pending', auth, authorize('agent', 'subsystem'), async (req, res) => {
   try {
     let query = { syncStatus: 'pending' };
@@ -1287,12 +1277,10 @@ app.post('/api/tickets/pending', auth, authorize('agent', 'subsystem'), async (r
   }
 });
 
-// Tickets gagnants (à implémenter)
 app.get('/api/tickets/winning', auth, authorize('agent', 'subsystem'), async (req, res) => {
   res.json({ success: true, tickets: [] });
 });
 
-// Multi-draw tickets
 app.get('/api/tickets/multi-draw', auth, authorize('agent', 'subsystem'), async (req, res) => {
   try {
     let query = {};
@@ -1364,7 +1352,7 @@ app.get('/api/results', auth, authorize('subsystem', 'master', 'agent'), async (
     if (req.user.role === 'subsystem' || req.user.role === 'agent') {
       query.subsystem_id = req.user.subsystem_id;
     }
-    if (draw) query.draw = draw; // À adapter si on utilise draw_id
+    if (draw) query.draw_id = draw; // on attend l'ID du tirage
     if (time) query.draw_time = time;
     if (date) {
       const start = new Date(date);
@@ -1395,12 +1383,11 @@ app.get('/api/results', auth, authorize('subsystem', 'master', 'agent'), async (
 // Company info (pour agent)
 app.get('/api/company-info', auth, authorize('agent', 'subsystem'), async (req, res) => {
   try {
-    // Récupérer les paramètres du sous-système
     const settings = await SubsystemSettings.findOne({ subsystem_id: req.user.subsystem_id });
     if (settings) {
       res.json({
         name: settings.name,
-        phone: '', // À remplir si nécessaire
+        phone: '',
         address: '',
         reportTitle: settings.name,
         reportPhone: '',
@@ -1427,18 +1414,14 @@ app.get('/api/logo', auth, authorize('agent', 'subsystem'), async (req, res) => 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'OK' }));
 
-// --- ROUTES POUR LES AGENTS (pour lotato.js) ---
-// Note : certaines routes sont déjà partagées (tickets, results, etc.)
-
 // --- MASTER DASHBOARD (routes supplémentaires) ---
 app.get('/api/agents', auth, authorize('master'), async (req, res) => {
   try {
     const agents = await User.find({ role: 'agent' }).populate('subsystem_id', 'name');
     const result = await Promise.all(agents.map(async agent => {
-      // Calculer les ventes et gains de l'agent (à partir des tickets)
       const tickets = await Ticket.find({ agent_id: agent._id });
       const total_sales = tickets.reduce((sum, t) => sum + (t.total || 0), 0);
-      const total_payout = 0; // À calculer
+      const total_payout = 0;
       const winning_tickets = 0;
       const total_tickets = tickets.length;
       const last_active = agent.last_login;
@@ -1462,11 +1445,15 @@ app.get('/api/agents', auth, authorize('master'), async (req, res) => {
   }
 });
 
-// Démarrer le serveur
+// ==================== SERVEUR STATIQUE ET FALLBACK ====================
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// ==================== DÉMARRAGE ====================
 mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     console.log('✅ MongoDB connecté');
-    // Créer le master par défaut si inexistant
     const masterExists = await User.findOne({ role: 'master' });
     if (!masterExists) {
       let masterUsername, masterPassword;
@@ -1490,7 +1477,6 @@ mongoose.connect(process.env.MONGODB_URI)
       console.log('✅ Master par défaut créé');
     }
 
-    // Créer les tirages globaux par défaut s'ils n'existent pas
     const defaultDraws = [
       { name: 'Miami (Florida)', key: 'miami', times: { morning: '1:30 PM', evening: '9:50 PM' } },
       { name: 'Georgia', key: 'georgia', times: { morning: '12:30 PM', evening: '7:00 PM' } },
