@@ -570,19 +570,16 @@
             <!-- L'historique sera chargé dynamiquement -->
         </div>
     </div>
-
-    <!-- Inclusion des modules découpés (dans l'ordre requis) -->
-    <script src="js/config.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/betManager.js"></script>
-    <script src="js/ticketManager.js"></script>
-    <script src="js/multiDrawManager.js"></script>
-    <script src="js/resultsManager.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/main.js"></script>
-
-    <script>
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script src="auth.js"></script>
+<script src="betManager.js"></script>
+<script src="ticketManager.js"></script>
+<script src="multiDrawManager.js"></script>
+<script src="resultsManager.js"></script>
+<script src="ui.js"></script>
+<script src="main.js"></script>
+    
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/service-worker.js')
             .then(reg => console.log('Service Worker enregistré', reg))
