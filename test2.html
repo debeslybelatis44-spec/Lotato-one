@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test enregistrement ticket</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #f5f5f5; }
+        .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        input, select, textarea, button { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        button { background: #3498db; color: white; font-weight: bold; cursor: pointer; }
+        button:hover { background: #2980b9; }
+        .result { margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 4px; white-space: pre-wrap; font-family: monospace; overflow-x: auto; }
+        .error { color: #e74c3c; }
+        .success { color: #27ae60; }
+        .info { color: #2980b9; }
+        .bet-item { display: flex; gap: 10px; margin: 5px 0; }
+        .bet-item input { margin: 0; flex: 1; }
+        .remove-bet { background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        #bets-container { margin-bottom: 10px; }
+        hr { margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Test enregistrement d'un ticket</h2>
+        <div id="auth-status"></div>
+        <form id="ticketForm">
+            <h3>Informations générales</h3>
+            <input type="text" id="agent_name" placeholder="Nom de l'agent *" required>
+            <input type="number" id="ticket_number" placeholder="Numéro de ticket (auto)" value="1" required>
+            <input type="text" id="draw_id" placeholder="ID du tirage (ex: miami, georgia, etc.)">
+            <input type="text" id="draw_time" placeholder="Heure du tirage (morning/evening)">
+            
+            <h3>Paris</h3>
+            <div id="bets-container">
+                <div class="bet-item">
+                    <input type="text" placeholder="Type (borlette, lotto3...)" class="bet-type">
+                    <input type="text" placeholder="Numéro" class="bet-number">
+                    <input type="number" placeholder="Montant" class="bet-amount">
+                    <button type="button" class="remove-bet" style="width: auto; background:#e74c3c;">X</button>
+                </div>
+            </div>
+            <button type="button" id="add-bet">+ Ajouter un pari</button>
+            <hr>
+            <button type="submit">Enregistrer le ticket</button>
+        </form>
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        // Récupération du token et des données utilisateur
+        const token = localStorage.getItem('nova_token');
+        const userData = localStorage.getItem('nova_user_data');
+        let currentUser = null;
+        let subsystemId = null;
+        let agentId = null;
+
+        const authDiv = document.getElementById('auth-status');
+        if (!token) {
+            authDiv.innerHTML = '<span class="error">⚠️ Aucun token trouvé. Connectez-vous d\'abord via le dashboard principal.</span>';
+        } else {
+            try {
+                currentUser = JSON.parse(userData);
+                subsystemId = currentUser.subsystem_id;
+                agentId = currentUser.id;
+                authDiv.innerHTML = `<span class="success">✅ Token valide. Utilisateur : ${currentUser.name || currentUser.username}<br>Subsystem ID : ${subsystemId}<br>Agent ID : ${agentId}</span>`;
+                // Pré-remplir le nom de l'agent si disponible
+                if (currentUser.name) document.getElementById('agent_name').value = currentUser.name;
+            } catch(e) {
+                authDiv.innerHTML = '<span class="error">❌ Erreur de parsing des données utilisateur.</span>';
+            }
+        }
+
+        // Gestion des paris dynamiques
+        const betsContainer = document.getElementById('bets-container');
+        document.getElementById('add-bet').addEventListener('click', () => {
+            const div = document.createElement('div');
+            div.className = 'bet-item';
+            div.innerHTML = `
+                <input type="text" placeholder="Type (borlette, lotto3...)" class="bet-type">
+                <input type="text" placeholder="Numéro" class="bet-number">
+                <input type="number" placeholder="Montant" class="bet-amount">
+                <button type="button" class="remove-bet" style="width: auto; background:#e74c3c;">X</button>
+            `;
+            div.querySelector('.remove-bet').addEventListener('click', () => div.remove());
+            betsContainer.appendChild(div);
+        });
+
+        // Supprimer le premier pari (celui par défaut)
+        document.querySelectorAll('.remove-bet').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.closest('.bet-item').remove();
+            });
+        });
+
+        // Soumission du formulaire
+        document.getElementById('ticketForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<span>⏳ Envoi en cours...</span>';
+
+            // Récupération des champs
+            const agent_name = document.getElementById('agent_name').value.trim();
+            const ticket_number = parseInt(document.getElementById('ticket_number').value);
+            const draw_id = document.getElementById('draw_id').value.trim();
+            const draw_time = document.getElementById('draw_time').value.trim();
+
+            if (!agent_name) {
+                resultDiv.innerHTML = '<span class="error">❌ Le nom de l\'agent est obligatoire.</span>';
+                return;
+            }
+            if (!subsystemId || !agentId) {
+                resultDiv.innerHTML = '<span class="error">❌ Subsystem ID ou Agent ID manquant. Vérifiez votre connexion.</span>';
+                return;
+            }
+
+            // Récupération des paris
+            const betItems = document.querySelectorAll('.bet-item');
+            const bets = [];
+            for (let item of betItems) {
+                const type = item.querySelector('.bet-type').value.trim();
+                const number = item.querySelector('.bet-number').value.trim();
+                const amount = parseFloat(item.querySelector('.bet-amount').value);
+                if (type && number && !isNaN(amount) && amount > 0) {
+                    bets.push({
+                        type: type,
+                        name: type.charAt(0).toUpperCase() + type.slice(1), // nom simple
+                        number: number,
+                        amount: amount,
+                        multiplier: 60 // valeur par défaut
+                    });
+                }
+            }
+            if (bets.length === 0) {
+                resultDiv.innerHTML = '<span class="error">❌ Ajoutez au moins un pari valide.</span>';
+                return;
+            }
+
+            const total = bets.reduce((sum, bet) => sum + bet.amount, 0);
+
+            const ticketData = {
+                subsystem_id: subsystemId,
+                agent_id: agentId,
+                agent_name: agent_name,
+                number: ticket_number,
+                draw_id: draw_id || null,
+                draw_time: draw_time || null,
+                bets: bets,
+                total: total,
+                status: 'active',
+                syncStatus: 'synced'
+            };
+
+            try {
+                const response = await fetch('https://lotato-one.onrender.com/api/tickets', {
+                    method: 'POST',
+                    headers: {
+                        'x-auth-token': token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(ticketData)
+                });
+                const data = await response.json();
+                if (response.ok && data.success) {
+                    resultDiv.innerHTML = `<span class="success">✅ Ticket enregistré avec succès !<br>ID: ${data.ticket._id}<br>Numéro: ${data.ticket.number}<br>Total: ${data.ticket.total} G<br>Paris: ${bets.length}</span>`;
+                } else {
+                    resultDiv.innerHTML = `<span class="error">❌ Erreur : ${data.error || 'Erreur inconnue'}<br>Statut HTTP : ${response.status}</span>`;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<span class="error">❌ Erreur réseau : ${err.message}</span>`;
+            }
+        });
+    </script>
+</body>
+</html>
