@@ -14,8 +14,7 @@ const APP_CONFIG = {
     history: `${API_BASE_URL}/api/history`,
     multiDrawTickets: `${API_BASE_URL}/api/tickets/multi-draw`,
     companyInfo: `${API_BASE_URL}/api/company-info`,
-    logo: `${API_BASE_URL}/api/logo`,
-    authCheck: `${API_BASE_URL}/api/auth/check`
+    logo: `${API_BASE_URL}/api/logo`
 };
 
 const FIVE_MINUTES = 5 * 60 * 1000; // 5 minutes en millisecondes
@@ -94,13 +93,13 @@ let resultsDatabase = {
     }
 };
 
-// Données des tirages avec heures spécifiques pour le blocage
+// Données des tirages
 const draws = {
     miami: {
         name: "Miami (Florida)",
         times: {
-            morning: { time: "1:30 PM", hour: 13, minute: 30 },
-            evening: { time: "9:50 PM", hour: 21, minute: 50 }
+            morning: "1:30 PM",
+            evening: "9:50 PM"
         },
         date: "Sam, 29 Nov",
         countdown: "18 h 30 min"
@@ -108,8 +107,8 @@ const draws = {
     georgia: {
         name: "Georgia",
         times: {
-            morning: { time: "12:30 PM", hour: 12, minute: 30 },
-            evening: { time: "7:00 PM", hour: 19, minute: 0 }
+            morning: "12:30 PM",
+            evening: "7:00 PM"
         },
         date: "Sam, 29 Nov",
         countdown: "17 h 29 min"
@@ -117,8 +116,8 @@ const draws = {
     newyork: {
         name: "New York",
         times: {
-            morning: { time: "2:30 PM", hour: 14, minute: 30 },
-            evening: { time: "8:00 PM", hour: 20, minute: 0 }
+            morning: "2:30 PM",
+            evening: "8:00 PM"
         },
         date: "Sam, 29 Nov",
         countdown: "19 h 30 min"
@@ -126,8 +125,8 @@ const draws = {
     texas: {
         name: "Texas",
         times: {
-            morning: { time: "12:00 PM", hour: 12, minute: 0 },
-            evening: { time: "6:00 PM", hour: 18, minute: 0 }
+            morning: "12:00 PM",
+            evening: "6:00 PM"
         },
         date: "Sam, 29 Nov",
         countdown: "18 h 27 min"
@@ -135,8 +134,8 @@ const draws = {
     tunisia: {
         name: "Tunisie",
         times: {
-            morning: { time: "10:30 AM", hour: 10, minute: 30 },
-            evening: { time: "2:00 PM", hour: 14, minute: 0 }
+            morning: "10:30 AM",
+            evening: "2:00 PM"
         },
         date: "Sam, 29 Nov",
         countdown: "8 h 30 min"
@@ -222,6 +221,7 @@ let activeBets = [];
 let ticketNumber = 1;
 let savedTickets = [];
 let currentAdmin = null;
+let pendingSyncTickets = [];
 let isOnline = navigator.onLine;
 let companyLogo = "logo-borlette.jpg";
 let currentBetCategory = null;
@@ -256,17 +256,17 @@ let winningTickets = [];
 
 // Gestion du token
 let authToken = null;
-let currentUser = null; // AJOUT: Stocker les infos de l'utilisateur connecté
 
 // ==========================================
-// 1. Fonction de communication API (Corrigée pour server.js)
+// 1. Fonction de communication API (Corrigée)
 // ==========================================
 async function apiCall(url, method = 'GET', body = null) {
     const headers = {
         'Content-Type': 'application/json'
     };
 
-    // CORRECTION ICI : Utiliser 'x-auth-token' comme attendu par server.js (ligne 225)
+    // CORRECTION ICI : On utilise 'x-auth-token' au lieu de 'Authorization: Bearer'
+    // pour correspondre à ce que server.js attend (ligne 225 de server.js)
     if (authToken) {
         headers['x-auth-token'] = authToken;
     }
@@ -303,56 +303,9 @@ async function apiCall(url, method = 'GET', body = null) {
     }
 }
 
-// ==========================================
-// NOUVEAU: Vérifier si un tirage est bloqué
-// ==========================================
-function isDrawBlocked(drawId, drawTime) {
-    const draw = draws[drawId];
-    if (!draw || !draw.times[drawTime]) {
-        return true; // Par sécurité, bloquer si non trouvé
-    }
-
-    const now = new Date();
-    const drawTimeInfo = draw.times[drawTime];
-    
-    // Créer la date du tirage pour aujourd'hui
-    const drawDate = new Date(now);
-    drawDate.setHours(drawTimeInfo.hour, drawTimeInfo.minute, 0, 0);
-    
-    // Calculer 5 minutes avant le tirage
-    const blockTime = new Date(drawDate.getTime() - (5 * 60 * 1000));
-    
-    // Si nous sommes entre le blocage (5 min avant) et après le tirage, bloquer
-    if (now >= blockTime) {
-        return true;
-    }
-    
-    return false;
-}
-
-// ==========================================
-// NOUVEAU: Vérifier le blocage avant d'ouvrir l'écran de pari
-// ==========================================
-function checkDrawBeforeOpening(drawId, time) {
-    if (isDrawBlocked(drawId, time)) {
-        const drawTime = draws[drawId].times[time].time;
-        showNotification(`Tiraj sa a bloke! Li fèt à ${drawTime} epi ou pa kapab fè parye 5 minit avan.`, "error");
-        return false;
-    }
-    return true;
-}
-
-// Vérifier l'authentification et charger les données de l'utilisateur
-async function checkAuth() {
-    // Vérifier d'abord si le token est dans l'URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenFromUrl = urlParams.get('token');
-    
-    // Vérifier ensuite dans le localStorage
-    const tokenFromStorage = localStorage.getItem('nova_token');
-    
-    // Priorité: token URL > token storage
-    const token = tokenFromUrl || tokenFromStorage;
+// Vérifier l'authentification
+function checkAuth() {
+    const token = localStorage.getItem('nova_token');
     
     if (!token) {
         // Rediriger vers la page de connexion
@@ -361,55 +314,20 @@ async function checkAuth() {
     }
     
     authToken = token;
-    
-    // Stocker le token dans localStorage s'il vient de l'URL
-    if (tokenFromUrl && !tokenFromStorage) {
-        localStorage.setItem('nova_token', tokenFromUrl);
-    }
-    
-    // Charger les informations de l'utilisateur depuis l'API
-    try {
-        const response = await apiCall(APP_CONFIG.authCheck);
-        if (response && response.success) {
-            currentUser = response.admin;
-            console.log('Utilisateur connecté:', currentUser);
-            return true;
-        } else {
-            // Token invalide
-            handleLogout();
-            return false;
-        }
-    } catch (error) {
-        console.error('Erreur vérification authentification:', error);
-        handleLogout();
-        return false;
-    }
-}
-
-// Gérer la déconnexion
-function handleLogout() {
-    localStorage.removeItem('nova_token');
-    localStorage.removeItem('nova_user_role');
-    localStorage.removeItem('nova_user_data');
-    authToken = null;
-    currentUser = null;
-    window.location.href = '/index.html';
+    return true;
 }
 
 // Charger les données depuis l'API
 async function loadDataFromAPI() {
     try {
-        // Vérifier d'abord que l'utilisateur est connecté
-        if (!currentUser) {
-            if (!await checkAuth()) {
-                return;
-            }
-        }
-        
         // Charger les tickets
         const ticketsData = await apiCall(APP_CONFIG.tickets);
         savedTickets = ticketsData.tickets || [];
         ticketNumber = ticketsData.nextTicketNumber || 1;
+        
+        // Charger les tickets en attente
+        const pendingData = await apiCall(APP_CONFIG.ticketsPending);
+        pendingSyncTickets = pendingData.tickets || [];
         
         // Charger les tickets gagnants
         const winningData = await apiCall(APP_CONFIG.winningTickets);
@@ -422,13 +340,7 @@ async function loadDataFromAPI() {
         // Charger les informations de l'entreprise
         const companyData = await apiCall(APP_CONFIG.companyInfo);
         if (companyData) {
-            companyInfo = {
-                name: companyData.company_name || "Nova Lotto",
-                phone: companyData.company_phone || "+509 32 53 49 58",
-                address: companyData.company_address || "Cap Haïtien",
-                reportTitle: companyData.report_title || "Nova Lotto",
-                reportPhone: companyData.report_phone || "40104585"
-            };
+            companyInfo = companyData;
         }
         
         // Charger le logo
@@ -440,9 +352,9 @@ async function loadDataFromAPI() {
         console.log('Données chargées depuis l\'API:', { 
             tickets: savedTickets.length, 
             ticketNumber, 
+            pending: pendingSyncTickets.length,
             winning: winningTickets.length,
-            multiDraw: multiDrawTickets.length,
-            user: currentUser ? currentUser.name : 'Non connecté'
+            multiDraw: multiDrawTickets.length
         });
     } catch (error) {
         console.error('Erreur lors du chargement des données:', error);
@@ -451,122 +363,57 @@ async function loadDataFromAPI() {
 }
 
 // ==========================================
-// 2. Fonction saveTicketAPI() - Compatible avec server.js
+// 3. Correction dans la fonction saveTicket()
 // ==========================================
 
-async function saveTicketAPI(ticketData) {
+// Cherchez la partie où l'objet ticket est créé :
+const ticket = {
+    subsystem_id: currentUser.subsystem_id, // Si disponible
+    agent_id: currentUser.id,
+    agent_name: currentUser.username,
+    number: ticketNumber,
+    date: new Date().toISOString(),
+    draw: currentDraw,       // Ex: 'miami'
+    
+    // CORRECTION ICI : "draw_time" (snake_case) au lieu de "drawTime" (camelCase)
+    // server.js valide "draw_time" à la ligne 475
+    draw_time: currentDrawTime, 
+    
+    bets: currentCart.map(item => ({
+        type: item.type,
+        numbers: item.numbers,
+        amount: item.amount,
+        option: item.option || null
+    })),
+    total: currentTotal,
+    status: 'active',
+    syncStatus: navigator.onLine ? 'synced' : 'pending'
+};
+
+
+// ==========================================
+// 2. Fonction sauvegarde Pending (Corrigée)
+// ==========================================
+async function savePendingTicketAPI(ticket) {
+    if (!navigator.onLine) return null;
+    
     try {
-        // CORRECTION: Utiliser les noms de champs attendus par server.js
-        const response = await apiCall(APP_CONFIG.tickets, 'POST', {
-            number: ticketData.number,
-            draw: ticketData.draw,
-            draw_time: ticketData.drawTime,  // draw_time au lieu de drawTime
-            bets: ticketData.bets,
-            total: ticketData.total,
-            agent_id: ticketData.agent_id,
-            agent_name: ticketData.agent_name,
-            subsystem_id: ticketData.subsystem_id,
-            date: ticketData.date
-        });
+        console.log("Tentative sauvegarde pending ticket:", ticket.number);
+        // CORRECTION ICI : On enveloppe le ticket dans un objet { ticket: ... }
+        // car server.js attend "const { ticket } = req.body" (ligne 555)
+        const response = await apiCall(APP_CONFIG.ticketsPending, 'POST', { ticket: ticket });
         return response;
-    } catch (error) {
-        console.error('Erreur lors de la sauvegarde du ticket:', error);
-        throw error;
+    } catch (e) {
+        console.error("Erreur savePendingTicketAPI:", e);
+        return null;
     }
 }
 
-// Sauvegarder un ticket avec les informations de l'utilisateur
-async function saveTicket() {
-    console.log("Sauvegarder fiche via API");
-    if (activeBets.length === 0) {
-        showNotification("Pa gen okenn parye pou sove nan fiche a", "warning");
-        return;
-    }
-    
-    // Vérifier que le tirage n'est pas bloqué
-    if (currentDraw && currentDrawTime && isDrawBlocked(currentDraw, currentDrawTime)) {
-        const drawTime = draws[currentDraw].times[currentDrawTime].time;
-        showNotification(`Tiraj sa a bloke! Li fèt à ${drawTime} epi ou pa kapab sove fiche 5 minit avan.`, "error");
-        return;
-    }
-    
-    // Vérifier que l'utilisateur est connecté
-    if (!currentUser) {
-        showNotification("Ou pa konekte. Tanpri rekonekte.", "error");
-        handleLogout();
-        return;
-    }
-    
-    const total = activeBets.reduce((sum, bet) => sum + bet.amount, 0);
-    
-    const ticket = {
-        number: ticketNumber,
-        draw: currentDraw,
-        drawTime: currentDrawTime,
-        bets: activeBets,
-        total: total,
-        agent_id: currentUser.id,
-        agent_name: currentUser.name,
-        subsystem_id: currentUser.subsystem_id,
-        date: new Date().toISOString()
-    };
-    
-    try {
-        // Sauvegarder via API
-        const response = await saveTicketAPI(ticket);
-        
-        if (response && response.success) {
-            // Ajouter aux tickets sauvegardés localement
-            savedTickets.push({
-                ...response.ticket,
-                id: response.ticket.id
-            });
-            
-            // Incrémenter le numéro de ticket
-            ticketNumber = response.ticket.number + 1;
-            
-            showNotification("Fiche sove avèk siksè!", "success");
-            
-            // Réinitialiser les paris actifs
-            activeBets = [];
-            updateBetsList();
-            
-            return response;
-        } else {
-            showNotification("Erreur lors de la sauvegarde du ticket", "error");
-            return null;
-        }
-    } catch (error) {
-        console.error('Erreur lors de la sauvegarde du ticket:', error);
-        showNotification("Erreur lors de la sauvegarde du ticket", "error");
-        throw error;
-    }
-}
 
 // Sauvegarder une fiche multi-tirages via API
 async function saveMultiDrawTicketAPI(ticket) {
     try {
-        // Préparer les paris avec la structure attendue par server.js
-        const formattedBets = ticket.bets.map(bet => ({
-            gameType: bet.gameType,
-            name: bet.name,
-            number: bet.number,
-            amount: bet.amount,
-            multiplier: bet.multiplier,
-            draws: bet.draws,
-            options: bet.options || {}
-        }));
-        
-        const response = await apiCall(APP_CONFIG.multiDrawTickets, 'POST', { 
-            ticket: {
-                bets: formattedBets,
-                draws: Array.from(ticket.draws),
-                total: ticket.totalAmount,  // 'total' au lieu de 'totalAmount'
-                agent_id: ticket.agentId,
-                agent_name: ticket.agentName,
-                subsystem_id: ticket.subsystem_id
-            } 
-        });
+        const response = await apiCall(APP_CONFIG.multiDrawTickets, 'POST', ticket);
         return response;
     } catch (error) {
         console.error('Erreur lors de la sauvegarde de la fiche multi-tirages:', error);
@@ -577,13 +424,7 @@ async function saveMultiDrawTicketAPI(ticket) {
 // Sauvegarder l'historique via API
 async function saveHistoryAPI(historyRecord) {
     try {
-        const response = await apiCall(APP_CONFIG.history, 'POST', {
-            draw: historyRecord.draw,
-            draw_time: historyRecord.drawTime,  // draw_time au lieu de drawTime
-            bets: historyRecord.bets,
-            total: historyRecord.total
-            // agent_id et agent_name seront ajoutés automatiquement par server.js
-        });
+        const response = await apiCall(APP_CONFIG.history, 'POST', historyRecord);
         return response;
     } catch (error) {
         console.error('Erreur lors de la sauvegarde de l\'historique:', error);
@@ -592,11 +433,11 @@ async function saveHistoryAPI(historyRecord) {
 }
 
 // Initialisation
-document.addEventListener('DOMContentLoaded', async function() {
+document.addEventListener('DOMContentLoaded', function() {
     console.log("Document chargé, initialisation...");
     
     // Vérifier l'authentification
-    if (!await checkAuth()) {
+    if (!checkAuth()) {
         return;
     }
     
@@ -610,7 +451,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     updateCurrentTime();
     
     // Charger les données depuis l'API
-    await loadDataFromAPI();
+    loadDataFromAPI();
     
     // Configurer la détection de connexion
     setupConnectionDetection();
@@ -626,12 +467,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         card.addEventListener('click', function() {
             console.log("Carte de tiraj cliquée:", this.getAttribute('data-draw'));
             const drawId = this.getAttribute('data-draw');
-            
-            // Vérifier si le tirage du matin est bloqué
-            if (!checkDrawBeforeOpening(drawId, 'morning')) {
-                return;
-            }
-            
             openBettingScreen(drawId, 'morning');
         });
     });
@@ -645,11 +480,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             const time = this.getAttribute('data-time');
             
             console.log("Bouton tiraj cliqué:", drawId, time);
-            
-            // Vérifier si le tirage est bloqué
-            if (!checkDrawBeforeOpening(drawId, time)) {
-                return;
-            }
             
             card.querySelectorAll('.draw-btn').forEach(b => {
                 b.classList.remove('active');
@@ -669,7 +499,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Boutons de fiche
     document.getElementById('save-print-ticket').addEventListener('click', function() {
         console.log("Sauvegarder et imprimer cliqué");
-        saveAndPrintTicket();
+        checkConnectionBeforeSavePrint();
     });
     
     document.getElementById('save-ticket-only').addEventListener('click', function() {
@@ -679,7 +509,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     document.getElementById('print-ticket-only').addEventListener('click', function() {
         console.log("Imprimer seulement cliqué");
-        printTicket();
+        checkConnectionBeforePrint();
     });
     
     // Bouton pour sauvegarder et imprimer la fiche multi-tirages
@@ -798,7 +628,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     document.getElementById('show-pending-tickets').addEventListener('click', function() {
         console.log("Afficher fiches en attente");
-        showNotification("Fonksyon sa pa disponib", "info");
+        showPendingTickets();
     });
     
     // Recherche historique
@@ -814,6 +644,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Actualiser périodiquement
     setInterval(updateCurrentTime, 60000);
+    setInterval(updatePendingBadge, 30000);
+    // Vérifier périodiquement les résultats
     setInterval(checkForNewResults, 300000); // Toutes les 5 minutes
     
     console.log("Initialisation terminée");
@@ -829,6 +661,20 @@ async function loadMultiDrawTickets() {
     } catch (error) {
         console.error('Erreur lors du chargement des fiches multi-tirages:', error);
         multiDrawTickets = [];
+    }
+}
+
+// Sauvegarder les fiches multi-tirages via API
+async function saveMultiDrawTickets() {
+    console.log("Sauvegarde des fiches multi-tirages via API...");
+    try {
+        // Envoyer la dernière fiche multi-tirages si elle existe
+        if (currentMultiDrawTicket.bets.length > 0) {
+            await saveMultiDrawTicketAPI(currentMultiDrawTicket);
+        }
+    } catch (error) {
+        console.error('Erreur lors de la sauvegarde des fiches multi-tirages:', error);
+        throw error;
     }
 }
 
@@ -906,22 +752,12 @@ function addToMultiDrawTicket() {
         isValid = false;
     }
     
-    // Vérifier si un des tirages sélectionnés est bloqué
-    for (const drawId of selectedMultiDraws) {
-        // Pour multi-tirages, vérifier les deux créneaux (matin et soir)
-        if (isDrawBlocked(drawId, 'morning') || isDrawBlocked(drawId, 'evening')) {
-            errorMessage = "Youn nan tiraj yo bloke (5 minit avan lè tiraj la)";
-            isValid = false;
-            break;
-        }
-    }
-    
     if (!isValid) {
         showNotification(errorMessage, "warning");
         return;
     }
     
-    // Ajouter le pari à la fiche multi-tirages avec la structure attendue
+    // Ajouter le pari à la fiche multi-tirages
     const multiBet = {
         id: Date.now().toString(),
         gameType: selectedMultiGame,
@@ -929,8 +765,7 @@ function addToMultiDrawTicket() {
         number: number,
         amount: amount,
         multiplier: betTypes[selectedMultiGame].multiplier,
-        draws: Array.from(selectedMultiDraws),
-        options: {}  // Options vides par défaut
+        draws: Array.from(selectedMultiDraws)
     };
     
     currentMultiDrawTicket.bets.push(multiBet);
@@ -1045,61 +880,45 @@ async function saveAndPrintMultiDrawTicket() {
         return;
     }
     
-    // Vérifier si un des tirages est bloqué
-    for (const drawId of currentMultiDrawTicket.draws) {
-        if (isDrawBlocked(drawId, 'morning') || isDrawBlocked(drawId, 'evening')) {
-            showNotification("Youn nan tiraj yo bloke! Ou pa kapab sove fiche multi-tirages 5 minit avan tiraj la.", "error");
-            return;
-        }
-    }
+    // Générer un numéro de fiche
+    const ticketNum = multiDrawTickets.length + 1;
     
-    // Vérifier que l'utilisateur est connecté
-    if (!currentUser) {
-        showNotification("Ou pa konekte. Tanpri rekonekte.", "error");
-        handleLogout();
-        return;
-    }
+    // Créer la fiche
+    const ticket = {
+        id: currentMultiDrawTicket.id,
+        number: ticketNum,
+        date: new Date().toISOString(),
+        bets: [...currentMultiDrawTicket.bets],
+        total: currentMultiDrawTicket.totalAmount,
+        draws: Array.from(currentMultiDrawTicket.draws),
+        agentName: currentAdmin ? currentAdmin.name : 'Agent',
+        agentId: currentAdmin ? currentAdmin.id : 1
+    };
     
     try {
-        // Créer la fiche avec les informations de l'utilisateur
-        const ticket = {
-            id: currentMultiDrawTicket.id,
-            bets: [...currentMultiDrawTicket.bets],
-            totalAmount: currentMultiDrawTicket.totalAmount,
-            draws: Array.from(currentMultiDrawTicket.draws),
-            agentId: currentUser.id,
-            agentName: currentUser.name,
-            subsystem_id: currentUser.subsystem_id
+        // Sauvegarder via API
+        await saveMultiDrawTicketAPI(ticket);
+        
+        // Imprimer
+        printMultiDrawTicket(ticket);
+        
+        // Réinitialiser la fiche actuelle
+        currentMultiDrawTicket = {
+            id: Date.now().toString(),
+            bets: [],
+            totalAmount: 0,
+            draws: new Set(),
+            createdAt: new Date().toISOString()
         };
         
-        // Sauvegarder via API
-        const response = await saveMultiDrawTicketAPI(ticket);
+        // Mettre à jour l'affichage
+        updateMultiDrawTicketDisplay();
         
-        if (response && response.success) {
-            // Imprimer
-            printMultiDrawTicket(response.ticket);
-            
-            // Réinitialiser la fiche actuelle
-            currentMultiDrawTicket = {
-                id: Date.now().toString(),
-                bets: [],
-                totalAmount: 0,
-                draws: new Set(),
-                createdAt: new Date().toISOString()
-            };
-            
-            // Mettre à jour l'affichage
-            updateMultiDrawTicketDisplay();
-            
-            // Recharger les fiches multi-tirages depuis l'API
-            await loadMultiDrawTickets();
-            
-            showNotification("Fiche multi-tirages anrejistre ak enprime avèk siksè!", "success");
-        } else {
-            showNotification("Erreur lors de la sauvegarde de la fiche multi-tirages", "error");
-        }
+        // Recharger les fiches multi-tirages depuis l'API
+        await loadMultiDrawTickets();
+        
+        showNotification("Fiche multi-tirages anrejistre ak enprime avèk siksè!", "success");
     } catch (error) {
-        console.error('Erreur sauvegarde fiche multi-tirages:', error);
         showNotification("Erreur lors de la sauvegarde de la fiche multi-tirages", "error");
     }
 }
@@ -1122,7 +941,7 @@ function printMultiDrawTicket(ticket) {
             <div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
                 <div style="font-weight: bold; margin-bottom: 5px;">${bet.name}</div>
                 <div style="margin-bottom: 5px;">Nimewo: ${bet.number}</div>
-                <div style="margin-bottom: 5px;">Tirages: ${bet.draws.map(d => draws[d]?.name || d).join(', ')}</div>
+                <div style="margin-bottom: 5px;">Tirages: ${bet.draws.map(d => draws[d].name).join(', ')}</div>
                 <div style="font-weight: bold;">${bet.amount} G × ${bet.draws.length} = ${betTotal} G</div>
             </div>
         `;
@@ -1137,8 +956,7 @@ function printMultiDrawTicket(ticket) {
             <p>Fiche Multi-Tirages</p>
             <p><strong>Nimewo:</strong> #${String(ticket.number).padStart(6, '0')} (Multi)</p>
             <p><strong>Dat:</strong> ${new Date(ticket.date).toLocaleString('fr-FR')}</p>
-            <p><strong>Ajan:</strong> ${ticket.agent_name}</p>
-            <p><strong>Sous-système:</strong> ${currentUser?.subsystem_name || 'Non spécifié'}</p>
+            <p><strong>Ajan:</strong> ${ticket.agentName}</p>
             <hr>
             <div style="margin: 15px 0;">
                 <h3>Parye Multi-Tirages</h3>
@@ -1213,8 +1031,6 @@ function viewCurrentMultiDrawTicket() {
                         <h3>Fiche Multi-Tirages (Preview)</h3>
                         <p><strong>Nimewo:</strong> #${ticket.number}</p>
                         <p><strong>Dat:</strong> ${ticket.date}</p>
-                        <p><strong>Ajan:</strong> ${currentUser ? currentUser.name : 'Non connecté'}</p>
-                        <p><strong>Sous-système:</strong> ${currentUser ? (currentUser.subsystem_name || 'Non spécifié') : 'Non connecté'}</p>
                     </div>
                     <div>
                         <h3>Parye Multi-Tirages</h3>
@@ -1226,7 +1042,7 @@ function viewCurrentMultiDrawTicket() {
             <div class="bet-item">
                 <div><strong>${bet.name}</strong></div>
                 <div>Nimewo: ${bet.number}</div>
-                <div>Tirages: ${bet.draws.map(d => draws[d]?.name || d).join(', ')}</div>
+                <div>Tirages: ${bet.draws.map(d => draws[d].name).join(', ')}</div>
                 <div><strong>${bet.amount} G × ${bet.draws.length} = ${betTotal} G</strong></div>
             </div>
         `);
@@ -1278,7 +1094,7 @@ function updateMultiTicketsScreen() {
         ticketItem.className = 'multi-ticket-item';
         
         const ticketDate = new Date(ticket.date);
-        const drawNames = ticket.draws.map(d => draws[d]?.name || d).join(', ');
+        const drawNames = ticket.draws.map(d => draws[d].name).join(', ');
         
         let betsHTML = '';
         ticket.bets.forEach(bet => {
@@ -1822,13 +1638,13 @@ function checkWinningTickets() {
     winningTickets = [];
     
     // Parcourir tous les tickets sauvegardés
-    const allTickets = [...savedTickets];
+    const allTickets = [...savedTickets, ...pendingSyncTickets];
     
     allTickets.forEach(ticket => {
-        const result = resultsDatabase[ticket.draw]?.[ticket.draw_time];
+        const result = resultsDatabase[ticket.draw]?.[ticket.drawTime];
         
         if (!result) {
-            console.log(`Pas de résultat pour ${ticket.draw} ${ticket.draw_time}`);
+            console.log(`Pas de résultat pour ${ticket.draw} ${ticket.drawTime}`);
             return;
         }
         
@@ -2202,7 +2018,7 @@ function displayWinningTickets() {
             <div style="margin-bottom: 10px;">
                 <strong>Fiche #${String(ticket.number).padStart(6, '0')}</strong>
                 <div style="font-size: 0.9rem; color: #7f8c8d;">
-                    ${draws[ticket.draw]?.name || ticket.draw} (${ticket.draw_time === 'morning' ? 'Maten' : 'Swè'})
+                    ${draws[ticket.draw].name} (${ticket.drawTime === 'morning' ? 'Maten' : 'Swè'})
                 </div>
             </div>
             <div style="margin-bottom: 10px;">
@@ -2514,6 +2330,13 @@ function updateCurrentTime() {
     
     document.getElementById('current-time').textContent = `${dateString} - ${timeString}`;
     document.getElementById('ticket-date').textContent = `${dateString} - ${timeString}`;
+}
+
+// Mettre à jour le badge des fiches en attente
+function updatePendingBadge() {
+    const pendingCount = pendingSyncTickets.length;
+    console.log("Mise à jour badge:", pendingCount);
+    // Cette fonction peut être étendue pour afficher un badge visuel
 }
 
 // Ouvrir l'écran de pari
@@ -3667,13 +3490,6 @@ function submitBets() {
         return;
     }
     
-    // Vérifier si le tirage est bloqué
-    if (currentDraw && currentDrawTime && isDrawBlocked(currentDraw, currentDrawTime)) {
-        const drawTime = draws[currentDraw].times[currentDrawTime].time;
-        showNotification(`Tiraj sa a bloke! Li fèt à ${drawTime} epi ou pa kapab soumèt parye 5 minit avan.`, "error");
-        return;
-    }
-    
     let drawInfo = draws[currentDraw].name;
     if (currentDrawTime) {
         drawInfo += ` (${currentDrawTime === 'morning' ? 'Maten' : 'Swè'})`;
@@ -3737,7 +3553,7 @@ async function checkConnectionBeforeSavePrint() {
     } else {
         internetStatus.className = 'status-indicator disconnected';
         internetText.textContent = 'Entènèt: Pa konekte';
-        document.getElementById('connection-message').textContent = 'Pa gen koneksyon entènèt. Fiche a pa kapab enprime.';
+        document.getElementById('connection-message').textContent = 'Pa gen koneksyon entènèt. Fiche a pa kapab synchronize.';
         return;
     }
     
@@ -3787,18 +3603,55 @@ async function saveAndPrintTicket() {
         return;
     }
     
-    // Vérifier si le tirage est bloqué
-    if (currentDraw && currentDrawTime && isDrawBlocked(currentDraw, currentDrawTime)) {
-        const drawTime = draws[currentDraw].times[currentDrawTime].time;
-        showNotification(`Tiraj sa a bloke! Li fèt à ${drawTime} epi ou pa kapab sove oswa enprime fiche 5 minit avan.`, "error");
-        return;
-    }
-    
     await saveTicket();
     
     setTimeout(() => {
         printTicket();
     }, 100);
+}
+
+// Sauvegarder la fiche via API
+async function saveTicket() {
+    console.log("Sauvegarder fiche via API");
+    if (activeBets.length === 0) {
+        showNotification("Pa gen okenn parye pou sove nan fiche a", "warning");
+        return;
+    }
+    
+    const ticket = {
+        id: Date.now().toString(),
+        number: ticketNumber,
+        date: new Date().toISOString(),
+        draw: currentDraw,
+        drawTime: currentDrawTime,
+        bets: [...activeBets],
+        total: activeBets.reduce((sum, bet) => sum + bet.amount, 0),
+        agentName: currentAdmin ? currentAdmin.name : 'Agent',
+        agentId: currentAdmin ? currentAdmin.id : 1
+    };
+    
+    try {
+        // Sauvegarder via API
+        const response = await saveTicketAPI(ticket);
+        
+        // Ajouter aux tickets sauvegardés localement
+        savedTickets.push(ticket);
+        
+        // Incrémenter le numéro de ticket
+        ticketNumber++;
+        
+        showNotification("Fiche sove avèk siksè!", "success");
+        
+        // Réinitialiser les paris actifs
+        activeBets = [];
+        updateBetsList();
+        
+        return response;
+    } catch (error) {
+        console.error('Erreur lors de la sauvegarde du ticket:', error);
+        showNotification("Erreur lors de la sauvegarde du ticket", "error");
+        throw error;
+    }
 }
 
 // Imprimer la fiche
@@ -3863,9 +3716,8 @@ function printTicket() {
             <p>Fiche Parye</p>
             <p><strong>Nimewo:</strong> #${String(lastTicket.number).padStart(6, '0')}</p>
             <p><strong>Dat:</strong> ${new Date(lastTicket.date).toLocaleString('fr-FR')}</p>
-            <p><strong>Tiraj:</strong> ${draws[lastTicket.draw]?.name || lastTicket.draw} (${lastTicket.draw_time === 'morning' ? 'Maten' : 'Swè'})</p>
-            <p><strong>Ajan:</strong> ${lastTicket.agent_name}</p>
-            <p><strong>Sous-système:</strong> ${currentUser ? (currentUser.subsystem_name || 'Non spécifié') : 'Non connecté'}</p>
+            <p><strong>Tiraj:</strong> ${draws[lastTicket.draw].name} (${lastTicket.drawTime === 'morning' ? 'Maten' : 'Swè'})</p>
+            <p><strong>Ajan:</strong> ${lastTicket.agentName}</p>
             <hr>
             <div style="margin: 15px 0;">
                 ${betsHTML}
@@ -4080,7 +3932,7 @@ function updateHistoryScreen() {
         
         historyItem.innerHTML = `
             <div class="history-header">
-                <span class="history-draw">${draws[ticket.draw]?.name || ticket.draw} (${ticket.draw_time === 'morning' ? 'Maten' : 'Swè'})</span>
+                <span class="history-draw">${draws[ticket.draw].name} (${ticket.drawTime === 'morning' ? 'Maten' : 'Swè'})</span>
                 <span class="history-date">${ticketDate.toLocaleString()}</span>
             </div>
             <div class="history-bets">
@@ -4111,7 +3963,7 @@ function updateTicketManagementScreen() {
     console.log("Mise à jour écran gestion fiches");
     const ticketList = document.getElementById('ticket-management-list');
     
-    if (savedTickets.length === 0) {
+    if (savedTickets.length === 0 && pendingSyncTickets.length === 0) {
         ticketList.innerHTML = `
             <div style="text-align: center; padding: 40px; color: #7f8c8d;">
                 <i class="fas fa-file-invoice" style="font-size: 3rem; margin-bottom: 15px;"></i>
@@ -4124,7 +3976,7 @@ function updateTicketManagementScreen() {
     let html = '';
     
     // Combiner toutes les fiches
-    const allTickets = [...savedTickets];
+    const allTickets = [...savedTickets, ...pendingSyncTickets];
     
     // Trier par date (plus récent d'abord)
     const sortedTickets = [...allTickets].sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -4150,7 +4002,7 @@ function updateTicketManagementScreen() {
                 <div class="ticket-management-header">
                     <div>
                         <strong>Fiche #${String(ticket.number).padStart(6, '0')}</strong>
-                        ${ticket.draw ? `<div style="font-size: 0.9rem; color: #7f8c8d;">${draws[ticket.draw]?.name || 'Tiraj'} (${ticket.draw_time === 'morning' ? 'Maten' : 'Swè'})</div>` : ''}
+                        ${ticket.draw ? `<div style="font-size: 0.9rem; color: #7f8c8d;">${draws[ticket.draw]?.name || 'Tiraj'} (${ticket.drawTime === 'morning' ? 'Maten' : 'Swè'})</div>` : ''}
                     </div>
                     <div style="text-align: right;">
                         <div>${ticketDate.toLocaleString()}</div>
@@ -4159,7 +4011,7 @@ function updateTicketManagementScreen() {
                 </div>
                 <div class="ticket-details">
                     ${betsHTML}
-                    ${ticket.agent_name ? `<div><strong>Ajan:</strong> ${ticket.agent_name}</div>` : ''}
+                    ${ticket.agentName ? `<div><strong>Ajan:</strong> ${ticket.agentName}</div>` : ''}
                 </div>
                 ${canEdit ? `
                     <div style="display: flex; gap: 10px; margin-top: 10px;">
@@ -4187,7 +4039,7 @@ window.loadTicketForEdit = function(ticketId) {
     console.log("Charger ticket pour modification:", ticketId);
     
     // Trouver le ticket
-    const allTickets = [...savedTickets];
+    const allTickets = [...savedTickets, ...pendingSyncTickets];
     const ticketIndex = allTickets.findIndex(t => t.id === ticketId);
     
     if (ticketIndex === -1) {
@@ -4217,7 +4069,7 @@ window.loadTicketForEdit = function(ticketId) {
     
     // Mettre à jour le tiraj actuel
     currentDraw = ticket.draw;
-    currentDrawTime = ticket.draw_time;
+    currentDrawTime = ticket.drawTime;
     
     // Supprimer le ticket des listes
     const savedIndex = savedTickets.findIndex(t => t.id === ticketId);
@@ -4225,12 +4077,17 @@ window.loadTicketForEdit = function(ticketId) {
         savedTickets.splice(savedIndex, 1);
     }
     
+    const pendingIndex = pendingSyncTickets.findIndex(t => t.id === ticketId);
+    if (pendingIndex !== -1) {
+        pendingSyncTickets.splice(pendingIndex, 1);
+    }
+    
     // Mettre à jour l'affichage
     updateBetsList();
     updateTicketManagementScreen();
     
     // Ouvrir l'écran de pari
-    openBettingScreen(ticket.draw, ticket.draw_time);
+    openBettingScreen(ticket.draw, ticket.drawTime);
     
     showNotification(`Fiche #${String(ticket.number).padStart(6, '0')} chaje pou modification`, "success");
 };
@@ -4240,7 +4097,7 @@ window.deleteTicket = function(ticketId) {
     console.log("Supprimer ticket:", ticketId);
     
     // Trouver le ticket
-    const allTickets = [...savedTickets];
+    const allTickets = [...savedTickets, ...pendingSyncTickets];
     const ticket = allTickets.find(t => t.id === ticketId);
     
     if (!ticket) {
@@ -4267,6 +4124,11 @@ window.deleteTicket = function(ticketId) {
     const savedIndex = savedTickets.findIndex(t => t.id === ticketId);
     if (savedIndex !== -1) {
         savedTickets.splice(savedIndex, 1);
+    }
+    
+    const pendingIndex = pendingSyncTickets.findIndex(t => t.id === ticketId);
+    if (pendingIndex !== -1) {
+        pendingSyncTickets.splice(pendingIndex, 1);
     }
     
     // Mettre à jour l'affichage
@@ -4302,6 +4164,65 @@ function searchTicket() {
 function showAllTickets() {
     document.getElementById('search-ticket-number').value = '';
     updateTicketManagementScreen();
+}
+
+// Afficher les fiches en attente
+function showPendingTickets() {
+    document.getElementById('search-ticket-number').value = '';
+    const ticketList = document.getElementById('ticket-management-list');
+    
+    if (pendingSyncTickets.length === 0) {
+        ticketList.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #7f8c8d;">
+                <i class="fas fa-hourglass-half" style="font-size: 3rem; margin-bottom: 15px;"></i>
+                <p>Pa gen fiche ki pokò ale nan santral.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<h3>Fiche Pokò ale nan santral</h3>';
+    
+    // Trier par date (plus récent d'abord)
+    const sortedTickets = [...pendingSyncTickets].sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    sortedTickets.forEach(ticket => {
+        const ticketDate = new Date(ticket.date);
+        const now = new Date();
+        const timeDiff = now - ticketDate;
+        const canEdit = timeDiff <= FIVE_MINUTES;
+        
+        html += `
+            <div class="ticket-management">
+                <div class="ticket-management-header">
+                    <div>
+                        <strong>Fiche #${String(ticket.number).padStart(6, '0')}</strong>
+                        ${ticket.draw ? `<div style="font-size: 0.9rem; color: #7f8c8d;">${draws[ticket.draw]?.name || 'Tiraj'} (${ticket.drawTime === 'morning' ? 'Maten' : 'Swè'})</div>` : ''}
+                    </div>
+                    <div style="text-align: right;">
+                        <div>${ticketDate.toLocaleString()}</div>
+                        <div style="font-weight: bold;">${ticket.total} G</div>
+                    </div>
+                </div>
+                <div class="ticket-details">
+                    <div><strong>${ticket.bets.length} parye</strong></div>
+                    ${ticket.agentName ? `<div><strong>Ajan:</strong> ${ticket.agentName}</div>` : ''}
+                </div>
+                ${canEdit ? `
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="edit-btn" onclick="loadTicketForEdit('${ticket.id}')">
+                            <i class="fas fa-edit"></i> Modifye
+                        </button>
+                        <button class="delete-btn" onclick="deleteTicket('${ticket.id}')">
+                            <i class="fas fa-trash"></i> Efase
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    });
+    
+    ticketList.innerHTML = html;
 }
 
 function generateEndOfDrawReport() {
@@ -4363,7 +4284,7 @@ function generateDrawReport(drawId, time) {
     const reportResults = document.getElementById('report-results');
     
     const drawTickets = savedTickets.filter(ticket => 
-        ticket.draw === drawId && ticket.draw_time === time
+        ticket.draw === drawId && ticket.drawTime === time
     );
     
     reportResults.innerHTML = `
@@ -4415,7 +4336,7 @@ window.loadTicketForEditFromHistory = function(ticketId) {
     
     // Mettre à jour le tiraj actuel
     currentDraw = ticket.draw;
-    currentDrawTime = ticket.draw_time;
+    currentDrawTime = ticket.drawTime;
     
     // Supprimer le ticket
     savedTickets.splice(ticketIndex, 1);
@@ -4425,7 +4346,7 @@ window.loadTicketForEditFromHistory = function(ticketId) {
     updateHistoryScreen();
     
     // Ouvrir l'écran de pari
-    openBettingScreen(ticket.draw, ticket.draw_time);
+    openBettingScreen(ticket.draw, ticket.drawTime);
     
     showNotification(`Fiche #${String(ticket.number).padStart(6, '0')} chaje pou modification`, "success");
 };
