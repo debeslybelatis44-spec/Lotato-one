@@ -220,7 +220,7 @@
     </div>
 
     <script>
-        // Configuration API (identique à celle utilisée dans les autres fichiers)
+        // Configuration API
         const API_BASE_URL = 'https://lotato-one.onrender.com';
         
         // Éléments DOM
@@ -228,6 +228,73 @@
         const errorDiv = document.getElementById('error-message');
         const errorText = document.getElementById('error-text');
         const loginBtn = document.getElementById('login-btn');
+
+        // Afficher un message d'erreur
+        function showError(message) {
+            errorText.textContent = message;
+            errorDiv.style.display = 'flex';
+            setTimeout(() => {
+                if (errorDiv) errorDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Vérifier si le token est valide avant de rediriger
+        async function verifyTokenAndRedirect() {
+            const token = localStorage.getItem('nova_token');
+            const role = localStorage.getItem('nova_user_role');
+            
+            if (!token || !role) {
+                return; // Pas de token, rester sur la page
+            }
+            
+            try {
+                // Appel à un endpoint de vérification (existant dans server.js)
+                const response = await fetch(`${API_BASE_URL}/api/auth/check`, {
+                    headers: {
+                        'x-auth-token': token
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Token valide, rediriger selon le rôle
+                    switch (role) {
+                        case 'master':
+                            window.location.href = '/master-dashboard.html';
+                            break;
+                        case 'subsystem':
+                            window.location.href = '/subsystem-admin.html';
+                            break;
+                        case 'agent':
+                            window.location.href = '/lotato.html';
+                            break;
+                        default:
+                            // Rôle inconnu : on efface les données et on reste
+                            console.warn('Rôle inconnu:', role);
+                            localStorage.removeItem('nova_token');
+                            localStorage.removeItem('nova_user_role');
+                            localStorage.removeItem('nova_user_data');
+                    }
+                } else {
+                    // Token invalide, on le supprime
+                    console.log('Token invalide, suppression');
+                    localStorage.removeItem('nova_token');
+                    localStorage.removeItem('nova_user_role');
+                    localStorage.removeItem('nova_user_data');
+                }
+            } catch (err) {
+                // Erreur réseau ou serveur indisponible : on ne redirige pas, on laisse l'utilisateur tenter de se connecter
+                console.error('Erreur lors de la vérification du token:', err);
+                // On supprime le token pour éviter un blocage
+                localStorage.removeItem('nova_token');
+                localStorage.removeItem('nova_user_role');
+                localStorage.removeItem('nova_user_data');
+            }
+        }
+
+        // Appeler la vérification au chargement
+        verifyTokenAndRedirect();
 
         // Gestionnaire de soumission
         form.addEventListener('submit', async (e) => {
@@ -241,7 +308,7 @@
                 return;
             }
             
-            // Désactiver le bouton pendant la requête
+            // Désactiver le bouton
             loginBtn.disabled = true;
             const originalBtnText = loginBtn.innerHTML;
             loginBtn.innerHTML = '<span class="loading-spinner"></span> Connexion...';
@@ -258,7 +325,7 @@
                 const data = await response.json();
                 
                 if (response.ok && data.success) {
-                    // Stockage des informations d'authentification
+                    // Stockage
                     localStorage.setItem('nova_token', data.token);
                     localStorage.setItem('nova_user_role', data.admin.role);
                     localStorage.setItem('nova_user_data', JSON.stringify(data.admin));
@@ -276,6 +343,10 @@
                             break;
                         default:
                             showError('Rôle inconnu. Contactez l\'administrateur.');
+                            // Nettoyer les données
+                            localStorage.removeItem('nova_token');
+                            localStorage.removeItem('nova_user_role');
+                            localStorage.removeItem('nova_user_data');
                     }
                 } else {
                     showError(data.error || 'Identifiants incorrects.');
@@ -284,39 +355,10 @@
                 console.error('Erreur de connexion:', error);
                 showError('Erreur de connexion au serveur. Vérifiez votre réseau.');
             } finally {
-                // Réactiver le bouton
                 loginBtn.disabled = false;
                 loginBtn.innerHTML = originalBtnText;
             }
         });
-        
-        // Afficher un message d'erreur
-        function showError(message) {
-            errorText.textContent = message;
-            errorDiv.style.display = 'flex';
-            // Auto-masquer après 5 secondes
-            setTimeout(() => {
-                if (errorDiv) errorDiv.style.display = 'none';
-            }, 5000);
-        }
-        
-        // Vérifier si l'utilisateur est déjà connecté (optionnel)
-        const token = localStorage.getItem('nova_token');
-        const role = localStorage.getItem('nova_user_role');
-        if (token && role) {
-            // Rediriger directement vers le bon tableau de bord
-            switch (role) {
-                case 'master':
-                    window.location.href = '/master-dashboard.html';
-                    break;
-                case 'subsystem':
-                    window.location.href = '/subsystem-admin.html';
-                    break;
-                case 'agent':
-                    window.location.href = '/lotato.html';
-                    break;
-            }
-        }
     </script>
 </body>
 </html>
