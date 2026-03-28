@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LOTATO · Connexion</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="/manifest.json">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0a0b1e, #1a1a2e);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 30px;
+            padding: 40px 30px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .login-container:hover {
+            transform: translateY(-5px);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo i {
+            font-size: 4rem;
+            background: linear-gradient(135deg, #ad00f1, #ff007a);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .logo h1 {
+            font-size: 2rem;
+            margin-top: 10px;
+            background: linear-gradient(135deg, #ad00f1, #ff007a);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .logo p {
+            color: #a0a0b8;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #e0e0ff;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .input-group {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            color: #ad00f1;
+            font-size: 1rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 15px 14px 45px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            font-size: 1rem;
+            color: white;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #ad00f1;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #ad00f1, #00d4ff);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-login:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(173, 0, 241, 0.3);
+        }
+
+        .btn-login:active {
+            transform: scale(0.98);
+        }
+
+        .error-message {
+            background: rgba(255, 77, 77, 0.2);
+            border-left: 4px solid #ff4d4d;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            color: #ff4d4d;
+            font-size: 0.9rem;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .error-message i {
+            font-size: 1.2rem;
+        }
+
+        .info-text {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8rem;
+            color: #a0a0b8;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo">
+            <i class="fas fa-crown"></i>
+            <h1>LOTATO</h1>
+            <p>Système de gestion de paris</p>
+        </div>
+
+        <div id="error-message" class="error-message">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span id="error-text">Identifiant ou mot de passe incorrect</span>
+        </div>
+
+        <form id="login-form">
+            <div class="form-group">
+                <label><i class="fas fa-user"></i> Identifiant</label>
+                <div class="input-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="username" placeholder="Nom d'utilisateur" autocomplete="username" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-lock"></i> Mot de passe</label>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" placeholder="Mot de passe" autocomplete="current-password" required>
+                </div>
+            </div>
+            <button type="submit" class="btn-login" id="login-btn">
+                <i class="fas fa-sign-in-alt"></i> Se connecter
+            </button>
+        </form>
+
+        <div class="info-text">
+            <i class="fas fa-shield-alt"></i> Accès sécurisé · Chiffrement SSL
+        </div>
+    </div>
+
+    <script>
+        // Configuration API (identique à celle utilisée dans les autres fichiers)
+        const API_BASE_URL = 'https://lotato-one.onrender.com';
+        
+        // Éléments DOM
+        const form = document.getElementById('login-form');
+        const errorDiv = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
+        const loginBtn = document.getElementById('login-btn');
+
+        // Gestionnaire de soumission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showError('Veuillez remplir tous les champs.');
+                return;
+            }
+            
+            // Désactiver le bouton pendant la requête
+            loginBtn.disabled = true;
+            const originalBtnText = loginBtn.innerHTML;
+            loginBtn.innerHTML = '<span class="loading-spinner"></span> Connexion...';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    // Stockage des informations d'authentification
+                    localStorage.setItem('nova_token', data.token);
+                    localStorage.setItem('nova_user_role', data.admin.role);
+                    localStorage.setItem('nova_user_data', JSON.stringify(data.admin));
+                    
+                    // Redirection selon le rôle
+                    switch (data.admin.role) {
+                        case 'master':
+                            window.location.href = '/master-dashboard.html';
+                            break;
+                        case 'subsystem':
+                            window.location.href = '/subsystem-admin.html';
+                            break;
+                        case 'agent':
+                            window.location.href = '/lotato.html';
+                            break;
+                        default:
+                            showError('Rôle inconnu. Contactez l\'administrateur.');
+                    }
+                } else {
+                    showError(data.error || 'Identifiants incorrects.');
+                }
+            } catch (error) {
+                console.error('Erreur de connexion:', error);
+                showError('Erreur de connexion au serveur. Vérifiez votre réseau.');
+            } finally {
+                // Réactiver le bouton
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = originalBtnText;
+            }
+        });
+        
+        // Afficher un message d'erreur
+        function showError(message) {
+            errorText.textContent = message;
+            errorDiv.style.display = 'flex';
+            // Auto-masquer après 5 secondes
+            setTimeout(() => {
+                if (errorDiv) errorDiv.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Vérifier si l'utilisateur est déjà connecté (optionnel)
+        const token = localStorage.getItem('nova_token');
+        const role = localStorage.getItem('nova_user_role');
+        if (token && role) {
+            // Rediriger directement vers le bon tableau de bord
+            switch (role) {
+                case 'master':
+                    window.location.href = '/master-dashboard.html';
+                    break;
+                case 'subsystem':
+                    window.location.href = '/subsystem-admin.html';
+                    break;
+                case 'agent':
+                    window.location.href = '/lotato.html';
+                    break;
+            }
+        }
+    </script>
+</body>
+</html>
