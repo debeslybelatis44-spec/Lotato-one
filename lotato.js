@@ -1,5 +1,5 @@
 // Configuration de base avec APP_CONFIG
-const API_BASE_URL = 'https://lotatonova-fv0b.onrender.com';
+const API_BASE_URL = 'https://lotato-one.onrender.com';
 // Configuration API Backend
 const APP_CONFIG = {
     health: `${API_BASE_URL}/api/health`,
