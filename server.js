@@ -45,7 +45,7 @@ const subsystemSchema = new mongoose.Schema({
   }
 });
 
-// Paramètres par sous-système (nom, logo, slogan, multiplicateurs, limites)
+// Paramètres par sous-système
 const subsystemSettingsSchema = new mongoose.Schema({
   subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true, unique: true },
   name: { type: String, default: 'Mon Borlette' },
@@ -69,7 +69,7 @@ const subsystemSettingsSchema = new mongoose.Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
-// Tirage global (partagé)
+// Tirage global
 const drawSchema = new mongoose.Schema({
   name: { type: String, required: true },
   key: { type: String, required: true, unique: true },
@@ -80,20 +80,20 @@ const drawSchema = new mongoose.Schema({
   is_active: { type: Boolean, default: true }
 });
 
-// Résultat d'un tirage pour un sous-système
+// Résultat
 const resultSchema = new mongoose.Schema({
   subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true },
   draw_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Draw', required: true },
   draw_time: { type: String, enum: ['morning', 'evening'], required: true },
   date: { type: Date, required: true },
-  lot1: { type: String, required: true },   // 3 chiffres
-  lot2: { type: String, required: true },   // 2 chiffres
-  lot3: { type: String, required: true },   // 2 chiffres
+  lot1: { type: String, required: true },
+  lot2: { type: String, required: true },
+  lot3: { type: String, required: true },
   verified: { type: Boolean, default: false }
 });
 resultSchema.index({ subsystem_id: 1, draw_id: 1, draw_time: 1, date: 1 }, { unique: true });
 
-// Schéma de pari (betSchema)
+// Pari (betSchema)
 const betSchema = new mongoose.Schema({
   type: String, name: String, number: String, amount: Number, multiplier: Number,
   isGroup: Boolean, details: Array, options: Object, perOptionAmount: Number,
@@ -107,8 +107,8 @@ const ticketSchema = new mongoose.Schema({
   agent_name: String,
   number: { type: Number, required: true },
   date: { type: Date, default: Date.now },
-  draw: String,          // nom du tirage (ex: "miami")
-  draw_time: String,     // "morning" ou "evening"
+  draw: String,
+  draw_time: String,
   bets: [betSchema],
   total: Number,
   status: { type: String, default: 'active' },
@@ -139,7 +139,7 @@ const multiDrawTicketSchema = new mongoose.Schema({
   status: { type: String, default: 'active' }
 });
 
-// Historique générique
+// Historique
 const historySchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   username: String,
@@ -159,7 +159,7 @@ const restrictionSchema = new mongoose.Schema({
   created_at: { type: Date, default: Date.now }
 });
 
-// CompanyInfo (pour compatibilité)
+// CompanyInfo
 const companyInfoSchema = new mongoose.Schema({
   subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', unique: true },
   name: String,
@@ -215,9 +215,11 @@ app.use(cors());
 app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Servir les fichiers statiques (CSS, JS, HTML, etc.)
 app.use(express.static(path.join(__dirname)));
 
-// ==================== ROUTES ====================
+// ==================== ROUTES API ====================
 
 // --- AUTH ---
 app.post('/api/auth/login', async (req, res) => {
@@ -629,7 +631,7 @@ app.get('/api/master/consolidated-report', auth, authorize('master'), async (req
   }
 });
 
-// --- SUBSYSTEM ROUTES (propriétaire) ---
+// --- SUBSYSTEM ROUTES ---
 app.get('/api/subsystem/mine', auth, authorize('subsystem'), async (req, res) => {
   const subsystem = await Subsystem.findById(req.user.subsystem_id);
   res.json({ success: true, subsystems: [subsystem] });
@@ -775,7 +777,7 @@ app.delete('/api/subsystem/users/:id', auth, authorize('subsystem'), async (req,
   }
 });
 
-// --- ROUTES POUR LES TIRAGES (partagés) ---
+// --- TIRAGES ---
 app.get('/api/subsystem/draws', auth, authorize('subsystem', 'agent'), async (req, res) => {
   try {
     const draws = await Draw.find({ is_active: true }).sort({ key: 1 });
@@ -858,7 +860,7 @@ app.get('/api/subsystem/agents', auth, authorize('subsystem'), async (req, res) 
   }
 });
 
-// --- ROUTES POUR LES RESTRICTIONS ---
+// --- RESTRICTIONS ---
 app.get('/api/subsystem/blocked-numbers', auth, authorize('subsystem'), async (req, res) => {
   try {
     const restrictions = await Restriction.find({
@@ -1018,7 +1020,7 @@ app.post('/api/subsystem/block-draw', auth, authorize('subsystem'), async (req, 
   }
 });
 
-// --- DASHBOARD POUR SOUS-SYSTÈME ---
+// --- DASHBOARD SUBSYSTEM ---
 app.get('/api/subsystem/dashboard', auth, authorize('subsystem'), async (req, res) => {
   try {
     const subsystemId = req.user.subsystem_id;
@@ -1077,7 +1079,7 @@ app.get('/api/subsystem/dashboard', auth, authorize('subsystem'), async (req, re
   }
 });
 
-// --- RAPPORTS POUR SOUS-SYSTÈME ---
+// --- RAPPORTS SUBSYSTEM ---
 app.get('/api/subsystem/reports', auth, authorize('subsystem'), async (req, res) => {
   try {
     const { period, fromDate, toDate, agentId, drawId, gainLoss } = req.query;
@@ -1147,16 +1149,12 @@ app.get('/api/subsystem/reports', auth, authorize('subsystem'), async (req, res)
   }
 });
 
-// --- TICKETS (agents et sous-systèmes) ---
-// POST /api/tickets : accepte ticket à plat ou { ticket }
+// --- TICKETS ---
 app.post('/api/tickets', auth, authorize('agent', 'subsystem'), async (req, res) => {
   try {
     let ticketData = req.body;
-    // Si le body contient une propriété "ticket", on l'extrait
-    if (ticketData.ticket) {
-      ticketData = ticketData.ticket;
-    }
-    // S'assurer que subsystem_id et agent_id sont présents
+    if (ticketData.ticket) ticketData = ticketData.ticket;
+
     const finalSubsystemId = ticketData.subsystem_id || req.user.subsystem_id;
     const finalAgentId = ticketData.agent_id || req.user._id;
     const finalAgentName = ticketData.agent_name || req.user.name;
@@ -1257,7 +1255,6 @@ app.post('/api/tickets/pending', auth, authorize('agent', 'subsystem'), async (r
 });
 
 app.get('/api/tickets/winning', auth, authorize('agent', 'subsystem'), async (req, res) => {
-  // À implémenter si nécessaire, pour l'instant retourne vide
   res.json({ success: true, tickets: [] });
 });
 
@@ -1291,7 +1288,7 @@ app.post('/api/tickets/multi-draw', auth, authorize('agent', 'subsystem'), async
   }
 });
 
-// Historique (générique)
+// --- HISTORIQUE ---
 app.get('/api/history', auth, authorize('agent', 'subsystem'), async (req, res) => {
   try {
     const query = {};
@@ -1309,13 +1306,12 @@ app.get('/api/history', auth, authorize('agent', 'subsystem'), async (req, res) 
 
 app.post('/api/history', auth, authorize('agent', 'subsystem'), async (req, res) => {
   try {
-    // Le frontend peut envoyer n'importe quoi, on stocke l'action par défaut et les détails
-    const { action, details, ...rest } = req.body;
+    const { action, details } = req.body;
     const historyEntry = new History({
       user_id: req.user._id,
       username: req.user.username,
       action: action || 'bet_saved',
-      details: details || rest,
+      details: details || {},
       timestamp: new Date()
     });
     await historyEntry.save();
@@ -1325,7 +1321,7 @@ app.post('/api/history', auth, authorize('agent', 'subsystem'), async (req, res)
   }
 });
 
-// Résultats (pour agent, via l'API)
+// --- RÉSULTATS (pour agent) ---
 app.get('/api/results', auth, authorize('subsystem', 'master', 'agent'), async (req, res) => {
   try {
     const { draw, time, date, limit = 10 } = req.query;
@@ -1333,7 +1329,7 @@ app.get('/api/results', auth, authorize('subsystem', 'master', 'agent'), async (
     if (req.user.role === 'subsystem' || req.user.role === 'agent') {
       query.subsystem_id = req.user.subsystem_id;
     }
-    if (draw) query.draw_id = draw; // on attend l'ID du tirage
+    if (draw) query.draw_id = draw;
     if (time) query.draw_time = time;
     if (date) {
       const start = new Date(date);
@@ -1343,7 +1339,6 @@ app.get('/api/results', auth, authorize('subsystem', 'master', 'agent'), async (
       query.date = { $gte: start, $lte: end };
     }
     const results = await Result.find(query).sort({ date: -1 }).limit(parseInt(limit)).populate('draw_id', 'name key');
-    // Structurer pour le frontend
     const structured = {};
     for (let r of results) {
       const drawKey = r.draw_id ? r.draw_id.key : 'unknown';
@@ -1361,7 +1356,7 @@ app.get('/api/results', auth, authorize('subsystem', 'master', 'agent'), async (
   }
 });
 
-// Company info (pour agent)
+// --- COMPANY INFO ---
 app.get('/api/company-info', auth, authorize('agent', 'subsystem'), async (req, res) => {
   try {
     const settings = await SubsystemSettings.findOne({ subsystem_id: req.user.subsystem_id });
@@ -1392,10 +1387,9 @@ app.get('/api/logo', auth, authorize('agent', 'subsystem'), async (req, res) => 
   }
 });
 
-// Health check
 app.get('/api/health', (req, res) => res.json({ status: 'OK' }));
 
-// --- MASTER DASHBOARD (routes supplémentaires) ---
+// --- AGENTS (master) ---
 app.get('/api/agents', auth, authorize('master'), async (req, res) => {
   try {
     const agents = await User.find({ role: 'agent' }).populate('subsystem_id', 'name');
@@ -1426,14 +1420,17 @@ app.get('/api/agents', auth, authorize('master'), async (req, res) => {
   }
 });
 
-// Check winners (optionnel)
 app.get('/api/check-winners', auth, authorize('agent', 'subsystem'), async (req, res) => {
-  // Pour l'instant, pas de logique de gain
   res.json({ success: true, winners: [] });
 });
 
-// ==================== SERVEUR STATIQUE ET FALLBACK ====================
-app.get('*', (req, res) => {
+// ==================== FALLBACK POUR SPA ====================
+// Toute requête qui n'est pas une route API et qui n'a pas été satisfaite par express.static
+// renvoie index.html (pour gérer les routes côté client)
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    return next(); // Ne pas intercepter les appels API manquants (ils retourneront 404)
+  }
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
@@ -1447,11 +1444,10 @@ mongoose.connect(process.env.MONGODB_URI)
       if (process.env.DEFAULT_MASTER_USERNAME && process.env.DEFAULT_MASTER_PASSWORD) {
         masterUsername = process.env.DEFAULT_MASTER_USERNAME;
         masterPassword = process.env.DEFAULT_MASTER_PASSWORD;
-        console.log('Création du master avec les variables d\'environnement');
       } else {
         masterUsername = 'admin';
         masterPassword = 'admin123';
-        console.warn('⚠️  ATTENTION: Utilisation des identifiants par défaut pour le master (admin/admin123). Changez-les dès que possible.');
+        console.warn('⚠️  Utilisation des identifiants par défaut (admin/admin123). Changez-les dès que possible.');
       }
       const hashedPassword = await bcrypt.hash(masterPassword, 10);
       await User.create({
@@ -1473,10 +1469,7 @@ mongoose.connect(process.env.MONGODB_URI)
     ];
     for (const drawData of defaultDraws) {
       const exists = await Draw.findOne({ key: drawData.key });
-      if (!exists) {
-        await Draw.create(drawData);
-        console.log(`✅ Tirage ${drawData.key} créé`);
-      }
+      if (!exists) await Draw.create(drawData);
     }
 
     const PORT = process.env.PORT || 5000;
