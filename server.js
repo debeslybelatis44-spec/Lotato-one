@@ -9,7 +9,6 @@ const compression = require('compression');
 
 // ==================== MODÈLES ====================
 
-// Utilisateur
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
@@ -26,7 +25,6 @@ userSchema.methods.comparePassword = async function(candidate) {
   return await bcrypt.compare(candidate, this.password);
 };
 
-// Sous-système (propriétaire)
 const subsystemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   subdomain: { type: String, required: true, unique: true },
@@ -45,7 +43,6 @@ const subsystemSchema = new mongoose.Schema({
   }
 });
 
-// Paramètres par sous-système
 const subsystemSettingsSchema = new mongoose.Schema({
   subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true, unique: true },
   name: { type: String, default: 'Mon Borlette' },
@@ -69,7 +66,6 @@ const subsystemSettingsSchema = new mongoose.Schema({
   updated_at: { type: Date, default: Date.now }
 });
 
-// Tirage global
 const drawSchema = new mongoose.Schema({
   name: { type: String, required: true },
   key: { type: String, required: true, unique: true },
@@ -80,7 +76,6 @@ const drawSchema = new mongoose.Schema({
   is_active: { type: Boolean, default: true }
 });
 
-// Résultat
 const resultSchema = new mongoose.Schema({
   subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true },
   draw_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Draw', required: true },
@@ -93,14 +88,12 @@ const resultSchema = new mongoose.Schema({
 });
 resultSchema.index({ subsystem_id: 1, draw_id: 1, draw_time: 1, date: 1 }, { unique: true });
 
-// Pari (betSchema)
 const betSchema = new mongoose.Schema({
   type: String, name: String, number: String, amount: Number, multiplier: Number,
   isGroup: Boolean, details: Array, options: Object, perOptionAmount: Number,
   isLotto4: Boolean, isLotto5: Boolean, isAuto: Boolean
 }, { _id: false });
 
-// Ticket
 const ticketSchema = new mongoose.Schema({
   subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true },
   agent_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -119,7 +112,6 @@ const ticketSchema = new mongoose.Schema({
 ticketSchema.index({ subsystem_id: 1, date: -1 });
 ticketSchema.index({ agent_id: 1, date: -1 });
 
-// Multi‑tirage ticket
 const multiDrawTicketSchema = new mongoose.Schema({
   subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true },
   agent_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -139,7 +131,6 @@ const multiDrawTicketSchema = new mongoose.Schema({
   status: { type: String, default: 'active' }
 });
 
-// Historique
 const historySchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   username: String,
@@ -148,7 +139,6 @@ const historySchema = new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 });
 
-// Restriction
 const restrictionSchema = new mongoose.Schema({
   subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true },
   number: { type: String, required: true },
@@ -159,7 +149,6 @@ const restrictionSchema = new mongoose.Schema({
   created_at: { type: Date, default: Date.now }
 });
 
-// CompanyInfo
 const companyInfoSchema = new mongoose.Schema({
   subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', unique: true },
   name: String,
@@ -170,13 +159,11 @@ const companyInfoSchema = new mongoose.Schema({
   logoUrl: String
 });
 
-// Settings global
 const settingsSchema = new mongoose.Schema({
   key: { type: String, required: true, unique: true },
   value: mongoose.Schema.Types.Mixed
 });
 
-// Modèles
 const User = mongoose.model('User', userSchema);
 const Subsystem = mongoose.model('Subsystem', subsystemSchema);
 const SubsystemSettings = mongoose.model('SubsystemSettings', subsystemSettingsSchema);
@@ -216,7 +203,7 @@ app.use(compression());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Servir les fichiers statiques (CSS, JS, HTML, etc.)
+// Servir les fichiers statiques (CSS, JS, images, HTML)
 app.use(express.static(path.join(__dirname)));
 
 // ==================== ROUTES API ====================
@@ -1321,7 +1308,7 @@ app.post('/api/history', auth, authorize('agent', 'subsystem'), async (req, res)
   }
 });
 
-// --- RÉSULTATS (pour agent) ---
+// --- RÉSULTATS ---
 app.get('/api/results', auth, authorize('subsystem', 'master', 'agent'), async (req, res) => {
   try {
     const { draw, time, date, limit = 10 } = req.query;
@@ -1424,12 +1411,21 @@ app.get('/api/check-winners', auth, authorize('agent', 'subsystem'), async (req,
   res.json({ success: true, winners: [] });
 });
 
+// ==================== ROUTES POUR LES FICHIERS HTML ====================
+app.get('/lotato.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'lotato.html'));
+});
+app.get('/master-dashboard.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'master-dashboard.html'));
+});
+app.get('/subsystem-admin.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'subsystem-admin.html'));
+});
+
 // ==================== FALLBACK POUR SPA ====================
-// Toute requête qui n'est pas une route API et qui n'a pas été satisfaite par express.static
-// renvoie index.html (pour gérer les routes côté client)
 app.use((req, res, next) => {
-  if (req.path.startsWith('/api/')) {
-    return next(); // Ne pas intercepter les appels API manquants (ils retourneront 404)
+  if (req.path.includes('.') || req.path.startsWith('/api/')) {
+    return next();
   }
   res.sendFile(path.join(__dirname, 'index.html'));
 });
