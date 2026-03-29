@@ -93,14 +93,14 @@ const resultSchema = new mongoose.Schema({
 });
 resultSchema.index({ subsystem_id: 1, draw_id: 1, draw_time: 1, date: 1 }, { unique: true });
 
-// Schéma de pari (betSchema) – doit être défini avant ticketSchema
+// Schéma de pari (betSchema)
 const betSchema = new mongoose.Schema({
   type: String, name: String, number: String, amount: Number, multiplier: Number,
   isGroup: Boolean, details: Array, options: Object, perOptionAmount: Number,
   isLotto4: Boolean, isLotto5: Boolean, isAuto: Boolean
 }, { _id: false });
 
-// Ticket (modifié pour utiliser draw (string) au lieu de draw_id)
+// Ticket
 const ticketSchema = new mongoose.Schema({
   subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true },
   agent_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -139,12 +139,12 @@ const multiDrawTicketSchema = new mongoose.Schema({
   status: { type: String, default: 'active' }
 });
 
-// Historique
+// Historique générique
 const historySchema = new mongoose.Schema({
-  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   username: String,
   action: String,
-  details: String,
+  details: mongoose.Schema.Types.Mixed,
   timestamp: { type: Date, default: Date.now }
 });
 
@@ -259,9 +259,7 @@ app.get('/api/auth/check', auth, async (req, res) => {
   }
 });
 
-// --- MASTER ROUTES (gestion des sous-systèmes, statistiques globales) ---
-
-// Créer un sous-système
+// --- MASTER ROUTES ---
 app.post('/api/master/subsystems', auth, authorize('master'), async (req, res) => {
   try {
     const { name, subdomain, contact_email, contact_phone, max_users = 10, subscription_type = 'basic', subscription_months = 1 } = req.body;
@@ -310,7 +308,6 @@ app.post('/api/master/subsystems', auth, authorize('master'), async (req, res) =
   }
 });
 
-// Récupérer tous les sous-systèmes (avec pagination)
 app.get('/api/master/subsystems', auth, authorize('master'), async (req, res) => {
   try {
     const { page = 1, limit = 10, status = 'all', search } = req.query;
@@ -343,7 +340,6 @@ app.get('/api/master/subsystems', auth, authorize('master'), async (req, res) =>
   }
 });
 
-// Détails d'un sous-système
 app.get('/api/master/subsystems/:id', auth, authorize('master'), async (req, res) => {
   try {
     const subsystem = await Subsystem.findById(req.params.id);
@@ -358,7 +354,6 @@ app.get('/api/master/subsystems/:id', auth, authorize('master'), async (req, res
   }
 });
 
-// Désactiver un sous-système
 app.put('/api/master/subsystems/:id/deactivate', auth, authorize('master'), async (req, res) => {
   try {
     const subsystem = await Subsystem.findByIdAndUpdate(req.params.id, { is_active: false }, { new: true });
@@ -370,7 +365,6 @@ app.put('/api/master/subsystems/:id/deactivate', auth, authorize('master'), asyn
   }
 });
 
-// Activer un sous-système
 app.put('/api/master/subsystems/:id/activate', auth, authorize('master'), async (req, res) => {
   try {
     const subsystem = await Subsystem.findByIdAndUpdate(req.params.id, { is_active: true }, { new: true });
@@ -382,7 +376,6 @@ app.put('/api/master/subsystems/:id/activate', auth, authorize('master'), async 
   }
 });
 
-// Liste des agents d'un sous-système
 app.get('/api/master/subsystems/:id/users', auth, authorize('master'), async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -400,7 +393,6 @@ app.get('/api/master/subsystems/:id/users', auth, authorize('master'), async (re
   }
 });
 
-// Revenu mensuel global (tous sous-systèmes)
 app.get('/api/master/revenue/month', auth, authorize('master'), async (req, res) => {
   try {
     const now = new Date();
@@ -417,7 +409,6 @@ app.get('/api/master/revenue/month', auth, authorize('master'), async (req, res)
   }
 });
 
-// Tendances (statiques pour l'instant)
 app.get('/api/master/trends', auth, authorize('master'), async (req, res) => {
   try {
     res.json({
@@ -432,7 +423,6 @@ app.get('/api/master/trends', auth, authorize('master'), async (req, res) => {
   }
 });
 
-// Quick stats
 app.get('/api/master/quick-stats', auth, authorize('master'), async (req, res) => {
   try {
     const today = new Date(); today.setHours(0,0,0,0);
@@ -453,7 +443,6 @@ app.get('/api/master/quick-stats', auth, authorize('master'), async (req, res) =
   }
 });
 
-// Revenu quotidien sur N jours
 app.get('/api/master/revenue/daily', auth, authorize('master'), async (req, res) => {
   try {
     const days = parseInt(req.query.days) || 30;
@@ -488,7 +477,6 @@ app.get('/api/master/revenue/daily', auth, authorize('master'), async (req, res)
   }
 });
 
-// Statistiques détaillées par sous-système (pour l'onglet statistiques du master)
 app.get('/api/master/subsystems/stats', auth, authorize('master'), async (req, res) => {
   try {
     const subsystems = await Subsystem.find();
@@ -516,7 +504,6 @@ app.get('/api/master/subsystems/stats', auth, authorize('master'), async (req, r
   }
 });
 
-// Statistiques globales (agents actifs, ventes totales, profit)
 app.get('/api/statistics', auth, authorize('master'), async (req, res) => {
   try {
     const activeAgents = await User.countDocuments({ role: 'agent', is_active: true });
@@ -535,7 +522,6 @@ app.get('/api/statistics', auth, authorize('master'), async (req, res) => {
   }
 });
 
-// Profit global quotidien (pour graphique)
 app.get('/api/master/global/profit/daily', auth, authorize('master'), async (req, res) => {
   try {
     const days = parseInt(req.query.days) || 30;
@@ -570,7 +556,6 @@ app.get('/api/master/global/profit/daily', auth, authorize('master'), async (req
   }
 });
 
-// Répartition des jeux (statique)
 app.get('/api/games/distribution', auth, authorize('master'), async (req, res) => {
   try {
     const games = ['Borlette', 'Lotto 3', 'Lotto 4', 'Lotto 5', 'Grap', 'Marriage'];
@@ -581,7 +566,6 @@ app.get('/api/games/distribution', auth, authorize('master'), async (req, res) =
   }
 });
 
-// Rapport consolidé master
 app.get('/api/master/consolidated-report', auth, authorize('master'), async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
@@ -646,14 +630,11 @@ app.get('/api/master/consolidated-report', auth, authorize('master'), async (req
 });
 
 // --- SUBSYSTEM ROUTES (propriétaire) ---
-
-// Récupérer les informations du sous-système connecté
 app.get('/api/subsystem/mine', auth, authorize('subsystem'), async (req, res) => {
   const subsystem = await Subsystem.findById(req.user.subsystem_id);
   res.json({ success: true, subsystems: [subsystem] });
 });
 
-// Récupérer les paramètres du sous-système (nom, logo, slogan, multiplicateurs, limites)
 app.get('/api/subsystem/settings', auth, authorize('subsystem'), async (req, res) => {
   try {
     let settings = await SubsystemSettings.findOne({ subsystem_id: req.user.subsystem_id });
@@ -676,7 +657,6 @@ app.get('/api/subsystem/settings', auth, authorize('subsystem'), async (req, res
   }
 });
 
-// Mettre à jour les paramètres du sous-système
 app.post('/api/subsystem/settings', auth, authorize('subsystem'), async (req, res) => {
   try {
     const { name, slogan, logoUrl, multipliers, limits } = req.body;
@@ -698,7 +678,6 @@ app.post('/api/subsystem/settings', auth, authorize('subsystem'), async (req, re
   }
 });
 
-// Récupérer la liste des agents du sous-système
 app.get('/api/subsystem/users', auth, authorize('subsystem'), async (req, res) => {
   try {
     const { limit = 100 } = req.query;
@@ -709,7 +688,6 @@ app.get('/api/subsystem/users', auth, authorize('subsystem'), async (req, res) =
   }
 });
 
-// Créer un agent
 app.post('/api/subsystem/users/create', auth, authorize('subsystem'), async (req, res) => {
   try {
     const { name, username, email, password } = req.body;
@@ -755,7 +733,6 @@ app.post('/api/subsystem/users/create', auth, authorize('subsystem'), async (req
   }
 });
 
-// Modifier un agent
 app.put('/api/subsystem/users/:id', auth, authorize('subsystem'), async (req, res) => {
   try {
     const { name, email, is_active, password } = req.body;
@@ -773,7 +750,6 @@ app.put('/api/subsystem/users/:id', auth, authorize('subsystem'), async (req, re
   }
 });
 
-// Modifier statut agent (activer/désactiver)
 app.put('/api/subsystem/users/:id/status', auth, authorize('subsystem'), async (req, res) => {
   try {
     const { is_active } = req.body;
@@ -789,7 +765,6 @@ app.put('/api/subsystem/users/:id/status', auth, authorize('subsystem'), async (
   }
 });
 
-// Supprimer un agent
 app.delete('/api/subsystem/users/:id', auth, authorize('subsystem'), async (req, res) => {
   try {
     const user = await User.findOneAndDelete({ _id: req.params.id, subsystem_id: req.user.subsystem_id, role: 'agent' });
@@ -810,7 +785,6 @@ app.get('/api/subsystem/draws', auth, authorize('subsystem', 'agent'), async (re
   }
 });
 
-// Récupérer les résultats d'un tirage pour le sous-système connecté
 app.get('/api/subsystem/results', auth, authorize('subsystem', 'agent'), async (req, res) => {
   try {
     const { draw_id, draw_time, date } = req.query;
@@ -831,7 +805,6 @@ app.get('/api/subsystem/results', auth, authorize('subsystem', 'agent'), async (
   }
 });
 
-// Publier un résultat (sous-système)
 app.post('/api/subsystem/publish-results', auth, authorize('subsystem'), async (req, res) => {
   try {
     const { drawId, numbers, lotto3 } = req.body;
@@ -872,7 +845,6 @@ app.post('/api/subsystem/publish-results', auth, authorize('subsystem'), async (
   }
 });
 
-// Récupérer les superviseurs et agents pour les rapports (pour le front-end subsystem)
 app.get('/api/subsystem/supervisors', auth, authorize('subsystem'), async (req, res) => {
   res.json([]);
 });
@@ -886,7 +858,7 @@ app.get('/api/subsystem/agents', auth, authorize('subsystem'), async (req, res) 
   }
 });
 
-// --- ROUTES POUR LES RESTRICTIONS (blocage, limites) ---
+// --- ROUTES POUR LES RESTRICTIONS ---
 app.get('/api/subsystem/blocked-numbers', auth, authorize('subsystem'), async (req, res) => {
   try {
     const restrictions = await Restriction.find({
@@ -1132,7 +1104,7 @@ app.get('/api/subsystem/reports', auth, authorize('subsystem'), async (req, res)
 
     const query = { subsystem_id: req.user.subsystem_id, date: { $gte: start, $lte: end } };
     if (agentId && agentId !== 'all') query.agent_id = agentId;
-    if (drawId && drawId !== 'all') query.draw = drawId; // utilisera le champ draw (string)
+    if (drawId && drawId !== 'all') query.draw = drawId;
 
     const tickets = await Ticket.find(query);
     const total_tickets = tickets.length;
@@ -1176,25 +1148,32 @@ app.get('/api/subsystem/reports', auth, authorize('subsystem'), async (req, res)
 });
 
 // --- TICKETS (agents et sous-systèmes) ---
+// POST /api/tickets : accepte ticket à plat ou { ticket }
 app.post('/api/tickets', auth, authorize('agent', 'subsystem'), async (req, res) => {
   try {
-    const { subsystem_id, agent_id, agent_name, number, draw, draw_time, bets, total } = req.body;
-    if (req.user.role === 'agent' && req.user._id.toString() !== agent_id) {
-      return res.status(403).json({ success: false, error: 'Accès interdit.' });
+    let ticketData = req.body;
+    // Si le body contient une propriété "ticket", on l'extrait
+    if (ticketData.ticket) {
+      ticketData = ticketData.ticket;
     }
-    const finalSubsystemId = subsystem_id || req.user.subsystem_id;
+    // S'assurer que subsystem_id et agent_id sont présents
+    const finalSubsystemId = ticketData.subsystem_id || req.user.subsystem_id;
+    const finalAgentId = ticketData.agent_id || req.user._id;
+    const finalAgentName = ticketData.agent_name || req.user.name;
+
     if (!finalSubsystemId) {
       return res.status(400).json({ success: false, error: 'subsystem_id manquant.' });
     }
+
     const ticket = new Ticket({
       subsystem_id: finalSubsystemId,
-      agent_id,
-      agent_name,
-      number,
-      draw,
-      draw_time,
-      bets,
-      total,
+      agent_id: finalAgentId,
+      agent_name: finalAgentName,
+      number: ticketData.number,
+      draw: ticketData.draw,
+      draw_time: ticketData.draw_time,
+      bets: ticketData.bets,
+      total: ticketData.total,
       status: 'active',
       syncStatus: 'synced'
     });
@@ -1278,6 +1257,7 @@ app.post('/api/tickets/pending', auth, authorize('agent', 'subsystem'), async (r
 });
 
 app.get('/api/tickets/winning', auth, authorize('agent', 'subsystem'), async (req, res) => {
+  // À implémenter si nécessaire, pour l'instant retourne vide
   res.json({ success: true, tickets: [] });
 });
 
@@ -1311,7 +1291,7 @@ app.post('/api/tickets/multi-draw', auth, authorize('agent', 'subsystem'), async
   }
 });
 
-// Historique
+// Historique (générique)
 app.get('/api/history', auth, authorize('agent', 'subsystem'), async (req, res) => {
   try {
     const query = {};
@@ -1329,12 +1309,13 @@ app.get('/api/history', auth, authorize('agent', 'subsystem'), async (req, res) 
 
 app.post('/api/history', auth, authorize('agent', 'subsystem'), async (req, res) => {
   try {
-    const { action, details } = req.body;
+    // Le frontend peut envoyer n'importe quoi, on stocke l'action par défaut et les détails
+    const { action, details, ...rest } = req.body;
     const historyEntry = new History({
       user_id: req.user._id,
       username: req.user.username,
-      action,
-      details,
+      action: action || 'bet_saved',
+      details: details || rest,
       timestamp: new Date()
     });
     await historyEntry.save();
@@ -1362,7 +1343,7 @@ app.get('/api/results', auth, authorize('subsystem', 'master', 'agent'), async (
       query.date = { $gte: start, $lte: end };
     }
     const results = await Result.find(query).sort({ date: -1 }).limit(parseInt(limit)).populate('draw_id', 'name key');
-    // Pour compatibilité avec lotato.js, on retourne un objet structuré par draw
+    // Structurer pour le frontend
     const structured = {};
     for (let r of results) {
       const drawKey = r.draw_id ? r.draw_id.key : 'unknown';
@@ -1443,6 +1424,12 @@ app.get('/api/agents', auth, authorize('master'), async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: 'Erreur serveur.' });
   }
+});
+
+// Check winners (optionnel)
+app.get('/api/check-winners', auth, authorize('agent', 'subsystem'), async (req, res) => {
+  // Pour l'instant, pas de logique de gain
+  res.json({ success: true, winners: [] });
 });
 
 // ==================== SERVEUR STATIQUE ET FALLBACK ====================
