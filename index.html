@@ -2,10 +2,12 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LOTATO · Connexion</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#f39c12">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Lotato - Connexion</title>
     <style>
         * {
             margin: 0;
@@ -13,352 +15,530 @@
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
+        
         body {
-            background: linear-gradient(135deg, #0a0b1e, #1a1a2e);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             min-height: 100vh;
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             padding: 20px;
         }
-
-        .login-container {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border-radius: 30px;
+        
+        .container {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 24px;
             padding: 40px 30px;
             width: 100%;
-            max-width: 450px;
-            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: transform 0.3s ease;
+            max-width: 480px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
-
-        .login-container:hover {
-            transform: translateY(-5px);
-        }
-
+        
         .logo {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 35px;
         }
-
-        .logo i {
-            font-size: 4rem;
-            background: linear-gradient(135deg, #ad00f1, #ff007a);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent;
+        
+        .logo-icon {
+            font-size: 3.5rem;
+            color: #f39c12;
+            margin-bottom: 10px;
         }
-
+        
         .logo h1 {
-            font-size: 2rem;
-            margin-top: 10px;
-            background: linear-gradient(135deg, #ad00f1, #ff007a);
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #f39c12, #e74c3c, #f39c12);
+            background-size: 200% 200%;
             -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             background-clip: text;
-            color: transparent;
+            animation: gradientShift 3s ease infinite;
+            letter-spacing: 2px;
         }
-
+        
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
         .logo p {
-            color: #a0a0b8;
-            font-size: 0.9rem;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            color: #e0e0ff;
-            margin-bottom: 8px;
+            color: #b3c7e5;
+            font-size: 1rem;
             font-weight: 500;
+            letter-spacing: 1px;
+            margin-top: 5px;
         }
-
-        .input-group {
-            position: relative;
+        
+        .tabs {
             display: flex;
-            align-items: center;
+            gap: 6px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
-
-        .input-group i {
-            position: absolute;
-            left: 15px;
-            color: #ad00f1;
-            font-size: 1rem;
-        }
-
-        input {
-            width: 100%;
-            padding: 14px 15px 14px 45px;
-            background: rgba(255, 255, 255, 0.07);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 50px;
-            font-size: 1rem;
-            color: white;
-            transition: all 0.3s;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #ad00f1;
-            background: rgba(255, 255, 255, 0.12);
-        }
-
-        input::placeholder {
-            color: rgba(255, 255, 255, 0.4);
-        }
-
-        .btn-login {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #ad00f1, #00d4ff);
-            border: none;
-            border-radius: 50px;
-            color: white;
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin-top: 10px;
-        }
-
-        .btn-login:hover {
-            transform: scale(1.02);
-            box-shadow: 0 5px 15px rgba(173, 0, 241, 0.3);
-        }
-
-        .btn-login:active {
-            transform: scale(0.98);
-        }
-
-        .error-message {
-            background: rgba(255, 77, 77, 0.2);
-            border-left: 4px solid #ff4d4d;
-            padding: 12px;
+        
+        .tab-btn {
+            flex: 1;
+            min-width: 70px;
+            padding: 12px 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 12px;
-            margin-bottom: 20px;
-            color: #ff4d4d;
-            font-size: 0.9rem;
-            display: none;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .error-message i {
-            font-size: 1.2rem;
-        }
-
-        .info-text {
-            text-align: center;
-            margin-top: 20px;
+            color: #a0b4d0;
+            font-weight: 600;
             font-size: 0.8rem;
-            color: #a0a0b8;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            backdrop-filter: blur(5px);
         }
-
-        .loading-spinner {
+        
+        .tab-btn:hover {
+            background: rgba(243, 156, 18, 0.2);
+            color: #fff;
+            border-color: rgba(243, 156, 18, 0.4);
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            border-color: transparent;
+            box-shadow: 0 6px 15px rgba(243, 156, 18, 0.3);
+        }
+        
+        .form-container {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+        
+        .form-container.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .role-badge {
             display: inline-block;
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 0.8s linear infinite;
+            padding: 6px 16px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            color: white;
+        }
+        
+        .badge-agent { background: #10b981; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); }
+        .badge-supervisor { background: #3b82f6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+        .badge-subsystem { background: #8b5cf6; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3); }
+        .badge-master { background: #f59e0b; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); }
+        
+        .form-group {
+            margin-bottom: 22px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #e2e8f0;
+            font-weight: 500;
+            font-size: 0.9rem;
+            letter-spacing: 0.3px;
+        }
+        
+        .form-group label i {
             margin-right: 8px;
-            vertical-align: middle;
+            color: #f39c12;
+            width: 18px;
         }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        
+        .form-group input {
+            width: 100%;
+            padding: 15px 18px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1.5px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            color: #ffffff;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            outline: none;
         }
-
-        @media (max-width: 480px) {
-            .login-container {
-                padding: 30px 20px;
-            }
+        
+        .form-group input:focus {
+            border-color: #f39c12;
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 0 0 4px rgba(243, 156, 18, 0.15);
+        }
+        
+        .form-group input::placeholder {
+            color: rgba(255, 255, 255, 0.35);
+            font-weight: 300;
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 8px 20px rgba(243, 156, 18, 0.3);
+        }
+        
+        .login-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(243, 156, 18, 0.4);
+        }
+        
+        .login-btn:active {
+            transform: translateY(0);
+        }
+        
+        .login-btn i {
+            margin-right: 8px;
+        }
+        
+        .status-message {
+            padding: 14px 18px;
+            border-radius: 14px;
+            margin-top: 25px;
+            text-align: center;
+            display: none;
+            font-weight: 500;
+            backdrop-filter: blur(8px);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .status-success {
+            background: rgba(16, 185, 129, 0.15);
+            color: #6ee7b7;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .status-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .status-info {
+            background: rgba(59, 130, 246, 0.15);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 35px;
+            color: #64748b;
+            font-size: 0.85rem;
+        }
+        
+        .footer a {
+            color: #f39c12;
+            text-decoration: none;
+        }
+        
+        .demo-hint {
+            background: rgba(243, 156, 18, 0.1);
+            border-radius: 10px;
+            padding: 10px 15px;
+            margin-top: 20px;
+            border-left: 4px solid #f39c12;
+            font-size: 0.8rem;
+            color: #b3c7e5;
+        }
+        
+        .demo-hint i {
+            color: #f39c12;
+            margin-right: 8px;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
+    <div class="container">
         <div class="logo">
-            <i class="fas fa-crown"></i>
+            <div class="logo-icon">
+                <i class="fas fa-dice"></i>
+            </div>
             <h1>LOTATO</h1>
-            <p>Système de gestion de paris</p>
+            <p>JERE BòLET OU AK TOUT SEKIRITE</p>
         </div>
-
-        <div id="error-message" class="error-message">
-            <i class="fas fa-exclamation-triangle"></i>
-            <span id="error-text">Identifiant ou mot de passe incorrect</span>
+        
+        <div class="tabs">
+            <button class="tab-btn active" data-tab="agent">Agent</button>
+            <button class="tab-btn" data-tab="supervisor1">Superviseur 1</button>
+            <button class="tab-btn" data-tab="supervisor2">Superviseur 2</button>
+            <button class="tab-btn" data-tab="subsystem">Propriétaire</button>
+            <button class="tab-btn" data-tab="master">Master</button>
         </div>
-
-        <form id="login-form">
+        
+        <!-- Formulaire Agent -->
+        <div id="agent-form" class="form-container active">
+            <div class="role-badge badge-agent">
+                <i class="fas fa-user"></i> Agent
+            </div>
             <div class="form-group">
-                <label><i class="fas fa-user"></i> Identifiant</label>
-                <div class="input-group">
-                    <i class="fas fa-user"></i>
-                    <input type="text" id="username" placeholder="Nom d'utilisateur" autocomplete="username" required>
-                </div>
+                <label><i class="fas fa-user-circle"></i> Identifiant</label>
+                <input type="text" id="agent-username" placeholder="Votre identifiant agent" value="agent1">
             </div>
             <div class="form-group">
                 <label><i class="fas fa-lock"></i> Mot de passe</label>
-                <div class="input-group">
-                    <i class="fas fa-lock"></i>
-                    <input type="password" id="password" placeholder="Mot de passe" autocomplete="current-password" required>
-                </div>
+                <input type="password" id="agent-password" placeholder="••••••••" value="123">
             </div>
-            <button type="submit" class="btn-login" id="login-btn">
-                <i class="fas fa-sign-in-alt"></i> Se connecter
+            <button class="login-btn" onclick="login('agent')">
+                <i class="fas fa-sign-in-alt"></i> Connexion Agent
             </button>
-        </form>
-
-        <div class="info-text">
-            <i class="fas fa-shield-alt"></i> Accès sécurisé · Chiffrement SSL
+        </div>
+        
+        <!-- Formulaire Superviseur 1 -->
+        <div id="supervisor1-form" class="form-container">
+            <div class="role-badge badge-supervisor">
+                <i class="fas fa-user-tie"></i> Superviseur Niveau 1
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-user-circle"></i> Identifiant</label>
+                <input type="text" id="supervisor1-username" placeholder="superviseur1">
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-lock"></i> Mot de passe</label>
+                <input type="password" id="supervisor1-password" placeholder="••••••••">
+            </div>
+            <button class="login-btn" onclick="login('supervisor', 1)">
+                <i class="fas fa-sign-in-alt"></i> Connexion Superviseur 1
+            </button>
+        </div>
+        
+        <!-- Formulaire Superviseur 2 -->
+        <div id="supervisor2-form" class="form-container">
+            <div class="role-badge badge-supervisor">
+                <i class="fas fa-user-tie"></i> Superviseur Niveau 2
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-user-circle"></i> Identifiant</label>
+                <input type="text" id="supervisor2-username" placeholder="superviseur2">
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-lock"></i> Mot de passe</label>
+                <input type="password" id="supervisor2-password" placeholder="••••••••">
+            </div>
+            <button class="login-btn" onclick="login('supervisor', 2)">
+                <i class="fas fa-sign-in-alt"></i> Connexion Superviseur 2
+            </button>
+        </div>
+        
+        <!-- Formulaire Propriétaire (Sous-système) -->
+        <div id="subsystem-form" class="form-container">
+            <div class="role-badge badge-subsystem">
+                <i class="fas fa-building"></i> Propriétaire
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-user-circle"></i> Identifiant</label>
+                <input type="text" id="subsystem-username" placeholder="admin_votre_sous_systeme">
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-lock"></i> Mot de passe</label>
+                <input type="password" id="subsystem-password" placeholder="••••••••">
+            </div>
+            <button class="login-btn" onclick="login('subsystem')">
+                <i class="fas fa-sign-in-alt"></i> Connexion Propriétaire
+            </button>
+        </div>
+        
+        <!-- Formulaire Master -->
+        <div id="master-form" class="form-container">
+            <div class="role-badge badge-master">
+                <i class="fas fa-crown"></i> Master
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-user-circle"></i> Identifiant Master</label>
+                <input type="text" id="master-username" placeholder="master" value="master">
+            </div>
+            <div class="form-group">
+                <label><i class="fas fa-lock"></i> Mot de passe Master</label>
+                <input type="password" id="master-password" placeholder="••••••••" value="master123">
+            </div>
+            <button class="login-btn" onclick="login('master')">
+                <i class="fas fa-sign-in-alt"></i> Connexion Master
+            </button>
+        </div>
+        
+        <div id="status-message" class="status-message"></div>
+        
+        <div class="demo-hint">
+            <i class="fas fa-info-circle"></i>
+            <strong>Démo :</strong> Master (master/master123) • Pour les autres rôles, créez d'abord un sous-système puis des utilisateurs.
+        </div>
+        
+        <div class="footer">
+            <p>© 2024 Lotato System | Version 5.0</p>
+            <p style="margin-top: 8px; font-size: 0.75rem;">
+                <i class="fas fa-shield-alt"></i> Connexion sécurisée
+            </p>
         </div>
     </div>
 
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <script>
-        // Configuration API
-        const API_BASE_URL = 'https://lotato-one.onrender.com';
+        // Configuration API - même domaine que le serveur
+        const API_BASE = '';
         
-        // Éléments DOM
-        const form = document.getElementById('login-form');
-        const errorDiv = document.getElementById('error-message');
-        const errorText = document.getElementById('error-text');
-        const loginBtn = document.getElementById('login-btn');
+        // Gestion des onglets
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tab = btn.dataset.tab;
+                
+                // Mettre à jour les boutons actifs
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Afficher le formulaire correspondant
+                document.querySelectorAll('.form-container').forEach(f => f.classList.remove('active'));
+                document.getElementById(tab + '-form').classList.add('active');
+                
+                // Cacher le message de statut
+                hideStatus();
+                
+                // Focus sur le champ identifiant
+                const firstInput = document.querySelector(`#${tab}-form input[type="text"]`);
+                if (firstInput) firstInput.focus();
+            });
+        });
 
-        // Afficher un message d'erreur
-        function showError(message) {
-            errorText.textContent = message;
-            errorDiv.style.display = 'flex';
-            setTimeout(() => {
-                if (errorDiv) errorDiv.style.display = 'none';
-            }, 5000);
+        function showStatus(msg, type) {
+            const el = document.getElementById('status-message');
+            el.textContent = msg;
+            el.className = `status-message status-${type}`;
+            el.style.display = 'block';
+        }
+        
+        function hideStatus() {
+            document.getElementById('status-message').style.display = 'none';
         }
 
-        // Vérifier si le token est valide avant de rediriger
-        async function verifyTokenAndRedirect() {
-            const token = localStorage.getItem('nova_token');
-            const role = localStorage.getItem('nova_user_role');
+        async function login(role, level = null) {
+            let username, password;
             
-            if (!token || !role) {
-                return; // Pas de token, rester sur la page
+            if (role === 'agent') {
+                username = document.getElementById('agent-username').value.trim();
+                password = document.getElementById('agent-password').value;
+            } else if (role === 'supervisor') {
+                const suffix = level === 1 ? '1' : '2';
+                username = document.getElementById(`supervisor${suffix}-username`).value.trim();
+                password = document.getElementById(`supervisor${suffix}-password`).value;
+            } else if (role === 'subsystem') {
+                username = document.getElementById('subsystem-username').value.trim();
+                password = document.getElementById('subsystem-password').value;
+            } else if (role === 'master') {
+                username = document.getElementById('master-username').value.trim();
+                password = document.getElementById('master-password').value;
             }
             
+            if (!username || !password) {
+                showStatus('Veuillez remplir tous les champs', 'error');
+                return;
+            }
+            
+            showStatus('Connexion en cours...', 'info');
+            
             try {
-                // Appel à un endpoint de vérification (existant dans server.js)
-                const response = await fetch(`${API_BASE_URL}/api/auth/check`, {
-                    headers: {
-                        'x-auth-token': token
-                    }
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, role })
                 });
                 
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Token valide, rediriger selon le rôle
-                    switch (role) {
-                        case 'master':
-                            window.location.href = '/master-dashboard.html';
-                            break;
-                        case 'subsystem':
-                            window.location.href = '/subsystem-admin.html';
-                            break;
-                        case 'agent':
-                            window.location.href = '/lotato.html';
-                            break;
-                        default:
-                            // Rôle inconnu : on efface les données et on reste
-                            console.warn('Rôle inconnu:', role);
-                            localStorage.removeItem('nova_token');
-                            localStorage.removeItem('nova_user_role');
-                            localStorage.removeItem('nova_user_data');
-                    }
+                    // Stocker le token et les infos utilisateur
+                    localStorage.setItem('lotato_token', data.token);
+                    localStorage.setItem('lotato_user', JSON.stringify(data.user));
+                    
+                    showStatus('Connexion réussie ! Redirection...', 'success');
+                    
+                    // Rediriger vers la page appropriée
+                    setTimeout(() => {
+                        window.location.href = data.redirectUrl;
+                    }, 800);
                 } else {
-                    // Token invalide, on le supprime
-                    console.log('Token invalide, suppression');
-                    localStorage.removeItem('nova_token');
-                    localStorage.removeItem('nova_user_role');
-                    localStorage.removeItem('nova_user_data');
+                    showStatus(data.error || 'Identifiants incorrects', 'error');
                 }
-            } catch (err) {
-                // Erreur réseau ou serveur indisponible : on ne redirige pas, on laisse l'utilisateur tenter de se connecter
-                console.error('Erreur lors de la vérification du token:', err);
-                // On supprime le token pour éviter un blocage
-                localStorage.removeItem('nova_token');
-                localStorage.removeItem('nova_user_role');
-                localStorage.removeItem('nova_user_data');
+            } catch (error) {
+                console.error('Erreur de connexion:', error);
+                showStatus('Erreur de connexion au serveur. Vérifiez votre réseau.', 'error');
             }
         }
-
-        // Appeler la vérification au chargement
-        verifyTokenAndRedirect();
-
-        // Gestionnaire de soumission
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-            
-            if (!username || !password) {
-                showError('Veuillez remplir tous les champs.');
-                return;
-            }
-            
-            // Désactiver le bouton
-            loginBtn.disabled = true;
-            const originalBtnText = loginBtn.innerHTML;
-            loginBtn.innerHTML = '<span class="loading-spinner"></span> Connexion...';
+        
+        // Permettre la validation avec Entrée
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const activeForm = document.querySelector('.form-container.active');
+                    const btn = activeForm.querySelector('.login-btn');
+                    if (btn) btn.click();
+                }
+            });
+        });
+        
+        // Vérifier si l'utilisateur est déjà connecté
+        (async function checkExistingSession() {
+            const token = localStorage.getItem('lotato_token');
+            if (!token) return;
             
             try {
-                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username, password })
+                const response = await fetch('/api/auth/check', {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
                 
                 const data = await response.json();
                 
-                if (response.ok && data.success) {
-                    // Stockage
-                    localStorage.setItem('nova_token', data.token);
-                    localStorage.setItem('nova_user_role', data.admin.role);
-                    localStorage.setItem('nova_user_data', JSON.stringify(data.admin));
-                    
-                    // Redirection selon le rôle
-                    switch (data.admin.role) {
-                        case 'master':
-                            window.location.href = '/master-dashboard.html';
-                            break;
-                        case 'subsystem':
-                            window.location.href = '/subsystem-admin.html';
-                            break;
-                        case 'agent':
-                            window.location.href = '/lotato.html';
-                            break;
-                        default:
-                            showError('Rôle inconnu. Contactez l\'administrateur.');
-                            // Nettoyer les données
-                            localStorage.removeItem('nova_token');
-                            localStorage.removeItem('nova_user_role');
-                            localStorage.removeItem('nova_user_data');
+                if (data.success) {
+                    const user = data.user;
+                    let redirect = '/lotato.html';
+                    if (user.role === 'supervisor') {
+                        redirect = user.level === 1 ? '/control-level1.html' : '/control-level2.html';
+                    } else if (user.role === 'subsystem') {
+                        redirect = '/subsystem-admin.html';
+                    } else if (user.role === 'master') {
+                        redirect = '/master-dashboard.html';
                     }
+                    
+                    // Redirection automatique
+                    showStatus('Session active détectée. Redirection...', 'info');
+                    setTimeout(() => {
+                        window.location.href = redirect;
+                    }, 1000);
                 } else {
-                    showError(data.error || 'Identifiants incorrects.');
+                    // Token invalide, nettoyer
+                    localStorage.removeItem('lotato_token');
+                    localStorage.removeItem('lotato_user');
                 }
             } catch (error) {
-                console.error('Erreur de connexion:', error);
-                showError('Erreur de connexion au serveur. Vérifiez votre réseau.');
-            } finally {
-                loginBtn.disabled = false;
-                loginBtn.innerHTML = originalBtnText;
+                console.error('Erreur vérification session:', error);
             }
-        });
+        })();
+        
+        // Focus sur le champ agent par défaut
+        document.getElementById('agent-username').focus();
     </script>
 </body>
 </html>

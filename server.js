@@ -1,1477 +1,848 @@
-require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
 const path = require('path');
-const compression = require('compression');
+const sqlite3 = require('sqlite3').verbose();
+const { open } = require('sqlite');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const fs = require('fs');
 
-// ==================== MODÈLES ====================
-
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  name: { type: String, required: true },
-  email: String,
-  role: { type: String, enum: ['master', 'subsystem', 'agent'], required: true },
-  subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem' },
-  is_active: { type: Boolean, default: true },
-  is_online: { type: Boolean, default: false },
-  last_login: Date,
-  created_at: { type: Date, default: Date.now }
-});
-userSchema.methods.comparePassword = async function(candidate) {
-  return await bcrypt.compare(candidate, this.password);
-};
-
-const subsystemSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  subdomain: { type: String, required: true, unique: true },
-  contact_email: { type: String, required: true },
-  contact_phone: String,
-  max_users: { type: Number, default: 10 },
-  is_active: { type: Boolean, default: true },
-  subscription_type: { type: String, default: 'basic' },
-  subscription_expires: Date,
-  created_at: { type: Date, default: Date.now },
-  stats: {
-    active_users: { type: Number, default: 0 },
-    today_sales: { type: Number, default: 0 },
-    today_tickets: { type: Number, default: 0 },
-    total_sales: { type: Number, default: 0 }
-  }
-});
-
-const subsystemSettingsSchema = new mongoose.Schema({
-  subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true, unique: true },
-  name: { type: String, default: 'Mon Borlette' },
-  slogan: { type: String, default: 'Votre chance, notre jeu' },
-  logoUrl: { type: String, default: '' },
-  multipliers: {
-    lot1: { type: Number, default: 60 },
-    lot2: { type: Number, default: 20 },
-    lot3: { type: Number, default: 10 },
-    lotto3: { type: Number, default: 500 },
-    lotto4: { type: Number, default: 5000 },
-    lotto5: { type: Number, default: 25000 },
-    mariage: { type: Number, default: 500 }
-  },
-  limits: {
-    lotto3: { type: Number, default: 0 },
-    lotto4: { type: Number, default: 0 },
-    lotto5: { type: Number, default: 0 },
-    mariage: { type: Number, default: 0 }
-  },
-  updated_at: { type: Date, default: Date.now }
-});
-
-const drawSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  key: { type: String, required: true, unique: true },
-  times: {
-    morning: { type: String, default: '12:00' },
-    evening: { type: String, default: '18:00' }
-  },
-  is_active: { type: Boolean, default: true }
-});
-
-const resultSchema = new mongoose.Schema({
-  subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true },
-  draw_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Draw', required: true },
-  draw_time: { type: String, enum: ['morning', 'evening'], required: true },
-  date: { type: Date, required: true },
-  lot1: { type: String, required: true },
-  lot2: { type: String, required: true },
-  lot3: { type: String, required: true },
-  verified: { type: Boolean, default: false }
-});
-resultSchema.index({ subsystem_id: 1, draw_id: 1, draw_time: 1, date: 1 }, { unique: true });
-
-const betSchema = new mongoose.Schema({
-  type: String, name: String, number: String, amount: Number, multiplier: Number,
-  isGroup: Boolean, details: Array, options: Object, perOptionAmount: Number,
-  isLotto4: Boolean, isLotto5: Boolean, isAuto: Boolean
-}, { _id: false });
-
-const ticketSchema = new mongoose.Schema({
-  subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true },
-  agent_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  agent_name: String,
-  number: { type: Number, required: true },
-  date: { type: Date, default: Date.now },
-  draw: String,
-  draw_time: String,
-  bets: [betSchema],
-  total: Number,
-  status: { type: String, default: 'active' },
-  syncStatus: { type: String, default: 'synced' },
-  is_synced: { type: Boolean, default: true },
-  synced_at: Date
-});
-ticketSchema.index({ subsystem_id: 1, date: -1 });
-ticketSchema.index({ agent_id: 1, date: -1 });
-
-const multiDrawTicketSchema = new mongoose.Schema({
-  subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true },
-  agent_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  agent_name: String,
-  number: { type: Number, required: true },
-  date: { type: Date, default: Date.now },
-  bets: [{
-    gameType: String,
-    name: String,
-    number: String,
-    amount: Number,
-    multiplier: Number,
-    draws: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Draw' }]
-  }],
-  draws: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Draw' }],
-  total: Number,
-  status: { type: String, default: 'active' }
-});
-
-const historySchema = new mongoose.Schema({
-  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-  username: String,
-  action: String,
-  details: mongoose.Schema.Types.Mixed,
-  timestamp: { type: Date, default: Date.now }
-});
-
-const restrictionSchema = new mongoose.Schema({
-  subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true },
-  number: { type: String, required: true },
-  type: { type: String, enum: ['block', 'limit'], required: true },
-  limitAmount: Number,
-  draw_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Draw', default: null },
-  time: { type: String, default: 'all' },
-  created_at: { type: Date, default: Date.now }
-});
-
-const companyInfoSchema = new mongoose.Schema({
-  subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', unique: true },
-  name: String,
-  phone: String,
-  address: String,
-  reportTitle: String,
-  reportPhone: String,
-  logoUrl: String
-});
-
-const settingsSchema = new mongoose.Schema({
-  key: { type: String, required: true, unique: true },
-  value: mongoose.Schema.Types.Mixed
-});
-
-const User = mongoose.model('User', userSchema);
-const Subsystem = mongoose.model('Subsystem', subsystemSchema);
-const SubsystemSettings = mongoose.model('SubsystemSettings', subsystemSettingsSchema);
-const Draw = mongoose.model('Draw', drawSchema);
-const Result = mongoose.model('Result', resultSchema);
-const Ticket = mongoose.model('Ticket', ticketSchema);
-const MultiDrawTicket = mongoose.model('MultiDrawTicket', multiDrawTicketSchema);
-const History = mongoose.model('History', historySchema);
-const Restriction = mongoose.model('Restriction', restrictionSchema);
-const CompanyInfo = mongoose.model('CompanyInfo', companyInfoSchema);
-const Setting = mongoose.model('Setting', settingsSchema);
-
-// ==================== MIDDLEWARE AUTH ====================
-const auth = async (req, res, next) => {
-  try {
-    const token = req.header('x-auth-token');
-    if (!token) return res.status(401).json({ error: 'Accès refusé. Token manquant.' });
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId).select('-password');
-    if (!user || !user.is_active) return res.status(401).json({ error: 'Utilisateur invalide.' });
-    req.user = user;
-    next();
-  } catch (err) {
-    res.status(401).json({ error: 'Token invalide.' });
-  }
-};
-
-const authorize = (...roles) => (req, res, next) => {
-  if (!roles.includes(req.user.role)) return res.status(403).json({ error: 'Accès interdit.' });
-  next();
-};
-
-// ==================== EXPRESS APP ====================
+// Configuration
 const app = express();
-app.use(cors());
-app.use(compression());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+const PORT = process.env.PORT || 3000;
+const JWT_SECRET = process.env.JWT_SECRET || 'votre_secret_jwt_super_securise_a_changer_en_prod';
+const SALT_ROUNDS = 10;
 
-// Servir les fichiers statiques (CSS, JS, images, HTML)
-app.use(express.static(path.join(__dirname)));
+// Middleware
+app.use(helmet({
+    contentSecurityPolicy: false, // Désactivé pour permettre les scripts inline (à améliorer en prod)
+}));
+app.use(cors());
+app.use(express.json({ limit: '10mb' }));
+app.use(morgan('dev'));
+// Servir tous les fichiers statiques depuis la racine
+app.use(express.static(__dirname));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Configuration de multer pour l'upload de logos
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(__dirname, 'uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'logo-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage });
+
+// Base de données SQLite
+let db;
+async function initializeDatabase() {
+    db = await open({
+        filename: './database.sqlite',
+        driver: sqlite3.Database
+    });
+
+    // Création des tables
+    await db.exec(`
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            full_name TEXT,
+            email TEXT,
+            phone TEXT,
+            role TEXT NOT NULL CHECK(role IN ('agent', 'supervisor', 'subsystem', 'master')),
+            level INTEGER DEFAULT NULL,
+            subsystem_id INTEGER DEFAULT NULL,
+            supervisor_id INTEGER DEFAULT NULL,
+            supervisor2_id INTEGER DEFAULT NULL,
+            is_active BOOLEAN DEFAULT 1,
+            is_online BOOLEAN DEFAULT 0,
+            last_login DATETIME,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (subsystem_id) REFERENCES subsystems(id),
+            FOREIGN KEY (supervisor_id) REFERENCES users(id),
+            FOREIGN KEY (supervisor2_id) REFERENCES users(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS subsystems (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            subdomain TEXT UNIQUE NOT NULL,
+            contact_email TEXT,
+            contact_phone TEXT,
+            max_users INTEGER DEFAULT 10,
+            subscription_type TEXT DEFAULT 'standard',
+            subscription_expires DATE,
+            is_active BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_number TEXT UNIQUE NOT NULL,
+            agent_id INTEGER NOT NULL,
+            subsystem_id INTEGER NOT NULL,
+            draw TEXT NOT NULL,
+            draw_time TEXT NOT NULL,
+            total_amount REAL NOT NULL,
+            status TEXT DEFAULT 'active',
+            is_synced BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (agent_id) REFERENCES users(id),
+            FOREIGN KEY (subsystem_id) REFERENCES subsystems(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS bets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            bet_type TEXT NOT NULL,
+            numbers TEXT NOT NULL,
+            amount REAL NOT NULL,
+            multiplier REAL NOT NULL,
+            options TEXT, -- JSON pour Lotto4/Lotto5
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            draw TEXT NOT NULL,
+            draw_time TEXT NOT NULL,
+            draw_date DATE NOT NULL,
+            lot1 TEXT NOT NULL,
+            lot2 TEXT,
+            lot3 TEXT,
+            verified BOOLEAN DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(draw, draw_time, draw_date)
+        );
+
+        CREATE TABLE IF NOT EXISTS winning_tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ticket_id INTEGER NOT NULL,
+            winning_amount REAL NOT NULL,
+            paid BOOLEAN DEFAULT 0,
+            paid_at DATETIME,
+            FOREIGN KEY (ticket_id) REFERENCES tickets(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS activity_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            action TEXT NOT NULL,
+            details TEXT,
+            ip_address TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    `);
+
+    // Insérer des données par défaut (master, multiplicateurs)
+    const masterExists = await db.get("SELECT id FROM users WHERE role = 'master'");
+    if (!masterExists) {
+        const hashedPassword = await bcrypt.hash('master123', SALT_ROUNDS);
+        await db.run(
+            "INSERT INTO users (username, password, full_name, role, is_active) VALUES (?, ?, ?, ?, ?)",
+            ['master', hashedPassword, 'Administrateur Master', 'master', 1]
+        );
+        console.log('✅ Compte master créé (master / master123)');
+    }
+
+    // Paramètres par défaut
+    const defaultSettings = {
+        'borlette_first': '60',
+        'borlette_second': '20',
+        'borlette_third': '10',
+        'lotto3': '500',
+        'lotto4': '5000',
+        'lotto5': '25000',
+        'grap': '500',
+        'marriage': '1000',
+        'company_name': 'Lotato',
+        'company_phone': '+509 32 53 49 58',
+        'company_address': 'Cap Haïtien'
+    };
+
+    for (const [key, value] of Object.entries(defaultSettings)) {
+        await db.run(
+            "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+            [key, value]
+        );
+    }
+}
+
+// Middleware d'authentification
+function authenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+        // Essayer aussi x-auth-token pour compatibilité
+        const altToken = req.headers['x-auth-token'];
+        if (altToken) {
+            jwt.verify(altToken, JWT_SECRET, (err, user) => {
+                if (err) return res.status(403).json({ error: 'Token invalide' });
+                req.user = user;
+                next();
+            });
+            return;
+        }
+        return res.status(401).json({ error: 'Token manquant' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ error: 'Token invalide' });
+        req.user = user;
+        next();
+    });
+}
+
+// Middleware de vérification de rôle
+function requireRole(...roles) {
+    return (req, res, next) => {
+        if (!req.user) return res.status(401).json({ error: 'Non authentifié' });
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({ error: 'Accès refusé' });
+        }
+        next();
+    };
+}
 
 // ==================== ROUTES API ====================
 
-// --- AUTH ---
+// --- Authentification ---
 app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ success: false, error: 'Champs requis.' });
-    const user = await User.findOne({ username });
-    if (!user) return res.status(401).json({ success: false, error: 'Identifiants incorrects.' });
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) return res.status(401).json({ success: false, error: 'Identifiants incorrects.' });
-    if (!user.is_active) return res.status(403).json({ success: false, error: 'Compte désactivé.' });
-
-    user.last_login = new Date();
-    user.is_online = true;
-    await user.save();
-
-    const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    const userData = {
-      id: user._id,
-      username: user.username,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      subsystem_id: user.subsystem_id
-    };
-    res.json({ success: true, admin: userData, token });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/auth/check', auth, async (req, res) => {
-  try {
-    const user = await User.findById(req.user._id).select('-password');
-    res.json({ success: true, admin: user });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-// --- MASTER ROUTES ---
-app.post('/api/master/subsystems', auth, authorize('master'), async (req, res) => {
-  try {
-    const { name, subdomain, contact_email, contact_phone, max_users = 10, subscription_type = 'basic', subscription_months = 1 } = req.body;
-    if (!name || !subdomain || !contact_email) return res.status(400).json({ success: false, error: 'Champs manquants.' });
-    const existing = await Subsystem.findOne({ subdomain });
-    if (existing) return res.status(400).json({ success: false, error: 'Sous-domaine déjà utilisé.' });
-
-    const subscription_expires = new Date();
-    subscription_expires.setMonth(subscription_expires.getMonth() + subscription_months);
-
-    const subsystem = new Subsystem({ name, subdomain, contact_email, contact_phone, max_users, subscription_type, subscription_expires });
-    await subsystem.save();
-
-    const adminUsername = `admin_${subdomain.replace(/[^a-z0-9]/g, '')}`;
-    const adminPassword = Math.random().toString(36).slice(-8);
-    const hashedPassword = await bcrypt.hash(adminPassword, 10);
-    const adminUser = new User({
-      username: adminUsername,
-      password: hashedPassword,
-      name: `Admin ${name}`,
-      email: contact_email,
-      role: 'subsystem',
-      subsystem_id: subsystem._id
-    });
-    await adminUser.save();
-
-    const defaultSettings = new SubsystemSettings({
-      subsystem_id: subsystem._id,
-      name: name,
-      slogan: 'Votre chance, notre jeu',
-      logoUrl: '',
-      multipliers: { lot1:60, lot2:20, lot3:10, lotto3:500, lotto4:5000, lotto5:25000, mariage:500 },
-      limits: { lotto3:0, lotto4:0, lotto5:0, mariage:0 }
-    });
-    await defaultSettings.save();
-
-    res.json({
-      success: true,
-      subsystem,
-      admin_credentials: { username: adminUsername, password: adminPassword, email: contact_email },
-      access_url: `https://${subdomain}.${req.get('host')}`
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/master/subsystems', auth, authorize('master'), async (req, res) => {
-  try {
-    const { page = 1, limit = 10, status = 'all', search } = req.query;
-    const query = {};
-    if (status !== 'all') query.is_active = status === 'active';
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { subdomain: { $regex: search, $options: 'i' } },
-        { contact_email: { $regex: search, $options: 'i' } }
-      ];
-    }
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const total = await Subsystem.countDocuments(query);
-    const subsystems = await Subsystem.find(query).skip(skip).limit(parseInt(limit)).sort({ created_at: -1 });
-    for (let sub of subsystems) {
-      const activeUsers = await User.countDocuments({ subsystem_id: sub._id, role: 'agent', is_active: true });
-      sub.stats = sub.stats || {};
-      sub.stats.active_users = activeUsers;
-      sub.stats.usage_percentage = sub.max_users ? Math.round((activeUsers / sub.max_users) * 100) : 0;
-    }
-    res.json({
-      success: true,
-      subsystems,
-      pagination: { page: parseInt(page), limit: parseInt(limit), total, total_pages: Math.ceil(total / limit) }
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/master/subsystems/:id', auth, authorize('master'), async (req, res) => {
-  try {
-    const subsystem = await Subsystem.findById(req.params.id);
-    if (!subsystem) return res.status(404).json({ success: false, error: 'Sous-système non trouvé.' });
-    const activeUsers = await User.countDocuments({ subsystem_id: subsystem._id, role: 'agent', is_active: true });
-    subsystem.stats = subsystem.stats || {};
-    subsystem.stats.active_users = activeUsers;
-    subsystem.stats.usage_percentage = subsystem.max_users ? Math.round((activeUsers / subsystem.max_users) * 100) : 0;
-    res.json({ success: true, subsystem });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.put('/api/master/subsystems/:id/deactivate', auth, authorize('master'), async (req, res) => {
-  try {
-    const subsystem = await Subsystem.findByIdAndUpdate(req.params.id, { is_active: false }, { new: true });
-    if (!subsystem) return res.status(404).json({ success: false, error: 'Non trouvé.' });
-    await User.updateMany({ subsystem_id: subsystem._id }, { is_active: false });
-    res.json({ success: true, subsystem });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.put('/api/master/subsystems/:id/activate', auth, authorize('master'), async (req, res) => {
-  try {
-    const subsystem = await Subsystem.findByIdAndUpdate(req.params.id, { is_active: true }, { new: true });
-    if (!subsystem) return res.status(404).json({ success: false, error: 'Non trouvé.' });
-    await User.updateMany({ subsystem_id: subsystem._id }, { is_active: true });
-    res.json({ success: true, subsystem });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/master/subsystems/:id/users', auth, authorize('master'), async (req, res) => {
-  try {
-    const { page = 1, limit = 10 } = req.query;
-    const query = { subsystem_id: req.params.id, role: 'agent' };
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const total = await User.countDocuments(query);
-    const users = await User.find(query).skip(skip).limit(parseInt(limit)).sort({ created_at: -1 });
-    res.json({
-      success: true,
-      users,
-      pagination: { page: parseInt(page), limit: parseInt(limit), total, total_pages: Math.ceil(total / limit) }
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/master/revenue/month', auth, authorize('master'), async (req, res) => {
-  try {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-    const result = await Ticket.aggregate([
-      { $match: { date: { $gte: start, $lte: end } } },
-      { $group: { _id: null, total: { $sum: '$total' } } }
-    ]);
-    const revenue = result.length > 0 ? result[0].total : 0;
-    res.json({ success: true, revenue });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/master/trends', auth, authorize('master'), async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      subsystems: { direction: 'up', percent: 5 },
-      users: { direction: 'up', percent: 8 },
-      revenue: { direction: 'up', percent: 12 },
-      activity: { direction: 'up', percent: 3 }
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/master/quick-stats', auth, authorize('master'), async (req, res) => {
-  try {
-    const today = new Date(); today.setHours(0,0,0,0);
-    const todayTickets = await Ticket.countDocuments({ date: { $gte: today } });
-    const onlineUsers = await User.countDocuments({ role: 'agent', is_online: true });
-    const expiringSoon = await Subsystem.countDocuments({
-      subscription_expires: { $lte: new Date(Date.now() + 7*24*60*60*1000), $gt: new Date() }
-    });
-    res.json({
-      success: true,
-      today_tickets: todayTickets,
-      online_users: onlineUsers,
-      expiring_soon: expiringSoon,
-      system_alerts: 0
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/master/revenue/daily', auth, authorize('master'), async (req, res) => {
-  try {
-    const days = parseInt(req.query.days) || 30;
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    start.setHours(0,0,0,0);
-    const end = new Date();
-    end.setHours(23,59,59,999);
-
-    const pipeline = [
-      { $match: { date: { $gte: start, $lte: end } } },
-      { $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
-          total: { $sum: '$total' }
-      } },
-      { $sort: { _id: 1 } }
-    ];
-    const results = await Ticket.aggregate(pipeline);
-    const labels = [];
-    const values = [];
-    for (let i = 0; i < days; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const label = d.toISOString().split('T')[0];
-      labels.push(label);
-      const found = results.find(r => r._id === label);
-      values.push(found ? found.total : 0);
-    }
-    res.json({ success: true, labels, values });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/master/subsystems/stats', auth, authorize('master'), async (req, res) => {
-  try {
-    const subsystems = await Subsystem.find();
-    const result = [];
-    for (let sub of subsystems) {
-      const activeAgents = await User.countDocuments({ subsystem_id: sub._id, role: 'agent', is_active: true });
-      const totalSalesAgg = await Ticket.aggregate([
-        { $match: { subsystem_id: sub._id } },
-        { $group: { _id: null, total: { $sum: '$total' } } }
-      ]);
-      const totalSales = totalSalesAgg.length ? totalSalesAgg[0].total : 0;
-      result.push({
-        id: sub._id,
-        name: sub.name,
-        subdomain: sub.subdomain,
-        active_agents: activeAgents,
-        total_sales: totalSales,
-        total_payout: 0,
-        profit: totalSales
-      });
-    }
-    res.json({ success: true, subsystems: result });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/statistics', auth, authorize('master'), async (req, res) => {
-  try {
-    const activeAgents = await User.countDocuments({ role: 'agent', is_active: true });
-    const totalSalesAgg = await Ticket.aggregate([{ $group: { _id: null, total: { $sum: '$total' } } }]);
-    const totalSales = totalSalesAgg.length ? totalSalesAgg[0].total : 0;
-    res.json({
-      success: true,
-      statistics: {
-        active_agents: activeAgents,
-        total_sales: totalSales,
-        total_profit: totalSales
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/master/global/profit/daily', auth, authorize('master'), async (req, res) => {
-  try {
-    const days = parseInt(req.query.days) || 30;
-    const start = new Date();
-    start.setDate(start.getDate() - days);
-    start.setHours(0,0,0,0);
-    const end = new Date();
-    end.setHours(23,59,59,999);
-
-    const pipeline = [
-      { $match: { date: { $gte: start, $lte: end } } },
-      { $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
-          total: { $sum: '$total' }
-      } },
-      { $sort: { _id: 1 } }
-    ];
-    const results = await Ticket.aggregate(pipeline);
-    const labels = [];
-    const values = [];
-    for (let i = 0; i < days; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const label = d.toISOString().split('T')[0];
-      labels.push(label);
-      const found = results.find(r => r._id === label);
-      values.push(found ? found.total : 0);
-    }
-    res.json({ success: true, labels, values });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/games/distribution', auth, authorize('master'), async (req, res) => {
-  try {
-    const games = ['Borlette', 'Lotto 3', 'Lotto 4', 'Lotto 5', 'Grap', 'Marriage'];
-    const sales = [45000, 12000, 8000, 5000, 3000, 2000];
-    res.json({ success: true, games, sales });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/master/consolidated-report', auth, authorize('master'), async (req, res) => {
-  try {
-    const { start_date, end_date } = req.query;
-    const start = new Date(start_date);
-    const end = new Date(end_date);
-    end.setHours(23,59,59,999);
-
-    const totalTickets = await Ticket.countDocuments({ date: { $gte: start, $lte: end } });
-    const totalSalesAgg = await Ticket.aggregate([
-      { $match: { date: { $gte: start, $lte: end } } },
-      { $group: { _id: null, total: { $sum: '$total' } } }
-    ]);
-    const totalSales = totalSalesAgg.length ? totalSalesAgg[0].total : 0;
-
-    const subsystems = await Subsystem.find();
-    const subsystems_detail = [];
-    for (let sub of subsystems) {
-      const ticketsCount = await Ticket.countDocuments({ subsystem_id: sub._id, date: { $gte: start, $lte: end } });
-      const salesAgg = await Ticket.aggregate([
-        { $match: { subsystem_id: sub._id, date: { $gte: start, $lte: end } } },
-        { $group: { _id: null, total: { $sum: '$total' } } }
-      ]);
-      const sales = salesAgg.length ? salesAgg[0].total : 0;
-      subsystems_detail.push({
-        subsystem_name: sub.name,
-        tickets_count: ticketsCount,
-        total_sales: sales,
-        total_payout: 0,
-        profit: sales
-      });
-    }
-
-    const dailyPipeline = [
-      { $match: { date: { $gte: start, $lte: end } } },
-      { $group: {
-          _id: { $dateToString: { format: '%Y-%m-%d', date: '$date' } },
-          ticket_count: { $sum: 1 },
-          total_amount: { $sum: '$total' }
-      } },
-      { $sort: { _id: 1 } }
-    ];
-    const daily = await Ticket.aggregate(dailyPipeline);
-
-    res.json({
-      success: true,
-      report: {
-        period: { start_date, end_date },
-        total_subsystems: subsystems.length,
-        summary: {
-          total_tickets: totalTickets,
-          total_sales: totalSales,
-          total_payout: 0,
-          total_profit: totalSales
-        },
-        subsystems_detail,
-        daily_breakdown: daily
-      }
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-// --- SUBSYSTEM ROUTES ---
-app.get('/api/subsystem/mine', auth, authorize('subsystem'), async (req, res) => {
-  const subsystem = await Subsystem.findById(req.user.subsystem_id);
-  res.json({ success: true, subsystems: [subsystem] });
-});
-
-app.get('/api/subsystem/settings', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    let settings = await SubsystemSettings.findOne({ subsystem_id: req.user.subsystem_id });
-    if (!settings) {
-      const subsystem = await Subsystem.findById(req.user.subsystem_id);
-      settings = new SubsystemSettings({
-        subsystem_id: req.user.subsystem_id,
-        name: subsystem ? subsystem.name : 'Mon Borlette',
-        slogan: 'Votre chance, notre jeu',
-        logoUrl: '',
-        multipliers: { lot1:60, lot2:20, lot3:10, lotto3:500, lotto4:5000, lotto5:25000, mariage:500 },
-        limits: { lotto3:0, lotto4:0, lotto5:0, mariage:0 }
-      });
-      await settings.save();
-    }
-    res.json({ success: true, settings });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.post('/api/subsystem/settings', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { name, slogan, logoUrl, multipliers, limits } = req.body;
-    const update = {
-      name, slogan, logoUrl,
-      multipliers: multipliers || {},
-      limits: limits || {},
-      updated_at: new Date()
-    };
-    const settings = await SubsystemSettings.findOneAndUpdate(
-      { subsystem_id: req.user.subsystem_id },
-      update,
-      { new: true, upsert: true }
-    );
-    res.json({ success: true, settings });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/subsystem/users', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { limit = 100 } = req.query;
-    const users = await User.find({ subsystem_id: req.user.subsystem_id, role: 'agent' }).limit(parseInt(limit)).sort({ created_at: -1 });
-    res.json({ success: true, users });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.post('/api/subsystem/users/create', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { name, username, email, password } = req.body;
-    if (!name || !username || !password) return res.status(400).json({ success: false, error: 'Champs manquants.' });
-    if (!req.user.subsystem_id) return res.status(403).json({ success: false, error: 'Accès interdit.' });
-
-    const subsystem = await Subsystem.findById(req.user.subsystem_id);
-    if (!subsystem) return res.status(404).json({ success: false, error: 'Sous-système non trouvé.' });
-
-    const activeCount = await User.countDocuments({ subsystem_id: subsystem._id, role: 'agent', is_active: true });
-    if (activeCount >= subsystem.max_users) {
-      return res.status(400).json({ success: false, error: `Quota d'agents atteint (maximum: ${subsystem.max_users}).` });
-    }
-
-    const existingUser = await User.findOne({ username });
-    if (existingUser) return res.status(400).json({ success: false, error: `Le nom d'utilisateur "${username}" est déjà pris.` });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({
-      username,
-      password: hashedPassword,
-      name,
-      email: email || '',
-      role: 'agent',
-      subsystem_id: subsystem._id,
-      is_active: true,
-      created_at: new Date()
-    });
-    await newUser.save();
-
-    subsystem.stats.active_users = activeCount + 1;
-    await subsystem.save();
-
-    res.json({
-      success: true,
-      user: { id: newUser._id, username, name, email, created_at: newUser.created_at },
-      message: 'Agent créé avec succès'
-    });
-  } catch (err) {
-    console.error(err);
-    if (err.code === 11000) return res.status(400).json({ success: false, error: 'Nom d\'utilisateur déjà utilisé.' });
-    res.status(500).json({ success: false, error: 'Erreur serveur interne.' });
-  }
-});
-
-app.put('/api/subsystem/users/:id', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { name, email, is_active, password } = req.body;
-    const update = { name, email, is_active };
-    if (password) update.password = await bcrypt.hash(password, 10);
-    const user = await User.findOneAndUpdate(
-      { _id: req.params.id, subsystem_id: req.user.subsystem_id, role: 'agent' },
-      update,
-      { new: true }
-    );
-    if (!user) return res.status(404).json({ success: false, error: 'Agent non trouvé.' });
-    res.json({ success: true, user });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.put('/api/subsystem/users/:id/status', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { is_active } = req.body;
-    const user = await User.findOneAndUpdate(
-      { _id: req.params.id, subsystem_id: req.user.subsystem_id, role: 'agent' },
-      { is_active },
-      { new: true }
-    );
-    if (!user) return res.status(404).json({ success: false, error: 'Agent non trouvé.' });
-    res.json({ success: true, user });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.delete('/api/subsystem/users/:id', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const user = await User.findOneAndDelete({ _id: req.params.id, subsystem_id: req.user.subsystem_id, role: 'agent' });
-    if (!user) return res.status(404).json({ success: false, error: 'Agent non trouvé.' });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-// --- TIRAGES ---
-app.get('/api/subsystem/draws', auth, authorize('subsystem', 'agent'), async (req, res) => {
-  try {
-    const draws = await Draw.find({ is_active: true }).sort({ key: 1 });
-    res.json({ success: true, draws });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/subsystem/results', auth, authorize('subsystem', 'agent'), async (req, res) => {
-  try {
-    const { draw_id, draw_time, date } = req.query;
-    const query = { subsystem_id: req.user.subsystem_id };
-    if (draw_id) query.draw_id = draw_id;
-    if (draw_time) query.draw_time = draw_time;
-    if (date) {
-      const start = new Date(date);
-      start.setHours(0,0,0,0);
-      const end = new Date(date);
-      end.setHours(23,59,59,999);
-      query.date = { $gte: start, $lte: end };
-    }
-    const results = await Result.find(query).populate('draw_id', 'name key');
-    res.json({ success: true, results });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.post('/api/subsystem/publish-results', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { drawId, numbers, lotto3 } = req.body;
-    if (!drawId || !numbers || numbers.length !== 3) return res.status(400).json({ success: false, error: 'Données incomplètes.' });
-    const draw = await Draw.findById(drawId);
-    if (!draw) return res.status(404).json({ success: false, error: 'Tirage non trouvé.' });
-
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const time = 'morning';
-
-    const existing = await Result.findOne({
-      subsystem_id: req.user.subsystem_id,
-      draw_id: drawId,
-      draw_time: time,
-      date: { $gte: today, $lt: new Date(today.getTime() + 24*60*60*1000) }
-    });
-    if (existing) {
-      return res.status(400).json({ success: false, error: 'Un résultat pour ce tirage aujourd\'hui existe déjà.' });
-    }
-
-    const result = new Result({
-      subsystem_id: req.user.subsystem_id,
-      draw_id: drawId,
-      draw_time: time,
-      date: today,
-      lot1: lotto3,
-      lot2: numbers[1],
-      lot3: numbers[2],
-      verified: false
-    });
-    await result.save();
-
-    res.json({ success: true, result });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/subsystem/supervisors', auth, authorize('subsystem'), async (req, res) => {
-  res.json([]);
-});
-
-app.get('/api/subsystem/agents', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const agents = await User.find({ subsystem_id: req.user.subsystem_id, role: 'agent', is_active: true }).select('_id name username email');
-    res.json(agents);
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-// --- RESTRICTIONS ---
-app.get('/api/subsystem/blocked-numbers', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const restrictions = await Restriction.find({
-      subsystem_id: req.user.subsystem_id,
-      type: 'block',
-      draw_id: null
-    });
-    const blockedNumbers = restrictions.map(r => r.number);
-    res.json({ success: true, blockedNumbers });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.post('/api/subsystem/block-number', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { number } = req.body;
-    if (!number) return res.status(400).json({ success: false, error: 'Numéro requis.' });
-    const existing = await Restriction.findOne({ subsystem_id: req.user.subsystem_id, type: 'block', draw_id: null, number });
-    if (!existing) {
-      await Restriction.create({ subsystem_id: req.user.subsystem_id, number, type: 'block' });
-    }
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.post('/api/subsystem/unblock-number', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { number } = req.body;
-    await Restriction.deleteMany({ subsystem_id: req.user.subsystem_id, type: 'block', draw_id: null, number });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/subsystem/blocked-numbers-per-draw', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const restrictions = await Restriction.find({
-      subsystem_id: req.user.subsystem_id,
-      type: 'block',
-      draw_id: { $ne: null }
-    }).populate('draw_id', 'name key');
-    const result = restrictions.map(r => ({
-      draw_id: r.draw_id._id,
-      draw_name: r.draw_id.name,
-      number: r.number
-    }));
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.post('/api/subsystem/block-number-draw', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { drawId, number } = req.body;
-    if (!drawId || !number) return res.status(400).json({ success: false, error: 'Données manquantes.' });
-    const existing = await Restriction.findOne({ subsystem_id: req.user.subsystem_id, type: 'block', draw_id: drawId, number });
-    if (!existing) {
-      await Restriction.create({ subsystem_id: req.user.subsystem_id, number, type: 'block', draw_id: drawId });
-    }
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.post('/api/subsystem/unblock-number-draw', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { drawId, number } = req.body;
-    await Restriction.deleteMany({ subsystem_id: req.user.subsystem_id, type: 'block', draw_id: drawId, number });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/subsystem/number-limits', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const restrictions = await Restriction.find({
-      subsystem_id: req.user.subsystem_id,
-      type: 'limit'
-    }).populate('draw_id', 'name key');
-    const result = restrictions.map(r => ({
-      draw_id: r.draw_id._id,
-      draw_name: r.draw_id.name,
-      number: r.number,
-      limit_amount: r.limitAmount
-    }));
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.post('/api/subsystem/number-limit', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { drawId, number, limitAmount } = req.body;
-    if (!drawId || !number || limitAmount === undefined) return res.status(400).json({ success: false, error: 'Données manquantes.' });
-    await Restriction.findOneAndUpdate(
-      { subsystem_id: req.user.subsystem_id, type: 'limit', draw_id: drawId, number },
-      { limitAmount },
-      { upsert: true }
-    );
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.post('/api/subsystem/remove-number-limit', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { drawId, number } = req.body;
-    await Restriction.deleteMany({ subsystem_id: req.user.subsystem_id, type: 'limit', draw_id: drawId, number });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/subsystem/blocked-draws', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const restrictions = await Restriction.find({
-      subsystem_id: req.user.subsystem_id,
-      type: 'block',
-      draw_id: { $ne: null }
-    }).populate('draw_id', 'name key');
-    const blockedDraws = restrictions.map(r => ({ drawId: r.draw_id._id, drawName: r.draw_id.name }));
-    const unique = {};
-    blockedDraws.forEach(b => { unique[b.drawId] = b; });
-    res.json(Object.values(unique));
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.post('/api/subsystem/block-draw', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { drawId, block } = req.body;
-    if (!drawId) return res.status(400).json({ success: false, error: 'Tirage manquant.' });
-    if (block) {
-      await Restriction.create({
-        subsystem_id: req.user.subsystem_id,
-        number: 'ALL',
-        type: 'block',
-        draw_id: drawId
-      });
-    } else {
-      await Restriction.deleteMany({ subsystem_id: req.user.subsystem_id, type: 'block', draw_id: drawId });
-    }
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-// --- DASHBOARD SUBSYSTEM ---
-app.get('/api/subsystem/dashboard', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const subsystemId = req.user.subsystem_id;
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-
-    const agents = await User.find({ subsystem_id: subsystemId, role: 'agent' }).select('name is_online');
-    const onlineAgents = agents.filter(a => a.is_online);
-    const onlineAgentsList = onlineAgents.map(a => ({ name: a.name }));
-    const supervisors = [];
-    const onlineSupervisors = [];
-
-    const ticketsToday = await Ticket.find({
-      subsystem_id: subsystemId,
-      date: { $gte: today, $lt: tomorrow }
-    });
-    const totalBets = ticketsToday.reduce((sum, t) => sum + (t.total || 0), 0);
-    const totalTickets = ticketsToday.length;
-    const totalWins = 0;
-    const netResult = totalBets - totalWins;
-
-    const limitsProgress = [];
-
-    const agentStats = {};
-    for (let ticket of ticketsToday) {
-      if (!agentStats[ticket.agent_id]) agentStats[ticket.agent_id] = { name: ticket.agent_name, total_bets: 0, total_wins: 0 };
-      agentStats[ticket.agent_id].total_bets += ticket.total;
-    }
-    const agentsGainLoss = Object.values(agentStats).map(a => ({
-      name: a.name,
-      total_bets: a.total_bets,
-      total_wins: 0,
-      net_result: a.total_bets
-    }));
-
-    res.json({
-      success: true,
-      connected: {
-        supervisors: onlineSupervisors,
-        agents: onlineAgentsList,
-        supervisors_count: onlineSupervisors.length,
-        agents_count: onlineAgents.length
-      },
-      limits_progress: limitsProgress,
-      agents_gain_loss: agentsGainLoss,
-      total_bets: totalBets,
-      total_tickets: totalTickets,
-      total_wins: totalWins,
-      net_result: netResult
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-// --- RAPPORTS SUBSYSTEM ---
-app.get('/api/subsystem/reports', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const { period, fromDate, toDate, agentId, drawId, gainLoss } = req.query;
-    let start, end;
-    if (period === 'today') {
-      start = new Date(); start.setHours(0,0,0,0);
-      end = new Date(); end.setHours(23,59,59,999);
-    } else if (period === 'yesterday') {
-      start = new Date(); start.setDate(start.getDate() - 1); start.setHours(0,0,0,0);
-      end = new Date(start); end.setDate(start.getDate() + 1); end.setHours(23,59,59,999);
-    } else if (period === 'week') {
-      start = new Date(); start.setDate(start.getDate() - start.getDay()); start.setHours(0,0,0,0);
-      end = new Date(); end.setHours(23,59,59,999);
-    } else if (period === 'month') {
-      start = new Date(); start.setDate(1); start.setHours(0,0,0,0);
-      end = new Date(); end.setHours(23,59,59,999);
-    } else if (period === 'custom' && fromDate && toDate) {
-      start = new Date(fromDate); start.setHours(0,0,0,0);
-      end = new Date(toDate); end.setHours(23,59,59,999);
-    } else {
-      start = new Date(0);
-      end = new Date();
-    }
-
-    const query = { subsystem_id: req.user.subsystem_id, date: { $gte: start, $lte: end } };
-    if (agentId && agentId !== 'all') query.agent_id = agentId;
-    if (drawId && drawId !== 'all') query.draw = drawId;
-
-    const tickets = await Ticket.find(query);
-    const total_tickets = tickets.length;
-    const total_bets = tickets.reduce((sum, t) => sum + (t.total || 0), 0);
-    const total_wins = 0;
-    const net_result = total_bets - total_wins;
-
-    const detailMap = new Map();
-    for (let ticket of tickets) {
-      const key = ticket.agent_id ? ticket.agent_id.toString() : 'unknown';
-      if (!detailMap.has(key)) {
-        detailMap.set(key, {
-          agent_name: ticket.agent_name,
-          tickets: 0,
-          bets: 0,
-          wins: 0
+    try {
+        const { username, password, role } = req.body;
+
+        const user = await db.get(
+            "SELECT * FROM users WHERE username = ? AND role = ?",
+            [username, role]
+        );
+
+        if (!user) {
+            return res.status(401).json({ success: false, error: 'Identifiants incorrects' });
+        }
+
+        const validPassword = await bcrypt.compare(password, user.password);
+        if (!validPassword) {
+            return res.status(401).json({ success: false, error: 'Identifiants incorrects' });
+        }
+
+        if (!user.is_active) {
+            return res.status(403).json({ success: false, error: 'Compte désactivé' });
+        }
+
+        // Mise à jour last_login et is_online
+        await db.run(
+            "UPDATE users SET last_login = CURRENT_TIMESTAMP, is_online = 1 WHERE id = ?",
+            [user.id]
+        );
+
+        // Générer le token
+        const token = jwt.sign(
+            { id: user.id, username: user.username, role: user.role, level: user.level, subsystem_id: user.subsystem_id },
+            JWT_SECRET,
+            { expiresIn: '24h' }
+        );
+
+        // Déterminer l'URL de redirection selon le rôle
+        let redirectUrl = '/lotato.html';
+        if (user.role === 'supervisor') {
+            redirectUrl = user.level === 1 ? '/control-level1.html' : '/control-level2.html';
+        } else if (user.role === 'subsystem') {
+            redirectUrl = '/subsystem-admin.html';
+        } else if (user.role === 'master') {
+            redirectUrl = '/master-dashboard.html';
+        }
+
+        // Logger l'activité
+        await db.run(
+            "INSERT INTO activity_log (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)",
+            [user.id, 'login', `Connexion réussie (${user.role})`, req.ip]
+        );
+
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: user.id,
+                username: user.username,
+                full_name: user.full_name,
+                role: user.role,
+                level: user.level,
+                subsystem_id: user.subsystem_id,
+                email: user.email
+            },
+            redirectUrl
         });
-      }
-      const d = detailMap.get(key);
-      d.tickets += 1;
-      d.bets += ticket.total;
+    } catch (error) {
+        console.error('Erreur login:', error);
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
-    const detail = Array.from(detailMap.values());
+});
 
-    let filteredDetail = detail;
-    if (gainLoss === 'gain') {
-      filteredDetail = detail.filter(d => (d.bets - d.wins) > 0);
-    } else if (gainLoss === 'loss') {
-      filteredDetail = detail.filter(d => (d.bets - d.wins) < 0);
+app.post('/api/auth/logout', authenticateToken, async (req, res) => {
+    try {
+        await db.run("UPDATE users SET is_online = 0 WHERE id = ?", [req.user.id]);
+        await db.run(
+            "INSERT INTO activity_log (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)",
+            [req.user.id, 'logout', 'Déconnexion', req.ip]
+        );
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
     }
-
-    res.json({
-      success: true,
-      summary: { total_tickets, total_bets, total_wins, net_result },
-      detail: filteredDetail
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
 });
 
-// --- TICKETS ---
-app.post('/api/tickets', auth, authorize('agent', 'subsystem'), async (req, res) => {
-  try {
-    let ticketData = req.body;
-    if (ticketData.ticket) ticketData = ticketData.ticket;
-
-    const finalSubsystemId = ticketData.subsystem_id || req.user.subsystem_id;
-    const finalAgentId = ticketData.agent_id || req.user._id;
-    const finalAgentName = ticketData.agent_name || req.user.name;
-
-    if (!finalSubsystemId) {
-      return res.status(400).json({ success: false, error: 'subsystem_id manquant.' });
+app.get('/api/auth/check', authenticateToken, async (req, res) => {
+    try {
+        const user = await db.get(
+            "SELECT id, username, full_name, role, level, subsystem_id, email, is_active FROM users WHERE id = ?",
+            [req.user.id]
+        );
+        if (!user) {
+            return res.status(404).json({ success: false, error: 'Utilisateur non trouvé' });
+        }
+        res.json({ success: true, user });
+    } catch (error) {
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
-
-    const ticket = new Ticket({
-      subsystem_id: finalSubsystemId,
-      agent_id: finalAgentId,
-      agent_name: finalAgentName,
-      number: ticketData.number,
-      draw: ticketData.draw,
-      draw_time: ticketData.draw_time,
-      bets: ticketData.bets,
-      total: ticketData.total,
-      status: 'active',
-      syncStatus: 'synced'
-    });
-    await ticket.save();
-    res.json({ success: true, ticket });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
 });
 
-app.get('/api/tickets', auth, authorize('agent', 'subsystem', 'master'), async (req, res) => {
-  try {
-    let query = {};
-    if (req.user.role === 'agent') {
-      query.agent_id = req.user._id;
-    } else if (req.user.role === 'subsystem') {
-      query.subsystem_id = req.user.subsystem_id;
-    } else if (req.user.role === 'master' && req.query.subsystem_id) {
-      query.subsystem_id = req.query.subsystem_id;
+// --- Utilisateurs (pour admin sous-système) ---
+app.get('/api/subsystem/users', authenticateToken, requireRole('subsystem', 'master'), async (req, res) => {
+    try {
+        const { role, search } = req.query;
+        let subsystemId = req.user.subsystem_id;
+        if (req.user.role === 'master' && req.query.subsystem_id) {
+            subsystemId = req.query.subsystem_id;
+        }
+
+        let query = `
+            SELECT u.*, 
+                   s1.full_name as supervisor1_name,
+                   s2.full_name as supervisor2_name
+            FROM users u
+            LEFT JOIN users s1 ON u.supervisor_id = s1.id
+            LEFT JOIN users s2 ON u.supervisor2_id = s2.id
+            WHERE u.subsystem_id = ? AND u.role != 'subsystem'
+        `;
+        const params = [subsystemId];
+
+        if (role) {
+            query += " AND u.role = ?";
+            params.push(role);
+        }
+        if (search) {
+            query += " AND (u.full_name LIKE ? OR u.username LIKE ?)";
+            params.push(`%${search}%`, `%${search}%`);
+        }
+
+        query += " ORDER BY u.created_at DESC";
+
+        const users = await db.all(query, params);
+        res.json({ success: true, users });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur serveur' });
     }
-    const tickets = await Ticket.find(query).sort({ date: -1 }).limit(parseInt(req.query.limit || 100));
-    res.json({ success: true, tickets });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
 });
 
-app.get('/api/tickets/:id', auth, authorize('agent', 'subsystem', 'master'), async (req, res) => {
-  try {
-    const ticket = await Ticket.findById(req.params.id);
-    if (!ticket) return res.status(404).json({ success: false, error: 'Ticket non trouvé.' });
-    if (req.user.role === 'agent' && ticket.agent_id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ success: false, error: 'Accès interdit.' });
+app.post('/api/subsystem/users/create', authenticateToken, requireRole('subsystem'), async (req, res) => {
+    try {
+        const { name, username, password, role, level, supervisorId } = req.body;
+
+        // Vérifier si l'username existe déjà
+        const existing = await db.get("SELECT id FROM users WHERE username = ?", [username]);
+        if (existing) {
+            return res.status(400).json({ success: false, error: 'Nom d\'utilisateur déjà pris' });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+        const result = await db.run(
+            `INSERT INTO users (full_name, username, password, role, level, subsystem_id, supervisor_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [name, username, hashedPassword, role, level || null, req.user.subsystem_id, supervisorId || null]
+        );
+
+        await db.run(
+            "INSERT INTO activity_log (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)",
+            [req.user.id, 'create_user', `Création de l'utilisateur ${username} (${role})`, req.ip]
+        );
+
+        res.json({ success: true, userId: result.lastID });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
-    if (req.user.role === 'subsystem' && ticket.subsystem_id.toString() !== req.user.subsystem_id.toString()) {
-      return res.status(403).json({ success: false, error: 'Accès interdit.' });
+});
+
+app.put('/api/subsystem/users/:id', authenticateToken, requireRole('subsystem'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, is_active, password } = req.body;
+
+        let query = "UPDATE users SET full_name = ?, is_active = ?";
+        const params = [name, is_active ? 1 : 0];
+
+        if (password) {
+            const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+            query += ", password = ?";
+            params.push(hashedPassword);
+        }
+
+        query += " WHERE id = ? AND subsystem_id = ?";
+        params.push(id, req.user.subsystem_id);
+
+        await db.run(query, params);
+
+        await db.run(
+            "INSERT INTO activity_log (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)",
+            [req.user.id, 'update_user', `Modification de l'utilisateur ID ${id}`, req.ip]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
-    res.json({ success: true, ticket });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
 });
 
-app.delete('/api/tickets/:id', auth, authorize('subsystem'), async (req, res) => {
-  try {
-    const ticket = await Ticket.findOneAndDelete({ _id: req.params.id, subsystem_id: req.user.subsystem_id });
-    if (!ticket) return res.status(404).json({ success: false, error: 'Ticket non trouvé.' });
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
+app.put('/api/subsystem/users/:id/status', authenticateToken, requireRole('subsystem'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { is_active } = req.body;
 
-app.get('/api/tickets/pending', auth, authorize('agent', 'subsystem'), async (req, res) => {
-  try {
-    let query = { syncStatus: 'pending' };
-    if (req.user.role === 'agent') query.agent_id = req.user._id;
-    else if (req.user.role === 'subsystem') query.subsystem_id = req.user.subsystem_id;
-    const tickets = await Ticket.find(query).sort({ date: -1 });
-    res.json({ success: true, tickets });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
+        await db.run(
+            "UPDATE users SET is_active = ? WHERE id = ? AND subsystem_id = ?",
+            [is_active ? 1 : 0, id, req.user.subsystem_id]
+        );
 
-app.post('/api/tickets/pending', auth, authorize('agent', 'subsystem'), async (req, res) => {
-  try {
-    const { ticket } = req.body;
-    if (!ticket) return res.status(400).json({ success: false, error: 'Ticket manquant.' });
-    const newTicket = new Ticket({
-      ...ticket,
-      syncStatus: 'pending',
-      is_synced: false
-    });
-    await newTicket.save();
-    res.json({ success: true, ticket: newTicket });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/tickets/winning', auth, authorize('agent', 'subsystem'), async (req, res) => {
-  res.json({ success: true, tickets: [] });
-});
-
-app.get('/api/tickets/multi-draw', auth, authorize('agent', 'subsystem'), async (req, res) => {
-  try {
-    let query = {};
-    if (req.user.role === 'agent') query.agent_id = req.user._id;
-    else if (req.user.role === 'subsystem') query.subsystem_id = req.user.subsystem_id;
-    const tickets = await MultiDrawTicket.find(query).sort({ date: -1 });
-    res.json({ success: true, tickets });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.post('/api/tickets/multi-draw', auth, authorize('agent', 'subsystem'), async (req, res) => {
-  try {
-    const ticketData = req.body;
-    const newTicket = new MultiDrawTicket({
-      ...ticketData,
-      subsystem_id: req.user.subsystem_id,
-      agent_id: req.user._id,
-      agent_name: req.user.name,
-      number: ticketData.number || 1,
-      date: new Date()
-    });
-    await newTicket.save();
-    res.json({ success: true, ticket: newTicket });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-// --- HISTORIQUE ---
-app.get('/api/history', auth, authorize('agent', 'subsystem'), async (req, res) => {
-  try {
-    const query = {};
-    if (req.user.role === 'agent') query.user_id = req.user._id;
-    else if (req.user.role === 'subsystem') {
-      const agents = await User.find({ subsystem_id: req.user.subsystem_id, role: 'agent' }).select('_id');
-      query.user_id = { $in: agents.map(a => a._id) };
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
     }
-    const history = await History.find(query).sort({ timestamp: -1 }).limit(100);
-    res.json({ success: true, history });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
 });
 
-app.post('/api/history', auth, authorize('agent', 'subsystem'), async (req, res) => {
-  try {
-    const { action, details } = req.body;
-    const historyEntry = new History({
-      user_id: req.user._id,
-      username: req.user.username,
-      action: action || 'bet_saved',
-      details: details || {},
-      timestamp: new Date()
-    });
-    await historyEntry.save();
-    res.json({ success: true, history: historyEntry });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
+// --- Tickets ---
+app.post('/api/tickets', authenticateToken, requireRole('agent'), async (req, res) => {
+    try {
+        const { ticket } = req.body;
+        const agentId = req.user.id;
+        const subsystemId = req.user.subsystem_id;
+
+        // Générer un numéro de ticket unique
+        const ticketNumber = 'T' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+
+        // Insérer le ticket
+        const result = await db.run(
+            `INSERT INTO tickets (ticket_number, agent_id, subsystem_id, draw, draw_time, total_amount, status, is_synced)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [ticketNumber, agentId, subsystemId, ticket.draw, ticket.draw_time, ticket.total, 'active', 1]
+        );
+
+        const ticketId = result.lastID;
+
+        // Insérer les paris
+        for (const bet of ticket.bets) {
+            await db.run(
+                `INSERT INTO bets (ticket_id, bet_type, numbers, amount, multiplier, options)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+                [ticketId, bet.type, bet.number, bet.amount, bet.multiplier, JSON.stringify(bet.options || null)]
+            );
+        }
+
+        await db.run(
+            "INSERT INTO activity_log (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)",
+            [agentId, 'create_ticket', `Ticket ${ticketNumber} - ${ticket.total} HTG`, req.ip]
+        );
+
+        res.json({ success: true, ticketId, ticketNumber });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
+    }
 });
 
-// --- RÉSULTATS ---
-app.get('/api/results', auth, authorize('subsystem', 'master', 'agent'), async (req, res) => {
-  try {
-    const { draw, time, date, limit = 10 } = req.query;
-    let query = {};
-    if (req.user.role === 'subsystem' || req.user.role === 'agent') {
-      query.subsystem_id = req.user.subsystem_id;
+app.get('/api/tickets', authenticateToken, async (req, res) => {
+    try {
+        let query = `
+            SELECT t.*, u.full_name as agent_name,
+                   (SELECT COUNT(*) FROM bets WHERE ticket_id = t.id) as bet_count
+            FROM tickets t
+            JOIN users u ON t.agent_id = u.id
+            WHERE t.subsystem_id = ?
+        `;
+        const params = [req.user.subsystem_id];
+
+        if (req.user.role === 'agent') {
+            query += " AND t.agent_id = ?";
+            params.push(req.user.id);
+        }
+
+        // Filtrer par date si fourni
+        if (req.query.date) {
+            query += " AND DATE(t.created_at) = DATE(?)";
+            params.push(req.query.date);
+        }
+
+        if (req.query.start && req.query.end) {
+            query += " AND t.created_at BETWEEN ? AND ?";
+            params.push(req.query.start, req.query.end);
+        }
+
+        query += " ORDER BY t.created_at DESC LIMIT 100";
+
+        const tickets = await db.all(query, params);
+
+        // Récupérer les paris pour chaque ticket
+        for (const ticket of tickets) {
+            ticket.bets = await db.all("SELECT * FROM bets WHERE ticket_id = ?", [ticket.id]);
+        }
+
+        res.json({ success: true, tickets });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur serveur' });
     }
-    if (draw) query.draw_id = draw;
-    if (time) query.draw_time = time;
-    if (date) {
-      const start = new Date(date);
-      start.setHours(0,0,0,0);
-      const end = new Date(date);
-      end.setHours(23,59,59,999);
-      query.date = { $gte: start, $lte: end };
-    }
-    const results = await Result.find(query).sort({ date: -1 }).limit(parseInt(limit)).populate('draw_id', 'name key');
-    const structured = {};
-    for (let r of results) {
-      const drawKey = r.draw_id ? r.draw_id.key : 'unknown';
-      if (!structured[drawKey]) structured[drawKey] = {};
-      structured[drawKey][r.draw_time] = {
-        lot1: r.lot1,
-        lot2: r.lot2,
-        lot3: r.lot3,
-        date: r.date
-      };
-    }
-    res.json({ success: true, results: structured });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
 });
 
-// --- COMPANY INFO ---
-app.get('/api/company-info', auth, authorize('agent', 'subsystem'), async (req, res) => {
-  try {
-    const settings = await SubsystemSettings.findOne({ subsystem_id: req.user.subsystem_id });
-    if (settings) {
-      res.json({
-        name: settings.name,
-        phone: '',
-        address: '',
-        reportTitle: settings.name,
-        reportPhone: '',
-        logoUrl: settings.logoUrl
-      });
+app.get('/api/tickets/recent', authenticateToken, async (req, res) => {
+    try {
+        let query = `
+            SELECT t.*, u.full_name as agent_name
+            FROM tickets t
+            JOIN users u ON t.agent_id = u.id
+            WHERE t.subsystem_id = ?
+        `;
+        const params = [req.user.subsystem_id];
+
+        if (req.user.role === 'agent') {
+            query += " AND t.agent_id = ?";
+            params.push(req.user.id);
+        }
+
+        query += " ORDER BY t.created_at DESC LIMIT 10";
+
+        const tickets = await db.all(query, params);
+        res.json({ success: true, tickets });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// --- Résultats ---
+app.get('/api/results', async (req, res) => {
+    try {
+        const results = await db.all(
+            "SELECT * FROM results ORDER BY draw_date DESC, draw_time DESC LIMIT 50"
+        );
+        // Formater comme attendu par le frontend
+        const formatted = {};
+        for (const r of results) {
+            if (!formatted[r.draw]) formatted[r.draw] = {};
+            if (!formatted[r.draw][r.draw_time]) formatted[r.draw][r.draw_time] = {};
+            formatted[r.draw][r.draw_time] = {
+                date: r.draw_date,
+                lot1: r.lot1,
+                lot2: r.lot2,
+                lot3: r.lot3,
+                verified: r.verified
+            };
+        }
+        res.json({ success: true, results: formatted });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+app.post('/api/results', authenticateToken, requireRole('subsystem', 'master'), async (req, res) => {
+    try {
+        const { draw, draw_time, draw_date, lot1, lot2, lot3, verified } = req.body;
+
+        await db.run(
+            `INSERT OR REPLACE INTO results (draw, draw_time, draw_date, lot1, lot2, lot3, verified)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [draw, draw_time, draw_date, lot1, lot2, lot3, verified ? 1 : 0]
+        );
+
+        // TODO: Déclencher la vérification des tickets gagnants
+
+        await db.run(
+            "INSERT INTO activity_log (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)",
+            [req.user.id, 'enter_result', `Résultat ${draw} ${draw_time} - ${lot1}`, req.ip]
+        );
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// --- Gagnants ---
+app.get('/api/tickets/winning', authenticateToken, async (req, res) => {
+    try {
+        let query = `
+            SELECT w.*, t.ticket_number, t.draw, t.draw_time, t.created_at as date,
+                   u.full_name as agent_name
+            FROM winning_tickets w
+            JOIN tickets t ON w.ticket_id = t.id
+            JOIN users u ON t.agent_id = u.id
+            WHERE t.subsystem_id = ?
+        `;
+        const params = [req.user.subsystem_id];
+
+        if (req.user.role === 'agent') {
+            query += " AND t.agent_id = ?";
+            params.push(req.user.id);
+        }
+
+        const winners = await db.all(query, params);
+        res.json({ success: true, tickets: winners });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// --- Settings ---
+app.get('/api/settings', async (req, res) => {
+    try {
+        const settings = await db.all("SELECT key, value FROM settings");
+        const obj = {};
+        settings.forEach(s => obj[s.key] = s.value);
+        res.json({ success: true, settings: obj });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+app.post('/api/settings', authenticateToken, requireRole('subsystem', 'master'), async (req, res) => {
+    try {
+        const { settings } = req.body;
+        for (const [key, value] of Object.entries(settings)) {
+            await db.run(
+                "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+                [key, value]
+            );
+        }
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// --- Statistiques ---
+app.get('/api/subsystem/stats', authenticateToken, async (req, res) => {
+    try {
+        const subsystemId = req.user.subsystem_id;
+
+        const [activeUsers, todayTickets, todaySales, maxUsers] = await Promise.all([
+            db.get("SELECT COUNT(*) as count FROM users WHERE subsystem_id = ? AND is_active = 1", [subsystemId]),
+            db.get(`SELECT COUNT(*) as count FROM tickets WHERE subsystem_id = ? AND DATE(created_at) = DATE('now')`, [subsystemId]),
+            db.get(`SELECT COALESCE(SUM(total_amount), 0) as total FROM tickets WHERE subsystem_id = ? AND DATE(created_at) = DATE('now')`, [subsystemId]),
+            db.get("SELECT max_users FROM subsystems WHERE id = ?", [subsystemId])
+        ]);
+
+        res.json({
+            success: true,
+            stats: {
+                active_users: activeUsers.count,
+                today_tickets: todayTickets.count,
+                today_sales: todaySales.total,
+                max_users: maxUsers?.max_users || 10
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// --- Master endpoints ---
+app.get('/api/master/subsystems', authenticateToken, requireRole('master'), async (req, res) => {
+    try {
+        const subsystems = await db.all(`
+            SELECT s.*, 
+                   (SELECT COUNT(*) FROM users WHERE subsystem_id = s.id AND role = 'agent') as agents_count,
+                   (SELECT COUNT(*) FROM users WHERE subsystem_id = s.id AND is_active = 1) as active_users
+            FROM subsystems s
+            ORDER BY s.created_at DESC
+        `);
+
+        res.json({ success: true, subsystems });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+app.post('/api/master/subsystems', authenticateToken, requireRole('master'), async (req, res) => {
+    try {
+        const { name, subdomain, contact_email, contact_phone, max_users, subscription_type, subscription_months } = req.body;
+
+        // Calculer la date d'expiration
+        const expires = new Date();
+        expires.setMonth(expires.getMonth() + (subscription_months || 1));
+
+        const result = await db.run(
+            `INSERT INTO subsystems (name, subdomain, contact_email, contact_phone, max_users, subscription_type, subscription_expires)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [name, subdomain, contact_email, contact_phone, max_users, subscription_type, expires.toISOString().split('T')[0]]
+        );
+
+        const subsystemId = result.lastID;
+
+        // Créer un compte admin pour le sous-système
+        const adminUsername = `admin_${subdomain}`;
+        const adminPassword = Math.random().toString(36).slice(-8);
+        const hashedPassword = await bcrypt.hash(adminPassword, SALT_ROUNDS);
+
+        await db.run(
+            `INSERT INTO users (username, password, full_name, role, subsystem_id, is_active)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [adminUsername, hashedPassword, `Admin ${name}`, 'subsystem', subsystemId, 1]
+        );
+
+        await db.run(
+            "INSERT INTO activity_log (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)",
+            [req.user.id, 'create_subsystem', `Création du sous-système ${name}`, req.ip]
+        );
+
+        res.json({
+            success: true,
+            subsystemId,
+            access_url: `https://${subdomain}.lotato.com`,
+            admin_credentials: {
+                username: adminUsername,
+                password: adminPassword,
+                email: contact_email
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, error: 'Erreur serveur' });
+    }
+});
+
+app.get('/api/master/subsystems/:id', authenticateToken, requireRole('master'), async (req, res) => {
+    try {
+        const subsystem = await db.get(`
+            SELECT s.*, 
+                   (SELECT COUNT(*) FROM users WHERE subsystem_id = s.id) as total_users,
+                   (SELECT COUNT(*) FROM users WHERE subsystem_id = s.id AND is_active = 1) as active_users
+            FROM subsystems s
+            WHERE s.id = ?
+        `, [req.params.id]);
+
+        if (!subsystem) {
+            return res.status(404).json({ success: false, error: 'Sous-système non trouvé' });
+        }
+
+        res.json({ success: true, subsystem });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+app.put('/api/master/subsystems/:id/deactivate', authenticateToken, requireRole('master'), async (req, res) => {
+    try {
+        await db.run("UPDATE subsystems SET is_active = 0 WHERE id = ?", [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+app.put('/api/master/subsystems/:id/activate', authenticateToken, requireRole('master'), async (req, res) => {
+    try {
+        await db.run("UPDATE subsystems SET is_active = 1 WHERE id = ?", [req.params.id]);
+        res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// --- Activités ---
+app.get('/api/subsystem/activities', authenticateToken, requireRole('subsystem'), async (req, res) => {
+    try {
+        const activities = await db.all(`
+            SELECT a.*, u.full_name as user_name, u.role as user_role
+            FROM activity_log a
+            LEFT JOIN users u ON a.user_id = u.id
+            WHERE u.subsystem_id = ? OR a.user_id IS NULL
+            ORDER BY a.created_at DESC
+            LIMIT 100
+        `, [req.user.subsystem_id]);
+
+        const formatted = activities.map(a => ({
+            user: a.user_name || 'Système',
+            action: a.action,
+            details: a.details,
+            timestamp: a.created_at
+        }));
+
+        res.json({ success: true, activities: formatted });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// --- Upload logo ---
+app.post('/api/upload-logo', authenticateToken, requireRole('subsystem', 'master'), upload.single('logo'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, error: 'Aucun fichier' });
+        }
+        const logoUrl = '/uploads/' + req.file.filename;
+        await db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", ['company_logo', logoUrl]);
+        res.json({ success: true, logoUrl });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Erreur serveur' });
+    }
+});
+
+// --- Route de fallback pour le frontend (SPA) ---
+app.get('*', (req, res) => {
+    // Si la requête est pour un fichier statique inexistant, renvoyer index.html
+    if (!req.path.startsWith('/api')) {
+        res.sendFile(path.join(__dirname, 'index.html'));
     } else {
-      res.json({ name: 'Mon Borlette', phone: '', address: '', reportTitle: 'Mon Borlette', reportPhone: '', logoUrl: '' });
+        res.status(404).json({ error: 'Endpoint non trouvé' });
     }
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
 });
 
-app.get('/api/logo', auth, authorize('agent', 'subsystem'), async (req, res) => {
-  try {
-    const settings = await SubsystemSettings.findOne({ subsystem_id: req.user.subsystem_id });
-    const logoUrl = settings && settings.logoUrl ? settings.logoUrl : '/logo-borlette.jpg';
-    res.json({ logoUrl });
-  } catch (err) {
-    res.json({ logoUrl: '/logo-borlette.jpg' });
-  }
-});
-
-app.get('/api/health', (req, res) => res.json({ status: 'OK' }));
-
-// --- AGENTS (master) ---
-app.get('/api/agents', auth, authorize('master'), async (req, res) => {
-  try {
-    const agents = await User.find({ role: 'agent' }).populate('subsystem_id', 'name');
-    const result = await Promise.all(agents.map(async agent => {
-      const tickets = await Ticket.find({ agent_id: agent._id });
-      const total_sales = tickets.reduce((sum, t) => sum + (t.total || 0), 0);
-      const total_payout = 0;
-      const winning_tickets = 0;
-      const total_tickets = tickets.length;
-      const last_active = agent.last_login;
-      return {
-        id: agent._id,
-        username: agent.username,
-        full_name: agent.name,
-        email: agent.email,
-        is_online: agent.is_online,
-        subsystem_name: agent.subsystem_id ? agent.subsystem_id.name : 'N/A',
-        total_sales,
-        total_payout,
-        winning_tickets,
-        total_tickets,
-        last_active
-      };
-    }));
-    res.json({ success: true, agents: result });
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Erreur serveur.' });
-  }
-});
-
-app.get('/api/check-winners', auth, authorize('agent', 'subsystem'), async (req, res) => {
-  res.json({ success: true, winners: [] });
-});
-
-// ==================== ROUTES POUR LES FICHIERS HTML ====================
-app.get('/lotato.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'lotato.html'));
-});
-app.get('/master-dashboard.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'master-dashboard.html'));
-});
-app.get('/subsystem-admin.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'subsystem-admin.html'));
-});
-
-// ==================== FALLBACK POUR SPA ====================
-app.use((req, res, next) => {
-  if (req.path.includes('.') || req.path.startsWith('/api/')) {
-    return next();
-  }
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// ==================== DÉMARRAGE ====================
-mongoose.connect(process.env.MONGODB_URI)
-  .then(async () => {
-    console.log('✅ MongoDB connecté');
-    const masterExists = await User.findOne({ role: 'master' });
-    if (!masterExists) {
-      let masterUsername, masterPassword;
-      if (process.env.DEFAULT_MASTER_USERNAME && process.env.DEFAULT_MASTER_PASSWORD) {
-        masterUsername = process.env.DEFAULT_MASTER_USERNAME;
-        masterPassword = process.env.DEFAULT_MASTER_PASSWORD;
-      } else {
-        masterUsername = 'admin';
-        masterPassword = 'admin123';
-        console.warn('⚠️  Utilisation des identifiants par défaut (admin/admin123). Changez-les dès que possible.');
-      }
-      const hashedPassword = await bcrypt.hash(masterPassword, 10);
-      await User.create({
-        username: masterUsername,
-        password: hashedPassword,
-        name: 'Master Admin',
-        role: 'master',
-        is_active: true
-      });
-      console.log('✅ Master par défaut créé');
-    }
-
-    const defaultDraws = [
-      { name: 'Miami (Florida)', key: 'miami', times: { morning: '1:30 PM', evening: '9:50 PM' } },
-      { name: 'Georgia', key: 'georgia', times: { morning: '12:30 PM', evening: '7:00 PM' } },
-      { name: 'New York', key: 'newyork', times: { morning: '2:30 PM', evening: '8:00 PM' } },
-      { name: 'Texas', key: 'texas', times: { morning: '12:00 PM', evening: '6:00 PM' } },
-      { name: 'Tunisie', key: 'tunisia', times: { morning: '10:30 AM', evening: '2:00 PM' } }
-    ];
-    for (const drawData of defaultDraws) {
-      const exists = await Draw.findOne({ key: drawData.key });
-      if (!exists) await Draw.create(drawData);
-    }
-
-    const PORT = process.env.PORT || 5000;
-    app.listen(PORT, () => console.log(`🚀 Serveur sur le port ${PORT}`));
-  })
-  .catch(err => {
-    console.error('❌ Erreur MongoDB:', err);
+// Démarrage du serveur
+initializeDatabase().then(() => {
+    app.listen(PORT, () => {
+        console.log(`🚀 Serveur Lotato démarré sur le port ${PORT}`);
+        console.log(`📁 Fichiers statiques servis depuis : ${__dirname}`);
+    });
+}).catch(err => {
+    console.error('❌ Erreur d\'initialisation de la base de données:', err);
     process.exit(1);
-  });
+});
