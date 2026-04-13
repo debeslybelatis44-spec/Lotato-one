@@ -3,8 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
-const sqlite3 = require('sqlite3').verbose();
-const { open } = require('sqlite');
+const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
@@ -15,6 +14,17 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'votre_secret_jwt_super_securise_a_changer_en_prod';
 const SALT_ROUNDS = 10;
 
+// MongoDB Atlas connection
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://<username>:<password>@cluster0.mongodb.net/lotato?retryWrites=true&w=majority';
+
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('✅ Connecté à MongoDB Atlas'))
+  .catch(err => {
+    console.error('❌ Erreur de connexion MongoDB:', err);
+    process.exit(1);
+  });
+
+// Middleware
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -22,441 +32,687 @@ app.use(morgan('dev'));
 app.use(express.static(__dirname));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Configuration multer pour les logos
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadDir = path.join(__dirname, 'uploads');
-        if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'logo-' + uniqueSuffix + path.extname(file.originalname));
-    }
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'logo-' + uniqueSuffix + path.extname(file.originalname));
+  }
 });
 const upload = multer({ storage });
 
-let db;
-async function initializeDatabase() {
-    db = await open({ filename: './database.sqlite', driver: sqlite3.Database });
+// ==================== MODÈLES MONGOOSE ====================
 
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            full_name TEXT,
-            email TEXT,
-            phone TEXT,
-            role TEXT NOT NULL CHECK(role IN ('agent', 'supervisor', 'subsystem', 'master')),
-            level INTEGER DEFAULT NULL,
-            subsystem_id INTEGER DEFAULT NULL,
-            supervisor_id INTEGER DEFAULT NULL,
-            supervisor2_id INTEGER DEFAULT NULL,
-            is_active BOOLEAN DEFAULT 1,
-            is_online BOOLEAN DEFAULT 0,
-            last_login DATETIME,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (subsystem_id) REFERENCES subsystems(id),
-            FOREIGN KEY (supervisor_id) REFERENCES users(id),
-            FOREIGN KEY (supervisor2_id) REFERENCES users(id)
-        );
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  full_name: String,
+  email: String,
+  phone: String,
+  role: { type: String, enum: ['agent', 'supervisor', 'subsystem', 'master'], required: true },
+  level: Number,
+  subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem' },
+  supervisor_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  supervisor2_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  is_active: { type: Boolean, default: true },
+  is_online: { type: Boolean, default: false },
+  last_login: Date,
+  created_at: { type: Date, default: Date.now }
+});
 
-        CREATE TABLE IF NOT EXISTS subsystems (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            subdomain TEXT UNIQUE NOT NULL,
-            contact_email TEXT,
-            contact_phone TEXT,
-            max_users INTEGER DEFAULT 10,
-            subscription_type TEXT DEFAULT 'standard',
-            subscription_expires DATE,
-            is_active BOOLEAN DEFAULT 1,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
+const subsystemSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  subdomain: { type: String, required: true, unique: true },
+  contact_email: String,
+  contact_phone: String,
+  max_users: { type: Number, default: 10 },
+  subscription_type: { type: String, default: 'standard' },
+  subscription_expires: Date,
+  is_active: { type: Boolean, default: true },
+  created_at: { type: Date, default: Date.now }
+});
 
-        CREATE TABLE IF NOT EXISTS tickets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticket_number TEXT UNIQUE NOT NULL,
-            agent_id INTEGER NOT NULL,
-            subsystem_id INTEGER NOT NULL,
-            draw TEXT NOT NULL,
-            draw_time TEXT NOT NULL,
-            total_amount REAL NOT NULL,
-            status TEXT DEFAULT 'active',
-            is_synced BOOLEAN DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (agent_id) REFERENCES users(id),
-            FOREIGN KEY (subsystem_id) REFERENCES subsystems(id)
-        );
+const ticketSchema = new mongoose.Schema({
+  ticket_number: { type: String, required: true, unique: true },
+  agent_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  subsystem_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Subsystem', required: true },
+  draw: { type: String, required: true },
+  draw_time: { type: String, required: true },
+  total_amount: { type: Number, required: true },
+  status: { type: String, default: 'active' },
+  is_synced: { type: Boolean, default: false },
+  created_at: { type: Date, default: Date.now }
+});
 
-        CREATE TABLE IF NOT EXISTS bets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticket_id INTEGER NOT NULL,
-            bet_type TEXT NOT NULL,
-            numbers TEXT NOT NULL,
-            amount REAL NOT NULL,
-            multiplier REAL NOT NULL,
-            options TEXT,
-            FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
-        );
+const betSchema = new mongoose.Schema({
+  ticket_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket', required: true },
+  bet_type: { type: String, required: true },
+  numbers: { type: String, required: true },
+  amount: { type: Number, required: true },
+  multiplier: { type: Number, required: true },
+  options: mongoose.Schema.Types.Mixed
+});
 
-        CREATE TABLE IF NOT EXISTS results (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            draw TEXT NOT NULL,
-            draw_time TEXT NOT NULL,
-            draw_date DATE NOT NULL,
-            lot1 TEXT NOT NULL,
-            lot2 TEXT,
-            lot3 TEXT,
-            verified BOOLEAN DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(draw, draw_time, draw_date)
-        );
+const resultSchema = new mongoose.Schema({
+  draw: { type: String, required: true },
+  draw_time: { type: String, required: true },
+  draw_date: { type: Date, required: true },
+  lot1: { type: String, required: true },
+  lot2: String,
+  lot3: String,
+  verified: { type: Boolean, default: false },
+  created_at: { type: Date, default: Date.now }
+});
+resultSchema.index({ draw: 1, draw_time: 1, draw_date: 1 }, { unique: true });
 
-        CREATE TABLE IF NOT EXISTS winning_tickets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ticket_id INTEGER NOT NULL,
-            winning_amount REAL NOT NULL,
-            paid BOOLEAN DEFAULT 0,
-            paid_at DATETIME,
-            FOREIGN KEY (ticket_id) REFERENCES tickets(id)
-        );
+const winningTicketSchema = new mongoose.Schema({
+  ticket_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Ticket', required: true },
+  winning_amount: { type: Number, required: true },
+  paid: { type: Boolean, default: false },
+  paid_at: Date
+});
 
-        CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL
-        );
+const settingSchema = new mongoose.Schema({
+  key: { type: String, required: true, unique: true },
+  value: { type: String, required: true }
+});
 
-        CREATE TABLE IF NOT EXISTS activity_log (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            action TEXT NOT NULL,
-            details TEXT,
-            ip_address TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-    `);
+const activityLogSchema = new mongoose.Schema({
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  action: { type: String, required: true },
+  details: String,
+  ip_address: String,
+  created_at: { type: Date, default: Date.now }
+});
 
+const User = mongoose.model('User', userSchema);
+const Subsystem = mongoose.model('Subsystem', subsystemSchema);
+const Ticket = mongoose.model('Ticket', ticketSchema);
+const Bet = mongoose.model('Bet', betSchema);
+const Result = mongoose.model('Result', resultSchema);
+const WinningTicket = mongoose.model('WinningTicket', winningTicketSchema);
+const Setting = mongoose.model('Setting', settingSchema);
+const ActivityLog = mongoose.model('ActivityLog', activityLogSchema);
+
+// ==================== INITIALISATION ====================
+async function initializeData() {
+  try {
     // Paramètres par défaut
     const defaultSettings = {
-        'borlette_first': '60', 'borlette_second': '20', 'borlette_third': '10',
-        'lotto3': '500', 'lotto4': '5000', 'lotto5': '25000',
-        'grap': '500', 'marriage': '1000',
-        'company_name': 'Lotato', 'company_phone': '+509 32 53 49 58', 'company_address': 'Cap Haïtien'
+      'borlette_first': '60', 'borlette_second': '20', 'borlette_third': '10',
+      'lotto3': '500', 'lotto4': '5000', 'lotto5': '25000',
+      'grap': '500', 'marriage': '1000',
+      'company_name': 'Lotato', 'company_phone': '+509 32 53 49 58', 'company_address': 'Cap Haïtien'
     };
     for (const [key, value] of Object.entries(defaultSettings)) {
-        await db.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [key, value]);
+      await Setting.findOneAndUpdate({ key }, { value }, { upsert: true });
     }
 
-    // --- Création des utilisateurs de démonstration (si la base est vide) ---
-    const userCount = await db.get("SELECT COUNT(*) as count FROM users");
-    if (userCount.count === 0) {
-        console.log('📦 Initialisation des données de démonstration...');
+    // Vérifier si des utilisateurs existent
+    const userCount = await User.countDocuments();
+    if (userCount === 0) {
+      console.log('📦 Initialisation des données de démonstration...');
 
-        // 1. Créer un sous-système par défaut
-        const subResult = await db.run(
-            "INSERT INTO subsystems (name, subdomain, contact_email, max_users) VALUES (?, ?, ?, ?)",
-            ['Sous-système Démo', 'demo', 'demo@lotato.local', 20]
-        );
-        const subsystemId = subResult.lastID;
+      // 1. Créer un sous-système par défaut
+      const subsystem = await Subsystem.create({
+        name: 'Sous-système Démo',
+        subdomain: 'demo',
+        contact_email: 'demo@lotato.local',
+        max_users: 20
+      });
 
-        // 2. Master (mot de passe: master123)
-        const masterHash = await bcrypt.hash('master123', SALT_ROUNDS);
-        await db.run(
-            "INSERT INTO users (username, password, full_name, role, is_active) VALUES (?, ?, ?, ?, ?)",
-            ['master', masterHash, 'Administrateur Master', 'master', 1]
-        );
+      // 2. Master (master/master123)
+      const masterHash = await bcrypt.hash('master123', SALT_ROUNDS);
+      await User.create({
+        username: 'master',
+        password: masterHash,
+        full_name: 'Administrateur Master',
+        role: 'master',
+        is_active: true
+      });
 
-        // 3. Propriétaire du sous-système (mot de passe: 123)
-        const ownerHash = await bcrypt.hash('123', SALT_ROUNDS);
-        await db.run(
-            "INSERT INTO users (username, password, full_name, role, subsystem_id, is_active) VALUES (?, ?, ?, ?, ?, ?)",
-            ['proprietaire', ownerHash, 'Propriétaire Démo', 'subsystem', subsystemId, 1]
-        );
+      // 3. Propriétaire (proprietaire/123)
+      const ownerHash = await bcrypt.hash('123', SALT_ROUNDS);
+      await User.create({
+        username: 'proprietaire',
+        password: ownerHash,
+        full_name: 'Propriétaire Démo',
+        role: 'subsystem',
+        subsystem_id: subsystem._id,
+        is_active: true
+      });
 
-        // 4. Superviseur niveau 1 (mot de passe: 123)
-        const sup1Hash = await bcrypt.hash('123', SALT_ROUNDS);
-        const sup1Result = await db.run(
-            "INSERT INTO users (username, password, full_name, role, level, subsystem_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            ['superviseur1', sup1Hash, 'Superviseur Niveau 1', 'supervisor', 1, subsystemId, 1]
-        );
-        const sup1Id = sup1Result.lastID;
+      // 4. Superviseur niveau 1 (superviseur1/123)
+      const sup1Hash = await bcrypt.hash('123', SALT_ROUNDS);
+      const sup1 = await User.create({
+        username: 'superviseur1',
+        password: sup1Hash,
+        full_name: 'Superviseur Niveau 1',
+        role: 'supervisor',
+        level: 1,
+        subsystem_id: subsystem._id,
+        is_active: true
+      });
 
-        // 5. Superviseur niveau 2 (mot de passe: 123)
-        const sup2Hash = await bcrypt.hash('123', SALT_ROUNDS);
-        const sup2Result = await db.run(
-            "INSERT INTO users (username, password, full_name, role, level, subsystem_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            ['superviseur2', sup2Hash, 'Superviseur Niveau 2', 'supervisor', 2, subsystemId, 1]
-        );
-        const sup2Id = sup2Result.lastID;
+      // 5. Superviseur niveau 2 (superviseur2/123)
+      const sup2Hash = await bcrypt.hash('123', SALT_ROUNDS);
+      const sup2 = await User.create({
+        username: 'superviseur2',
+        password: sup2Hash,
+        full_name: 'Superviseur Niveau 2',
+        role: 'supervisor',
+        level: 2,
+        subsystem_id: subsystem._id,
+        is_active: true
+      });
 
-        // 6. Agent (mot de passe: 123), assigné aux deux superviseurs
-        const agentHash = await bcrypt.hash('123', SALT_ROUNDS);
-        await db.run(
-            "INSERT INTO users (username, password, full_name, role, subsystem_id, supervisor_id, supervisor2_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            ['agent1', agentHash, 'Agent Démo', 'agent', subsystemId, sup1Id, sup2Id, 1]
-        );
+      // 6. Agent (agent1/123)
+      const agentHash = await bcrypt.hash('123', SALT_ROUNDS);
+      await User.create({
+        username: 'agent1',
+        password: agentHash,
+        full_name: 'Agent Démo',
+        role: 'agent',
+        subsystem_id: subsystem._id,
+        supervisor_id: sup1._id,
+        supervisor2_id: sup2._id,
+        is_active: true
+      });
 
-        console.log('✅ Données de démonstration créées :');
-        console.log('   - master / master123');
-        console.log('   - proprietaire / 123');
-        console.log('   - superviseur1 / 123');
-        console.log('   - superviseur2 / 123');
-        console.log('   - agent1 / 123');
-    } else {
-        // S'assurer que le master existe toujours (au cas où la base aurait été modifiée)
-        const masterExists = await db.get("SELECT id FROM users WHERE role = 'master'");
-        if (!masterExists) {
-            const masterHash = await bcrypt.hash('master123', SALT_ROUNDS);
-            await db.run(
-                "INSERT INTO users (username, password, full_name, role, is_active) VALUES (?, ?, ?, ?, ?)",
-                ['master', masterHash, 'Administrateur Master', 'master', 1]
-            );
-            console.log('✅ Compte master créé (master / master123)');
-        }
+      console.log('✅ Données de démonstration créées.');
     }
+  } catch (error) {
+    console.error('Erreur initialisation:', error);
+  }
 }
 
+// ==================== MIDDLEWARES ====================
 function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    const altToken = req.headers['x-auth-token'];
-    const finalToken = token || altToken;
-    if (!finalToken) return res.status(401).json({ error: 'Token manquant' });
-    jwt.verify(finalToken, JWT_SECRET, (err, user) => {
-        if (err) return res.status(403).json({ error: 'Token invalide' });
-        req.user = user;
-        next();
-    });
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  const altToken = req.headers['x-auth-token'];
+  const finalToken = token || altToken;
+  if (!finalToken) return res.status(401).json({ error: 'Token manquant' });
+  jwt.verify(finalToken, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: 'Token invalide' });
+    req.user = user;
+    next();
+  });
 }
 
 function requireRole(...roles) {
-    return (req, res, next) => {
-        if (!req.user) return res.status(401).json({ error: 'Non authentifié' });
-        if (!roles.includes(req.user.role)) return res.status(403).json({ error: 'Accès refusé' });
-        next();
-    };
+  return (req, res, next) => {
+    if (!req.user) return res.status(401).json({ error: 'Non authentifié' });
+    if (!roles.includes(req.user.role)) return res.status(403).json({ error: 'Accès refusé' });
+    next();
+  };
 }
 
-// -------------------- ROUTES API --------------------
+// ==================== ROUTES API ====================
 
+// --- Authentification ---
 app.post('/api/auth/login', async (req, res) => {
-    try {
-        const { username, password } = req.body;
-        const user = await db.get("SELECT * FROM users WHERE username = ?", [username]);
-        if (!user) return res.status(401).json({ success: false, error: 'Identifiants incorrects' });
-        const valid = await bcrypt.compare(password, user.password);
-        if (!valid) return res.status(401).json({ success: false, error: 'Identifiants incorrects' });
-        if (!user.is_active) return res.status(403).json({ success: false, error: 'Compte désactivé' });
+  try {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (!user) return res.status(401).json({ success: false, error: 'Identifiants incorrects' });
 
-        await db.run("UPDATE users SET last_login = CURRENT_TIMESTAMP, is_online = 1 WHERE id = ?", [user.id]);
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(401).json({ success: false, error: 'Identifiants incorrects' });
 
-        const token = jwt.sign(
-            { id: user.id, username: user.username, role: user.role, level: user.level, subsystem_id: user.subsystem_id },
-            JWT_SECRET, { expiresIn: '24h' }
-        );
+    if (!user.is_active) return res.status(403).json({ success: false, error: 'Compte désactivé' });
 
-        let redirectUrl = '/lotato.html';
-        if (user.role === 'supervisor') redirectUrl = user.level === 1 ? '/control-level1.html' : '/control-level2.html';
-        else if (user.role === 'subsystem') redirectUrl = '/subsystem-admin.html';
-        else if (user.role === 'master') redirectUrl = '/master-dashboard.html';
+    user.last_login = new Date();
+    user.is_online = true;
+    await user.save();
 
-        await db.run("INSERT INTO activity_log (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)",
-            [user.id, 'login', `Connexion réussie (${user.role})`, req.ip]);
+    const token = jwt.sign(
+      { id: user._id, username: user.username, role: user.role, level: user.level, subsystem_id: user.subsystem_id },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
 
-        res.json({ success: true, token, user: { id: user.id, username: user.username, full_name: user.full_name, role: user.role, level: user.level, subsystem_id: user.subsystem_id }, redirectUrl });
-    } catch (error) {
-        res.status(500).json({ success: false, error: 'Erreur serveur' });
-    }
+    let redirectUrl = '/lotato.html';
+    if (user.role === 'supervisor') redirectUrl = user.level === 1 ? '/control-level1.html' : '/control-level2.html';
+    else if (user.role === 'subsystem') redirectUrl = '/subsystem-admin.html';
+    else if (user.role === 'master') redirectUrl = '/master-dashboard.html';
+
+    await ActivityLog.create({
+      user_id: user._id,
+      action: 'login',
+      details: `Connexion réussie (${user.role})`,
+      ip_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        full_name: user.full_name,
+        role: user.role,
+        level: user.level,
+        subsystem_id: user.subsystem_id
+      },
+      redirectUrl
+    });
+  } catch (error) {
+    console.error('Erreur login:', error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
 });
 
 app.post('/api/auth/logout', authenticateToken, async (req, res) => {
-    await db.run("UPDATE users SET is_online = 0 WHERE id = ?", [req.user.id]);
-    res.json({ success: true });
+  await User.findByIdAndUpdate(req.user.id, { is_online: false });
+  res.json({ success: true });
 });
 
 app.get('/api/auth/check', authenticateToken, async (req, res) => {
-    const user = await db.get("SELECT id, username, full_name, role, level, subsystem_id, email, is_active FROM users WHERE id = ?", [req.user.id]);
-    res.json({ success: true, user });
+  const user = await User.findById(req.user.id).select('-password');
+  res.json({ success: true, user });
 });
 
-// Utilisateurs du sous-système
+// --- Utilisateurs du sous-système ---
 app.get('/api/subsystem/users', authenticateToken, requireRole('subsystem', 'master'), async (req, res) => {
-    const { role, search } = req.query;
+  try {
     let subsystemId = req.user.subsystem_id;
     if (req.user.role === 'master' && req.query.subsystem_id) subsystemId = req.query.subsystem_id;
 
-    let query = `SELECT u.*, s1.full_name as supervisor1_name, s2.full_name as supervisor2_name FROM users u LEFT JOIN users s1 ON u.supervisor_id = s1.id LEFT JOIN users s2 ON u.supervisor2_id = s2.id WHERE u.subsystem_id = ? AND u.role != 'subsystem'`;
-    const params = [subsystemId];
-    if (role) { query += " AND u.role = ?"; params.push(role); }
-    if (search) { query += " AND (u.full_name LIKE ? OR u.username LIKE ?)"; params.push(`%${search}%`, `%${search}%`); }
-    query += " ORDER BY u.created_at DESC";
+    const filter = { subsystem_id: subsystemId, role: { $ne: 'subsystem' } };
+    if (req.query.role) filter.role = req.query.role;
+    if (req.query.search) {
+      filter.$or = [
+        { full_name: { $regex: req.query.search, $options: 'i' } },
+        { username: { $regex: req.query.search, $options: 'i' } }
+      ];
+    }
 
-    const users = await db.all(query, params);
+    const users = await User.find(filter)
+      .populate('supervisor_id', 'full_name')
+      .populate('supervisor2_id', 'full_name')
+      .sort('-created_at');
+
     res.json({ success: true, users });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 app.post('/api/subsystem/users/create', authenticateToken, requireRole('subsystem'), async (req, res) => {
+  try {
     const { name, username, password, role, level, supervisorId } = req.body;
-    const existing = await db.get("SELECT id FROM users WHERE username = ?", [username]);
+    const existing = await User.findOne({ username });
     if (existing) return res.status(400).json({ success: false, error: 'Nom d\'utilisateur déjà pris' });
+
     const hashed = await bcrypt.hash(password, SALT_ROUNDS);
-    const result = await db.run(
-        "INSERT INTO users (full_name, username, password, role, level, subsystem_id, supervisor_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [name, username, hashed, role, level || null, req.user.subsystem_id, supervisorId || null]
-    );
-    await db.run("INSERT INTO activity_log (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)",
-        [req.user.id, 'create_user', `Création de ${username} (${role})`, req.ip]);
-    res.json({ success: true, userId: result.lastID });
+    const user = await User.create({
+      full_name: name,
+      username,
+      password: hashed,
+      role,
+      level: level || null,
+      subsystem_id: req.user.subsystem_id,
+      supervisor_id: supervisorId || null
+    });
+
+    await ActivityLog.create({
+      user_id: req.user.id,
+      action: 'create_user',
+      details: `Création de ${username} (${role})`,
+      ip_address: req.ip
+    });
+
+    res.json({ success: true, userId: user._id });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
 });
 
 app.put('/api/subsystem/users/:id', authenticateToken, requireRole('subsystem'), async (req, res) => {
+  try {
     const { name, is_active, password } = req.body;
-    let query = "UPDATE users SET full_name = ?, is_active = ?";
-    const params = [name, is_active ? 1 : 0];
-    if (password) { query += ", password = ?"; params.push(await bcrypt.hash(password, SALT_ROUNDS)); }
-    query += " WHERE id = ? AND subsystem_id = ?";
-    params.push(req.params.id, req.user.subsystem_id);
-    await db.run(query, params);
+    const updateData = { full_name: name, is_active: is_active ? true : false };
+    if (password) updateData.password = await bcrypt.hash(password, SALT_ROUNDS);
+
+    await User.findOneAndUpdate(
+      { _id: req.params.id, subsystem_id: req.user.subsystem_id },
+      updateData
+    );
     res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
 });
 
 app.put('/api/subsystem/users/:id/status', authenticateToken, requireRole('subsystem'), async (req, res) => {
-    await db.run("UPDATE users SET is_active = ? WHERE id = ? AND subsystem_id = ?", [req.body.is_active ? 1 : 0, req.params.id, req.user.subsystem_id]);
-    res.json({ success: true });
+  await User.findOneAndUpdate(
+    { _id: req.params.id, subsystem_id: req.user.subsystem_id },
+    { is_active: req.body.is_active ? true : false }
+  );
+  res.json({ success: true });
 });
 
-// Tickets
+// --- Tickets ---
 app.post('/api/tickets', authenticateToken, requireRole('agent'), async (req, res) => {
+  try {
     const { ticket } = req.body;
-    const agentId = req.user.id;
-    const subsystemId = req.user.subsystem_id;
     const ticketNumber = 'T' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-    const result = await db.run(
-        "INSERT INTO tickets (ticket_number, agent_id, subsystem_id, draw, draw_time, total_amount, status, is_synced) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-        [ticketNumber, agentId, subsystemId, ticket.draw, ticket.draw_time, ticket.total, 'active', 1]
-    );
-    const ticketId = result.lastID;
+
+    const newTicket = await Ticket.create({
+      ticket_number: ticketNumber,
+      agent_id: req.user.id,
+      subsystem_id: req.user.subsystem_id,
+      draw: ticket.draw,
+      draw_time: ticket.draw_time,
+      total_amount: ticket.total,
+      status: 'active',
+      is_synced: true
+    });
+
     for (const bet of ticket.bets) {
-        await db.run("INSERT INTO bets (ticket_id, bet_type, numbers, amount, multiplier, options) VALUES (?, ?, ?, ?, ?, ?)",
-            [ticketId, bet.type, bet.number, bet.amount, bet.multiplier, JSON.stringify(bet.options || null)]);
+      await Bet.create({
+        ticket_id: newTicket._id,
+        bet_type: bet.type,
+        numbers: bet.number,
+        amount: bet.amount,
+        multiplier: bet.multiplier,
+        options: bet.options || null
+      });
     }
-    await db.run("INSERT INTO activity_log (user_id, action, details, ip_address) VALUES (?, ?, ?, ?)",
-        [agentId, 'create_ticket', `Ticket ${ticketNumber} - ${ticket.total} HTG`, req.ip]);
-    res.json({ success: true, ticketId, ticketNumber });
+
+    await ActivityLog.create({
+      user_id: req.user.id,
+      action: 'create_ticket',
+      details: `Ticket ${ticketNumber} - ${ticket.total} HTG`,
+      ip_address: req.ip
+    });
+
+    res.json({ success: true, ticketId: newTicket._id, ticketNumber });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
 });
 
 app.get('/api/tickets', authenticateToken, async (req, res) => {
-    let query = `SELECT t.*, u.full_name as agent_name FROM tickets t JOIN users u ON t.agent_id = u.id WHERE t.subsystem_id = ?`;
-    const params = [req.user.subsystem_id];
-    if (req.user.role === 'agent') { query += " AND t.agent_id = ?"; params.push(req.user.id); }
-    if (req.query.date) { query += " AND DATE(t.created_at) = DATE(?)"; params.push(req.query.date); }
-    query += " ORDER BY t.created_at DESC LIMIT 100";
-    const tickets = await db.all(query, params);
-    for (const t of tickets) t.bets = await db.all("SELECT * FROM bets WHERE ticket_id = ?", [t.id]);
+  try {
+    const filter = { subsystem_id: req.user.subsystem_id };
+    if (req.user.role === 'agent') filter.agent_id = req.user.id;
+
+    const tickets = await Ticket.find(filter)
+      .populate('agent_id', 'full_name')
+      .sort('-created_at')
+      .limit(100);
+
+    for (const t of tickets) {
+      t._doc.bets = await Bet.find({ ticket_id: t._id });
+    }
+
     res.json({ success: true, tickets });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
+// --- Résultats ---
 app.get('/api/results', async (req, res) => {
-    const results = await db.all("SELECT * FROM results ORDER BY draw_date DESC, draw_time DESC LIMIT 50");
+  try {
+    const results = await Result.find().sort('-draw_date').limit(50);
     const formatted = {};
     for (const r of results) {
-        if (!formatted[r.draw]) formatted[r.draw] = {};
-        if (!formatted[r.draw][r.draw_time]) formatted[r.draw][r.draw_time] = {};
-        formatted[r.draw][r.draw_time] = { date: r.draw_date, lot1: r.lot1, lot2: r.lot2, lot3: r.lot3, verified: r.verified };
+      if (!formatted[r.draw]) formatted[r.draw] = {};
+      if (!formatted[r.draw][r.draw_time]) formatted[r.draw][r.draw_time] = {};
+      formatted[r.draw][r.draw_time] = {
+        date: r.draw_date,
+        lot1: r.lot1,
+        lot2: r.lot2,
+        lot3: r.lot3,
+        verified: r.verified
+      };
     }
     res.json({ success: true, results: formatted });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 app.post('/api/results', authenticateToken, requireRole('subsystem', 'master'), async (req, res) => {
+  try {
     const { draw, draw_time, draw_date, lot1, lot2, lot3, verified } = req.body;
-    await db.run("INSERT OR REPLACE INTO results (draw, draw_time, draw_date, lot1, lot2, lot3, verified) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [draw, draw_time, draw_date, lot1, lot2, lot3, verified ? 1 : 0]);
+    await Result.findOneAndUpdate(
+      { draw, draw_time, draw_date },
+      { lot1, lot2, lot3, verified: verified ? true : false },
+      { upsert: true }
+    );
     res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
+// --- Tickets gagnants ---
 app.get('/api/tickets/winning', authenticateToken, async (req, res) => {
-    const winners = await db.all(`SELECT w.*, t.ticket_number FROM winning_tickets w JOIN tickets t ON w.ticket_id = t.id WHERE t.subsystem_id = ?`, [req.user.subsystem_id]);
+  try {
+    const tickets = await Ticket.find({ subsystem_id: req.user.subsystem_id });
+    const ticketIds = tickets.map(t => t._id);
+    const winners = await WinningTicket.find({ ticket_id: { $in: ticketIds } })
+      .populate('ticket_id', 'ticket_number');
     res.json({ success: true, tickets: winners });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
+// --- Paramètres ---
 app.get('/api/settings', async (req, res) => {
-    const settings = await db.all("SELECT key, value FROM settings");
+  try {
+    const settings = await Setting.find();
     const obj = {};
     settings.forEach(s => obj[s.key] = s.value);
     res.json({ success: true, settings: obj });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 app.post('/api/settings', authenticateToken, requireRole('subsystem', 'master'), async (req, res) => {
+  try {
     for (const [k, v] of Object.entries(req.body.settings)) {
-        await db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [k, v]);
+      await Setting.findOneAndUpdate({ key: k }, { value: v }, { upsert: true });
     }
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
+// --- Statistiques du sous-système ---
 app.get('/api/subsystem/stats', authenticateToken, async (req, res) => {
-    const [activeUsers, todayTickets, todaySales, maxUsers] = await Promise.all([
-        db.get("SELECT COUNT(*) as count FROM users WHERE subsystem_id = ? AND is_active = 1", [req.user.subsystem_id]),
-        db.get("SELECT COUNT(*) as count FROM tickets WHERE subsystem_id = ? AND DATE(created_at) = DATE('now')", [req.user.subsystem_id]),
-        db.get("SELECT COALESCE(SUM(total_amount),0) as total FROM tickets WHERE subsystem_id = ? AND DATE(created_at) = DATE('now')", [req.user.subsystem_id]),
-        db.get("SELECT max_users FROM subsystems WHERE id = ?", [req.user.subsystem_id])
+  try {
+    const subsystemId = req.user.subsystem_id;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [activeUsers, todayTickets, todaySales, subsystem] = await Promise.all([
+      User.countDocuments({ subsystem_id: subsystemId, is_active: true }),
+      Ticket.countDocuments({ subsystem_id: subsystemId, created_at: { $gte: today } }),
+      Ticket.aggregate([
+        { $match: { subsystem_id: new mongoose.Types.ObjectId(subsystemId), created_at: { $gte: today } } },
+        { $group: { _id: null, total: { $sum: '$total_amount' } } }
+      ]),
+      Subsystem.findById(subsystemId).select('max_users')
     ]);
-    res.json({ success: true, stats: { active_users: activeUsers.count, today_tickets: todayTickets.count, today_sales: todaySales.total, max_users: maxUsers?.max_users || 10 } });
+
+    const totalSales = todaySales.length > 0 ? todaySales[0].total : 0;
+    const maxUsers = subsystem?.max_users || 10;
+
+    res.json({
+      success: true,
+      stats: {
+        active_users: activeUsers,
+        today_tickets: todayTickets,
+        today_sales: totalSales,
+        max_users: maxUsers
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
-// Master
+// --- Master: Sous-systèmes ---
 app.get('/api/master/subsystems', authenticateToken, requireRole('master'), async (req, res) => {
-    const subs = await db.all(`SELECT s.*, (SELECT COUNT(*) FROM users WHERE subsystem_id = s.id AND role = 'agent') as agents_count, (SELECT COUNT(*) FROM users WHERE subsystem_id = s.id AND is_active = 1) as active_users FROM subsystems s ORDER BY s.created_at DESC`);
-    res.json({ success: true, subsystems: subs });
+  try {
+    const subsystems = await Subsystem.aggregate([
+      {
+        $lookup: {
+          from: 'users',
+          let: { subId: '$_id' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$subsystem_id', '$$subId'] } } },
+            { $group: { _id: null, active_users: { $sum: { $cond: ['$is_active', 1, 0] } }, agents_count: { $sum: { $cond: [{ $eq: ['$role', 'agent'] }, 1, 0] } } } }
+          ],
+          as: 'stats'
+        }
+      },
+      { $addFields: { active_users: { $ifNull: [{ $arrayElemAt: ['$stats.active_users', 0] }, 0] }, agents_count: { $ifNull: [{ $arrayElemAt: ['$stats.agents_count', 0] }, 0] } } },
+      { $project: { stats: 0 } },
+      { $sort: { created_at: -1 } }
+    ]);
+    res.json({ success: true, subsystems });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
 app.post('/api/master/subsystems', authenticateToken, requireRole('master'), async (req, res) => {
+  try {
     const { name, subdomain, contact_email, contact_phone, max_users, subscription_type, subscription_months } = req.body;
-    const expires = new Date(); expires.setMonth(expires.getMonth() + (subscription_months || 1));
-    const result = await db.run(
-        "INSERT INTO subsystems (name, subdomain, contact_email, contact_phone, max_users, subscription_type, subscription_expires) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [name, subdomain, contact_email, contact_phone, max_users, subscription_type, expires.toISOString().split('T')[0]]
-    );
-    const subsystemId = result.lastID;
+    const expires = new Date();
+    expires.setMonth(expires.getMonth() + (subscription_months || 1));
+
+    const subsystem = await Subsystem.create({
+      name,
+      subdomain,
+      contact_email,
+      contact_phone,
+      max_users,
+      subscription_type,
+      subscription_expires: expires
+    });
+
     const adminUsername = `admin_${subdomain}`;
     const adminPassword = Math.random().toString(36).slice(-8);
     const hashed = await bcrypt.hash(adminPassword, SALT_ROUNDS);
-    await db.run("INSERT INTO users (username, password, full_name, role, subsystem_id, is_active) VALUES (?, ?, ?, ?, ?, ?)",
-        [adminUsername, hashed, `Admin ${name}`, 'subsystem', subsystemId, 1]);
-    res.json({ success: true, subsystemId, admin_credentials: { username: adminUsername, password: adminPassword, email: contact_email } });
+
+    await User.create({
+      username: adminUsername,
+      password: hashed,
+      full_name: `Admin ${name}`,
+      role: 'subsystem',
+      subsystem_id: subsystem._id,
+      is_active: true
+    });
+
+    res.json({
+      success: true,
+      subsystemId: subsystem._id,
+      admin_credentials: { username: adminUsername, password: adminPassword, email: contact_email }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
 });
 
 app.put('/api/master/subsystems/:id/deactivate', authenticateToken, requireRole('master'), async (req, res) => {
-    await db.run("UPDATE subsystems SET is_active = 0 WHERE id = ?", [req.params.id]);
-    res.json({ success: true });
+  await Subsystem.findByIdAndUpdate(req.params.id, { is_active: false });
+  res.json({ success: true });
 });
 
 app.put('/api/master/subsystems/:id/activate', authenticateToken, requireRole('master'), async (req, res) => {
-    await db.run("UPDATE subsystems SET is_active = 1 WHERE id = ?", [req.params.id]);
-    res.json({ success: true });
+  await Subsystem.findByIdAndUpdate(req.params.id, { is_active: true });
+  res.json({ success: true });
 });
 
 app.delete('/api/master/reset-users', authenticateToken, requireRole('master'), async (req, res) => {
-    try {
-        await db.run("DELETE FROM users WHERE role != 'master'");
-        await db.run("DELETE FROM activity_log");
-        res.json({ success: true, message: 'Tous les utilisateurs (sauf master) ont été supprimés.' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Erreur lors de la suppression' });
-    }
+  try {
+    await User.deleteMany({ role: { $ne: 'master' } });
+    await ActivityLog.deleteMany({});
+    res.json({ success: true, message: 'Tous les utilisateurs (sauf master) ont été supprimés.' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur lors de la suppression' });
+  }
 });
 
+// --- Activités ---
 app.get('/api/subsystem/activities', authenticateToken, requireRole('subsystem'), async (req, res) => {
-    const activities = await db.all(`SELECT a.*, u.full_name as user_name FROM activity_log a LEFT JOIN users u ON a.user_id = u.id WHERE u.subsystem_id = ? ORDER BY a.created_at DESC LIMIT 100`, [req.user.subsystem_id]);
-    res.json({ success: true, activities: activities.map(a => ({ user: a.user_name, action: a.action, details: a.details, timestamp: a.created_at })) });
+  try {
+    const activities = await ActivityLog.find()
+      .populate('user_id', 'full_name role')
+      .sort('-created_at')
+      .limit(100);
+
+    const filtered = activities.filter(a => {
+      if (!a.user_id) return true;
+      return a.user_id.subsystem_id?.toString() === req.user.subsystem_id?.toString();
+    });
+
+    const formatted = filtered.map(a => ({
+      user: a.user_id?.full_name || 'Système',
+      action: a.action,
+      details: a.details,
+      timestamp: a.created_at
+    }));
+
+    res.json({ success: true, activities: formatted });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
+// --- Upload logo ---
+app.post('/api/upload-logo', authenticateToken, requireRole('subsystem', 'master'), upload.single('logo'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, error: 'Aucun fichier' });
+    const logoUrl = '/uploads/' + req.file.filename;
+    await Setting.findOneAndUpdate({ key: 'company_logo' }, { value: logoUrl }, { upsert: true });
+    res.json({ success: true, logoUrl });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// --- Fallback SPA ---
 app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api')) res.sendFile(path.join(__dirname, 'index.html'));
-    else res.status(404).json({ error: 'Endpoint non trouvé' });
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, 'index.html'));
+  } else {
+    res.status(404).json({ error: 'Endpoint non trouvé' });
+  }
 });
 
-initializeDatabase().then(() => {
-    app.listen(PORT, () => console.log(`🚀 Serveur Lotato sur le port ${PORT}`));
-}).catch(err => { console.error(err); process.exit(1); });
+// ==================== DÉMARRAGE ====================
+initializeData().then(() => {
+  app.listen(PORT, () => {
+    console.log(`🚀 Serveur Lotato (MongoDB) sur le port ${PORT}`);
+  });
+});
