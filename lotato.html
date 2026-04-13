@@ -10,12 +10,6 @@
     <meta name="theme-color" content="#ad00f1">
 </head>
 <body>
-    <!-- Indicateur de synchronisation -->
-    <div class="sync-status sync-disconnected" id="sync-status" style="display: none;">
-        <i class="fas fa-cloud"></i> <span id="sync-text">Hors ligne</span>
-    </div>
-    
-    <!-- Conteneur principal -->
     <div class="container" id="main-container">
         <header>
             <div class="header-content">
@@ -26,9 +20,12 @@
                     </div>
                 </div>
                 <div class="header-text">
-                    <h1>Lotato</h1>
-                    <p>Chwazi yon Jwet</p>
+                    <h1 id="company-name">Lotato</h1>
+                    <p id="company-slogan">Chwazi yon Jwet</p>
                 </div>
+                <button class="logout-btn" id="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
             </div>
             <div class="time-display">
                 <i class="fas fa-clock"></i> <span id="current-time">Chargement...</span>
@@ -140,9 +137,7 @@
                 <i class="fas fa-trophy"></i>
                 <h2>Dènye Rezilta</h2>
             </div>
-            <div class="results-grid" id="results-grid">
-                <!-- Rempli dynamiquement -->
-            </div>
+            <div class="results-grid" id="results-grid"></div>
             <div class="ticket-actions" style="margin-top: 15px;">
                 <button class="ticket-action-btn save-print-btn" id="generate-report-btn">
                     <i class="fas fa-file-alt"></i> Jenere Rapò Fin Tiraj
@@ -157,6 +152,10 @@
             <div class="nav-icon"><i class="fas fa-home"></i></div>
             <span>Akèy</span>
         </div>
+        <div class="nav-item" data-screen="report">
+            <div class="nav-icon"><i class="fas fa-chart-line"></i></div>
+            <span>Rapò</span>
+        </div>
         <div class="nav-item" data-screen="winning-tickets">
             <div class="nav-icon"><i class="fas fa-trophy"></i></div>
             <span>Fich Genyen</span>
@@ -164,10 +163,6 @@
         <div class="nav-item" data-screen="history">
             <div class="nav-icon"><i class="fas fa-history"></i></div>
             <span>Istorik</span>
-        </div>
-        <div class="nav-item" data-screen="ticket-management">
-            <div class="nav-icon"><i class="fas fa-file-invoice"></i></div>
-            <span>Jere fich</span>
         </div>
     </div>
     
@@ -178,64 +173,60 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <h2 class="betting-title" id="betting-title">parye</h2>
-            <div style="margin-left: auto;">
-                <button class="submit-bet" id="confirm-bet-top" style="padding: 8px 15px; font-size: 0.9rem;">
-                    <i class="fas fa-check"></i> Konfime Parye
-                </button>
-            </div>
         </div>
         
         <div id="total-notification-container" style="margin-bottom: 15px;"></div>
         
-        <!-- Navigation par catégories (pour édition) -->
-        <div class="bet-type-navigation" id="bet-type-nav" style="display: none;"></div>
+        <!-- Onglets de catégories -->
+        <div class="category-tabs" id="category-tabs">
+            <button class="category-tab active" data-category="borlette">Borlette</button>
+            <button class="category-tab" data-category="lotto">Lotto</button>
+            <button class="category-tab" data-category="special">Spéciaux</button>
+        </div>
         
         <!-- Interface des jeux -->
         <div id="games-interface" class="all-categories-container">
             <div class="game-category" id="borlette-category">
-                <div class="game-category-title">BORLETTE</div>
                 <div class="game-category-grid">
                     <div class="game-item borlette" data-game="borlette">
                         <div class="game-name">BORLETTE</div>
                         <div class="game-multiplier">x 60 (1er lot)</div>
-                        <small>2 chif - 1er lot ×60, 2e ×20, 3e ×10</small>
+                        <small>2 chif</small>
                     </div>
                     <div class="game-item borlette" data-game="boulpe">
                         <div class="game-name">BOUL PE</div>
                         <div class="game-multiplier">x 60 (1er lot)</div>
-                        <small>Boul pe (00-99)</small>
+                        <small>00-99</small>
                     </div>
                 </div>
             </div>
             
-            <div class="game-category" id="lotto-category">
-                <div class="game-category-title">LOTTO</div>
+            <div class="game-category" id="lotto-category" style="display: none;">
                 <div class="game-category-grid">
                     <div class="game-item lotto" data-game="lotto3">
                         <div class="game-name">LOTO 3</div>
                         <div class="game-multiplier">x 500</div>
-                        <small>3 chif (lot 1 + 1 chif devan)</small>
+                        <small>3 chif</small>
                     </div>
                     <div class="game-item lotto" data-game="lotto4">
                         <div class="game-name">LOTO 4</div>
                         <div class="game-multiplier">x 5000</div>
-                        <small>4 chif (lot 1+2 accumulate) - 3 opsyon</small>
+                        <small>4 chif - 3 opsyon</small>
                     </div>
                     <div class="game-item lotto" data-game="lotto5">
                         <div class="game-name">LOTO 5</div>
                         <div class="game-multiplier">x 25000</div>
-                        <small>5 chif (lot 1+2+3 accumulate) - 3 opsyon</small>
+                        <small>5 chif - 3 opsyon</small>
                     </div>
                 </div>
             </div>
             
-            <div class="game-category" id="special-category">
-                <div class="game-category-title">JEUX SPÉCIAUX</div>
+            <div class="game-category" id="special-category" style="display: none;">
                 <div class="game-category-grid">
                     <div class="game-item special" data-game="grap">
                         <div class="game-name">GRAP</div>
                         <div class="game-multiplier">x 500</div>
-                        <small>Boule paire (111, 222...)</small>
+                        <small>Boule paire</small>
                     </div>
                     <div class="game-item special" data-game="marriage">
                         <div class="game-name">MARYAJ</div>
@@ -245,7 +236,7 @@
                     <div class="game-item special" data-game="auto-marriage">
                         <div class="game-name">MARYAJ OTOMATIK</div>
                         <div class="game-multiplier">x 1000</div>
-                        <small>Marie boules otomatik</small>
+                        <small>Marie otomatik</small>
                     </div>
                     <div class="game-item special" data-game="auto-lotto4">
                         <div class="game-name">LOTO 4 OTOMATIK</div>
@@ -254,13 +245,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- Boutons automatiques -->
-        <div class="auto-buttons" id="auto-buttons" style="display: none;">
-            <button class="auto-btn" id="auto-marriage-btn">Maryaj Otomatik</button>
-            <button class="auto-btn" id="auto-lotto4-btn">Lotto 4 Otomatik</button>
-            <button class="auto-btn reverse" id="reverse-lotto4-btn">Renverse Lotto 4</button>
         </div>
         
         <div class="bet-form" id="bet-form"></div>
@@ -280,25 +264,72 @@
         </div>
     </div>
     
-    <!-- Écran de gestion des fiches -->
-    <div class="screen" id="ticket-management-screen">
+    <!-- Écran de rapport et commission -->
+    <div class="screen" id="report-screen">
         <div class="screen-header">
             <button class="back-button" data-screen="home">
                 <i class="fas fa-arrow-left"></i>
             </button>
-            <h2 class="screen-title">Jere Fich ou</h2>
+            <h2 class="screen-title">Rapò & Komisyon</h2>
         </div>
-        <div class="ticket-search-box">
-            <div class="search-history">
-                <input type="text" id="search-ticket-number" class="search-input" placeholder="Chache fiche pa nimewo...">
-                <button class="search-btn" id="search-ticket-btn"><i class="fas fa-search"></i> Chache</button>
+        
+        <div class="report-filters">
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-period="15days">15 dènye jou</button>
+                <button class="filter-btn" data-period="7days">7 dènye jou</button>
+                <button class="filter-btn" data-period="month">Mwa sa a</button>
+                <button class="filter-btn" data-period="today">Jodi a</button>
             </div>
-            <div style="margin-top: 10px;">
-                <button class="btn-secondary" id="show-all-tickets">Afiche Tout Fich</button>
-                <button class="btn-secondary" id="show-pending-tickets">Fiche Pokò ale nan santral</button>
+            <div class="custom-range">
+                <input type="date" id="start-date">
+                <span>à</span>
+                <input type="date" id="end-date">
+                <button class="filter-btn" id="apply-custom">Aplike</button>
             </div>
         </div>
-        <div id="ticket-management-list"></div>
+        
+        <div class="report-stats" id="report-stats">
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-chart-simple"></i></div>
+                <div class="stat-info">
+                    <span class="stat-label">Total Vant</span>
+                    <span class="stat-value" id="total-sales">0 G</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-percent"></i></div>
+                <div class="stat-info">
+                    <span class="stat-label">Komisyon Agent</span>
+                    <span class="stat-value" id="commission-rate">0%</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-coins"></i></div>
+                <div class="stat-info">
+                    <span class="stat-label">Komisyon Ganyen</span>
+                    <span class="stat-value" id="commission-earned">0 G</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+                <div class="stat-info">
+                    <span class="stat-label">Total Pyman</span>
+                    <span class="stat-value" id="total-payouts">0 G</span>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                <div class="stat-info">
+                    <span class="stat-label">Bénéfis Net</span>
+                    <span class="stat-value" id="net-profit">0 G</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="report-detail">
+            <h3>Detay pa Tiraj</h3>
+            <div id="report-detail-list"></div>
+        </div>
     </div>
     
     <!-- Écran des fiches gagnantes -->
@@ -328,8 +359,6 @@
             <input type="text" id="search-history" class="search-input" placeholder="Chache fiche...">
             <button class="search-btn" id="search-history-btn"><i class="fas fa-search"></i> Chache</button>
         </div>
-        <div class="reports-container" id="reports-container"></div>
-        <div id="report-results"></div>
         <div id="history-list"></div>
     </div>
     
@@ -365,8 +394,8 @@
         <div id="multi-tickets-list"></div>
     </div>
     
-    <!-- Écran de rapport -->
-    <div class="report-screen" id="report-screen">
+    <!-- Écran de rapport de fin tiraj (rapide) -->
+    <div class="report-screen" id="end-draw-report-screen">
         <div class="screen-header">
             <button class="back-button" id="back-from-report">
                 <i class="fas fa-arrow-left"></i>
@@ -376,10 +405,8 @@
         <div class="report-container" id="report-content"></div>
     </div>
 
-    <!-- Script principal -->
     <script src="lotato.js"></script>
     
-    <!-- Service Worker -->
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/service-worker.js')

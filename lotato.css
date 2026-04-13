@@ -39,7 +39,6 @@ header {
     background: linear-gradient(135deg, #ad00f1, #1a2530);
     color: white;
     padding: 15px;
-    text-align: center;
     border-radius: 12px;
     margin-bottom: 20px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -49,8 +48,8 @@ header {
 .header-content {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 15px;
+    justify-content: space-between;
+    gap: 10px;
 }
 
 .logo-container {
@@ -68,18 +67,33 @@ header {
 }
 
 .logo {
-    font-size: 2.5rem;
+    font-size: 2rem;
     color: var(--warning-color);
 }
 
 .header-text h1 {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
     margin-bottom: 5px;
 }
 
 .header-text p {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     opacity: 0.9;
+}
+
+.logout-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.logout-btn:hover {
+    background: rgba(255,255,255,0.3);
 }
 
 .time-display {
@@ -87,7 +101,8 @@ header {
     padding: 8px 15px;
     border-radius: 20px;
     margin-top: 10px;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
+    text-align: center;
 }
 
 .draws-container {
@@ -119,7 +134,7 @@ header {
 .draw-card.tunisia { border-top: 5px solid var(--tunisia-color); }
 
 .draw-icon {
-    font-size: 2.5rem;
+    font-size: 2rem;
     margin-bottom: 10px;
 }
 
@@ -130,7 +145,7 @@ header {
 .tunisia .draw-icon { color: var(--tunisia-color); }
 
 .draw-card h3 {
-    font-size: 1.2rem;
+    font-size: 1rem;
     margin-bottom: 5px;
 }
 
@@ -145,7 +160,7 @@ header {
     padding: 6px;
     border: none;
     border-radius: 6px;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     cursor: pointer;
     background-color: var(--light-color);
     transition: background-color 0.3s;
@@ -192,7 +207,7 @@ header {
 }
 
 .section-title h2 {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     color: var(--primary-color);
 }
 
@@ -204,23 +219,24 @@ header {
 
 .result-card {
     background-color: var(--light-color);
-    padding: 12px;
+    padding: 10px;
     border-radius: 8px;
     text-align: center;
 }
 
 .result-card h4 {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     margin-bottom: 5px;
     color: var(--primary-color);
 }
 
 .result-number {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: bold;
     color: var(--accent-color);
 }
 
+/* Navigation inférieure plus petite */
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -229,7 +245,7 @@ header {
     background-color: white;
     display: flex;
     justify-content: space-around;
-    padding: 15px;
+    padding: 8px 12px;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
     max-width: 500px;
     margin: 0 auto;
@@ -241,17 +257,21 @@ header {
     flex-direction: column;
     align-items: center;
     color: #7f8c8d;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     cursor: pointer;
+    padding: 5px 8px;
+    border-radius: 8px;
+    transition: background 0.3s;
 }
 
 .nav-item.active {
     color: var(--secondary-color);
+    background: rgba(52, 152, 219, 0.1);
 }
 
 .nav-icon {
-    font-size: 1.5rem;
-    margin-bottom: 5px;
+    font-size: 1.2rem;
+    margin-bottom: 3px;
 }
 
 /* Panneau multi-tirages */
@@ -271,7 +291,7 @@ header {
 }
 
 .multi-draw-title {
-    font-size: 1.2rem;
+    font-size: 1rem;
     color: var(--primary-color);
 }
 
@@ -279,7 +299,7 @@ header {
     background: none;
     border: none;
     color: var(--secondary-color);
-    font-size: 1.2rem;
+    font-size: 1rem;
     cursor: pointer;
 }
 
@@ -294,16 +314,17 @@ header {
 .multi-draw-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 8px;
     margin-bottom: 15px;
 }
 
 .multi-draw-option {
     background-color: var(--light-color);
-    padding: 12px;
+    padding: 8px;
     border-radius: 8px;
     text-align: center;
     cursor: pointer;
+    font-size: 0.8rem;
     transition: all 0.3s;
 }
 
@@ -317,11 +338,31 @@ header {
     color: white;
 }
 
-.multi-draw-form {
-    background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
+/* Onglets catégories */
+.category-tabs {
+    display: flex;
+    gap: 10px;
     margin-bottom: 15px;
+    background: var(--light-color);
+    padding: 5px;
+    border-radius: 30px;
+}
+
+.category-tab {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: 25px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.3s;
+}
+
+.category-tab.active {
+    background: var(--secondary-color);
+    color: white;
 }
 
 /* Écran de pari */
@@ -351,51 +392,38 @@ header {
 .back-button {
     background: none;
     border: none;
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     color: var(--primary-color);
     margin-right: 15px;
     cursor: pointer;
 }
 
 .betting-title {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     color: var(--primary-color);
 }
 
-/* Interface des jeux */
-.game-category {
-    margin-bottom: 20px;
-}
-
-.game-category-title {
-    font-size: 1.1rem;
-    font-weight: bold;
-    color: var(--primary-color);
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 2px solid var(--light-color);
-}
-
+/* Grille des jeux - taille réduite 80% */
 .game-category-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
+    gap: 8px;
 }
 
 .game-item {
     background-color: white;
     border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    padding: 15px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    padding: 8px;
     text-align: center;
     cursor: pointer;
     transition: all 0.3s;
-    border-left: 4px solid var(--secondary-color);
+    border-left: 3px solid var(--secondary-color);
 }
 
 .game-item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
 }
 
 .game-item.borlette { border-left-color: var(--miami-color); }
@@ -404,13 +432,20 @@ header {
 
 .game-name {
     font-weight: bold;
-    margin-bottom: 5px;
+    font-size: 0.8rem;
+    margin-bottom: 3px;
 }
 
 .game-multiplier {
-    font-size: 0.9rem;
+    font-size: 0.7rem;
     color: var(--warning-color);
     font-weight: bold;
+}
+
+.game-item small {
+    font-size: 0.6rem;
+    display: block;
+    color: #666;
 }
 
 /* Formulaire de pari */
@@ -418,49 +453,50 @@ header {
     background-color: white;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    padding: 20px;
+    padding: 15px;
     margin-bottom: 20px;
 }
 
 .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 12px;
 }
 
 label {
     display: block;
     margin-bottom: 5px;
     font-weight: 600;
+    font-size: 0.85rem;
 }
 
 input, select {
     width: 100%;
-    padding: 12px;
+    padding: 10px;
     border: 1px solid #ddd;
     border-radius: 8px;
-    font-size: 1rem;
+    font-size: 0.9rem;
 }
 
 .number-inputs {
     display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
+    gap: 8px;
+    margin-bottom: 12px;
 }
 
 .number-inputs input {
     text-align: center;
-    font-size: 1.2rem;
+    font-size: 1rem;
 }
 
 .bet-actions {
     display: flex;
-    gap: 10px;
+    gap: 8px;
 }
 
 button {
-    padding: 12px 20px;
+    padding: 10px 16px;
     border: none;
     border-radius: 8px;
-    font-size: 1rem;
+    font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
     transition: background-color 0.3s;
@@ -486,23 +522,74 @@ button {
     background-color: #dde4e6;
 }
 
+/* Boules Nx */
+.nx-button {
+    background-color: var(--secondary-color);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+    cursor: pointer;
+    display: inline-block;
+}
+
+.n-balls-container {
+    display: none;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.n-balls-container.show {
+    display: grid;
+}
+
+.n-ball {
+    background-color: var(--light-color);
+    padding: 8px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.3s;
+}
+
+.n-ball:hover {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+/* Paires GRAP */
+.pair-ball {
+    background-color: var(--light-color);
+    padding: 8px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.3s;
+}
+
+.pair-ball:hover {
+    background-color: var(--success-color);
+    color: white;
+}
+
 .active-bets {
     background-color: white;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    padding: 20px;
+    padding: 15px;
     margin-bottom: 20px;
 }
 
 .bet-item {
     display: flex;
     justify-content: space-between;
-    padding: 12px 0;
+    padding: 10px 0;
     border-bottom: 1px solid var(--light-color);
-}
-
-.bet-item:last-child {
-    border-bottom: none;
+    font-size: 0.85rem;
 }
 
 .bet-details {
@@ -524,24 +611,11 @@ button {
 .bet-total {
     display: flex;
     justify-content: space-between;
-    margin-top: 15px;
-    padding-top: 15px;
+    margin-top: 12px;
+    padding-top: 12px;
     border-top: 2px solid var(--light-color);
     font-weight: bold;
-    font-size: 1.1rem;
-}
-
-.submit-bet {
-    background-color: var(--success-color);
-    color: white;
-    width: 100%;
-    padding: 15px;
-    margin-top: 20px;
-    font-size: 1.1rem;
-}
-
-.submit-bet:hover {
-    background-color: #219955;
+    font-size: 1rem;
 }
 
 /* Écrans */
@@ -569,27 +643,106 @@ button {
 }
 
 .screen-title {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
     color: var(--primary-color);
 }
 
-/* Animations */
-@keyframes slideIn {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
+/* Rapport */
+.report-filters {
+    margin-bottom: 20px;
 }
 
-.slide-in {
-    animation: slideIn 0.3s forwards;
+.filter-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
 }
 
-@keyframes slideOut {
-    from { transform: translateX(0); }
-    to { transform: translateX(100%); }
+.filter-btn {
+    background-color: var(--light-color);
+    padding: 8px 12px;
+    font-size: 0.75rem;
 }
 
-.slide-out {
-    animation: slideOut 0.3s forwards;
+.filter-btn.active {
+    background-color: var(--secondary-color);
+    color: white;
+}
+
+.custom-range {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.custom-range input {
+    flex: 1;
+    padding: 8px;
+    font-size: 0.8rem;
+}
+
+.report-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: white;
+}
+
+.stat-card:nth-child(2) { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+.stat-card:nth-child(3) { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+.stat-card:nth-child(4) { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
+.stat-card:nth-child(5) { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+
+.stat-icon {
+    font-size: 1.5rem;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-label {
+    font-size: 0.7rem;
+    opacity: 0.9;
+}
+
+.stat-value {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.report-detail {
+    background-color: white;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.report-detail h3 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: var(--primary-color);
+}
+
+.report-detail-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--light-color);
+    font-size: 0.8rem;
 }
 
 /* Notifications */
@@ -600,14 +753,15 @@ button {
     transform: translateX(-50%);
     background-color: var(--primary-color);
     color: white;
-    padding: 12px 20px;
+    padding: 10px 16px;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 1000;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     max-width: 90%;
+    font-size: 0.8rem;
     animation: slideUp 0.3s ease-out;
 }
 
@@ -626,32 +780,24 @@ button {
 .notification.warning { background-color: var(--warning-color); }
 .notification.error { background-color: var(--accent-color); }
 
-/* Styles pour les options */
+/* Options */
 .options-container {
     background-color: #f8f9fa;
-    padding: 15px;
+    padding: 12px;
     border-radius: 8px;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
 }
 
 .option-checkbox {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
-    padding: 8px;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 6px;
     background-color: white;
     border-radius: 6px;
     cursor: pointer;
-}
-
-.option-checkbox:hover {
-    background-color: #e9ecef;
-}
-
-.option-checkbox input {
-    width: auto;
-    margin-right: 5px;
+    font-size: 0.8rem;
 }
 
 .option-checkbox .option-multiplier {
@@ -664,40 +810,21 @@ button {
 .ticket-actions {
     display: flex;
     gap: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .ticket-action-btn {
     flex: 1;
-    padding: 12px;
+    padding: 10px;
     border: none;
     border-radius: 8px;
-    font-size: 1rem;
+    font-size: 0.8rem;
     font-weight: bold;
     cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.save-ticket {
-    background-color: var(--secondary-color);
-    color: white;
-}
-
-.save-ticket:hover {
-    background-color: #2300a0;
-}
-
-.print-ticket-btn {
-    background-color: var(--success-color);
-    color: white;
-}
-
-.print-ticket-btn:hover {
-    background-color: #219955;
 }
 
 .save-print-btn {
-    background-color: var(--warning-color);
+    background-color: var(--success-color);
     color: white;
 }
 
@@ -708,25 +835,23 @@ button {
 /* Recherche */
 .search-history {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     margin-bottom: 15px;
 }
 
 .search-input {
     flex: 2;
+    padding: 10px;
 }
 
 .search-btn {
     flex: 1;
     background-color: var(--secondary-color);
     color: white;
+    padding: 10px;
 }
 
-.search-btn:hover {
-    background-color: #2980b9;
-}
-
-/* Écran de vérification des résultats */
+/* Vérification résultats */
 .results-check-screen {
     display: none;
     position: fixed;
@@ -745,63 +870,51 @@ button {
 .check-results-btn {
     background-color: var(--success-color);
     color: white;
-    padding: 12px;
+    padding: 10px;
     border-radius: 8px;
     border: none;
-    font-size: 1rem;
+    font-size: 0.9rem;
     font-weight: bold;
     cursor: pointer;
     width: 100%;
     margin-top: 10px;
 }
 
-.check-results-btn:hover {
-    background-color: #219955;
-}
-
 .winning-ticket {
     background-color: #d4edda;
     border-left: 4px solid var(--success-color);
-    padding: 15px;
-    margin-bottom: 10px;
+    padding: 12px;
+    margin-bottom: 8px;
     border-radius: 8px;
-}
-
-.winning-amount {
-    color: var(--success-color);
-    font-weight: bold;
-    font-size: 1.1rem;
+    font-size: 0.85rem;
 }
 
 .lot-result {
     display: flex;
     justify-content: space-between;
-    padding: 10px;
+    padding: 8px;
     background-color: #f8f9fa;
     border-radius: 8px;
     margin-bottom: 5px;
+    font-size: 0.8rem;
 }
 
 /* Multi-tirages */
 .multi-game-select {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-bottom: 15px;
+    gap: 8px;
+    margin-bottom: 12px;
 }
 
 .multi-game-option {
     background-color: var(--light-color);
-    padding: 12px;
+    padding: 8px;
     border-radius: 8px;
     text-align: center;
     cursor: pointer;
+    font-size: 0.75rem;
     transition: all 0.3s;
-}
-
-.multi-game-option:hover {
-    background-color: var(--secondary-color);
-    color: white;
 }
 
 .multi-game-option.selected {
@@ -811,19 +924,17 @@ button {
 
 .multi-draw-actions {
     display: flex;
-    gap: 10px;
-    margin-top: 15px;
+    gap: 8px;
+    margin-top: 12px;
 }
 
 .multi-draw-action-btn {
     flex: 1;
-    padding: 12px;
-    border: none;
+    padding: 8px;
+    font-size: 0.75rem;
     border-radius: 8px;
-    font-size: 1rem;
     font-weight: bold;
     cursor: pointer;
-    transition: background-color 0.3s;
 }
 
 .add-to-multi-draw {
@@ -831,45 +942,12 @@ button {
     color: white;
 }
 
-.add-to-multi-draw:hover {
-    background-color: #2980b9;
-}
-
 .view-multi-draw-ticket {
     background-color: var(--warning-color);
     color: white;
 }
 
-.view-multi-draw-ticket:hover {
-    background-color: #e67e22;
-}
-
-/* Écran fiches multi-tirages */
-.multi-tickets-screen {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: white;
-    z-index: 100;
-    padding: 20px;
-    overflow-y: auto;
-    max-width: 500px;
-    margin: 0 auto;
-}
-
-.multi-ticket-item {
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    padding: 15px;
-    margin-bottom: 10px;
-    border-left: 4px solid var(--warning-color);
-}
-
-/* Écran de rapport */
+/* Écran rapport fin tiraj */
 .report-screen {
     display: none;
     position: fixed;
@@ -887,32 +965,6 @@ button {
 
 .report-container {
     padding: 15px;
-}
-
-.report-header {
-    text-align: center;
-    margin-bottom: 20px;
-    border-bottom: 2px solid var(--primary-color);
-    padding-bottom: 10px;
-}
-
-.report-details {
-    margin-bottom: 20px;
-}
-
-.report-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid #eee;
-}
-
-.report-row.total {
-    font-weight: bold;
-    border-top: 2px solid #333;
-    border-bottom: none;
-    padding-top: 15px;
-    margin-top: 10px;
 }
 
 /* Responsive */

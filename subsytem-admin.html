@@ -3,97 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotato - Administration Sous‑système</title>
+    <title>Lotato - Propriétaire</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="manifest" href="/manifest.json">
     <style>
         :root {
-            --primary-color: #3498db;
-            --secondary-color: #2c3e50;
-            --success-color: #27ae60;
-            --warning-color: #f39c12;
-            --danger-color: #e74c3c;
-            --dark-color: #2c3e50;
-            --light-color: #ecf0f1;
+            --primary: #3498db;
+            --secondary: #2c3e50;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
             --sidebar-width: 280px;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #f5f7fa; color: var(--dark-color); display: flex; min-height: 100vh; }
-        .sidebar { width: var(--sidebar-width); background: linear-gradient(180deg, var(--primary-color), #1a252f); color: white; position: fixed; height: 100vh; overflow-y: auto; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 1000; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #f5f7fa; display: flex; min-height: 100vh; }
+        .sidebar {
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, var(--primary), #1a252f);
+            color: white;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
         .logo-container { padding: 25px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .logo { font-size: 2.5rem; color: var(--warning-color); margin-bottom: 10px; }
-        .logo-text { font-size: 1.4rem; font-weight: bold; color: white; }
-        .logo-subtext { font-size: 0.8rem; color: rgba(255,255,255,0.7); }
+        .logo { font-size: 2.5rem; color: var(--warning); margin-bottom: 10px; }
+        .logo-text { font-size: 1.3rem; font-weight: bold; }
+        .logo-subtext { font-size: 0.8rem; opacity: 0.7; }
         .user-info { padding: 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .user-avatar { width: 50px; height: 50px; background-color: white; color: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; }
+        .user-avatar { width: 50px; height: 50px; background: white; color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; }
         .user-details h3 { font-size: 1rem; margin-bottom: 5px; }
-        .user-details p { font-size: 0.8rem; color: rgba(255,255,255,0.7); }
+        .user-details p { font-size: 0.8rem; opacity: 0.7; }
         .nav-menu { padding: 20px 0; }
-        .nav-item { display: flex; align-items: center; padding: 15px 25px; color: rgba(255,255,255,0.8); text-decoration: none; transition: all 0.3s; border-left: 4px solid transparent; }
-        .nav-item:hover { background-color: rgba(255,255,255,0.1); color: white; border-left-color: white; }
-        .nav-item.active { background-color: rgba(255,255,255,0.15); color: white; border-left-color: white; }
+        .nav-item {
+            display: flex; align-items: center; padding: 15px 25px; color: rgba(255,255,255,0.8);
+            text-decoration: none; transition: all 0.3s; border-left: 4px solid transparent;
+        }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.15); color: white; border-left-color: white; }
         .nav-icon { width: 30px; font-size: 1.2rem; margin-right: 15px; }
         .nav-label { font-size: 0.95rem; font-weight: 500; }
         .main-content { flex: 1; margin-left: var(--sidebar-width); padding: 20px; min-height: 100vh; }
         .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; margin-bottom: 30px; border-bottom: 1px solid #ddd; }
-        .page-title { font-size: 1.8rem; color: var(--dark-color); display: flex; align-items: center; gap: 10px; }
-        .page-title i { color: var(--primary-color); }
-        .top-actions { display: flex; gap: 10px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 8px; }
-        .btn-primary { background-color: var(--primary-color); color: white; }
-        .btn-success { background-color: var(--success-color); color: white; }
-        .btn-warning { background-color: var(--warning-color); color: white; }
-        .btn-danger { background-color: var(--danger-color); color: white; }
-        .stats-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background-color: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 20px; transition: transform 0.3s; }
-        .stat-icon { width: 60px; height: 60px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; color: white; }
-        .icon-users { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .icon-tickets { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .icon-revenue { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .icon-active { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-        .stat-info { flex: 1; }
-        .stat-value { font-size: 1.8rem; font-weight: bold; color: var(--dark-color); }
-        .stat-label { font-size: 0.9rem; color: #7f8c8d; }
-        .table-container { background-color: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px; overflow-x: auto; }
-        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .table-title { font-size: 1.3rem; color: var(--dark-color); font-weight: 600; }
-        .search-box { display: flex; gap: 10px; }
-        .search-input { padding: 8px 15px; border: 1px solid #ddd; border-radius: 6px; min-width: 200px; }
+        .page-title { font-size: 1.8rem; color: var(--secondary); }
+        .btn { padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; background: var(--primary); color: white; }
+        .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); }
+        .stats-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 15px; }
+        .stat-icon { width: 50px; height: 50px; border-radius: 10px; background: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: white; }
+        .stat-value { font-size: 1.8rem; font-weight: bold; }
+        .table-container { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .table-title { font-size: 1.3rem; margin-bottom: 20px; }
         .table { width: 100%; border-collapse: collapse; }
-        .table th { background-color: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; }
+        .table th { background: #f8f9fa; padding: 12px; text-align: left; border-bottom: 2px solid #dee2e6; }
         .table td { padding: 10px 12px; border-bottom: 1px solid #eee; }
-        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
-        .status-active { background-color: #d4edda; color: #155724; }
-        .status-inactive { background-color: #f8d7da; color: #721c24; }
-        .role-badge { padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; display: inline-block; }
-        .role-owner { background-color: var(--danger-color); color: white; }
-        .role-supervisor { background-color: #f39c12; color: white; }
-        .role-agent { background-color: #2ecc71; color: white; }
-        .action-buttons { display: flex; gap: 5px; }
-        .action-btn { width: 32px; height: 32px; border-radius: 5px; border: none; background-color: #f8f9fa; color: #6c757d; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .action-btn:hover { background-color: #e9ecef; }
-        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
+        .status-active { background: #d4edda; color: #155724; }
+        .status-inactive { background: #f8d7da; color: #721c24; }
+        .action-btn { width: 32px; height: 32px; border-radius: 5px; border: none; background: #f8f9fa; color: #6c757d; cursor: pointer; }
+        .action-btn:hover { background: #e9ecef; }
+        .modal {
+            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5);
+            z-index: 2000; align-items: center; justify-content: center; padding: 20px;
+        }
         .modal.active { display: flex; }
-        .modal-content { background-color: white; border-radius: 10px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        .modal-content { background: white; border-radius: 10px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
         .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .modal-title { font-size: 1.2rem; color: var(--dark-color); font-weight: 600; }
-        .modal-close { background: none; border: none; font-size: 1.5rem; color: #6c757d; cursor: pointer; }
+        .modal-title { font-size: 1.2rem; font-weight: 600; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
         .modal-body { padding: 20px; }
         .modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
         .form-group { margin-bottom: 15px; }
-        .form-label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--dark-color); }
-        .form-control { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; }
-        .tabs { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 20px; }
-        .tab { padding: 12px 20px; background: none; border: none; border-bottom: 3px solid transparent; font-weight: 600; color: #6c757d; cursor: pointer; }
-        .tab.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .notification { position: fixed; top: 20px; right: 20px; padding: 12px 18px; border-radius: 8px; color: white; display: flex; align-items: center; gap: 10px; z-index: 3000; animation: slideIn 0.3s; max-width: 350px; }
+        .form-label { display: block; margin-bottom: 6px; font-weight: 600; }
+        .form-control { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; }
+        .notification {
+            position: fixed; top: 20px; right: 20px; padding: 12px 18px; border-radius: 8px; color: white;
+            display: flex; align-items: center; gap: 10px; z-index: 3000; animation: slideIn 0.3s;
+        }
+        .notification.success { background: var(--success); }
+        .notification.error { background: var(--danger); }
         @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
-        .notification.success { background-color: var(--success-color); }
-        .notification.error { background-color: var(--danger-color); }
-        .notification.warning { background-color: var(--warning-color); }
-        .notification.info { background-color: var(--primary-color); }
         @media (max-width: 1024px) {
             .sidebar { width: 70px; }
             .logo-text, .logo-subtext, .user-details, .nav-label { display: none; }
@@ -105,8 +95,18 @@
 </head>
 <body>
 <div class="sidebar">
-    <div class="logo-container"><div class="logo"><i class="fas fa-building"></i></div><div class="logo-text">ADMIN SOUS‑SYSTÈME</div><div class="logo-subtext">Gestion complète</div></div>
-    <div class="user-info"><div class="user-avatar" id="user-avatar">A</div><div class="user-details"><h3 id="user-name">Chargement...</h3><p id="user-email">admin@local</p></div></div>
+    <div class="logo-container">
+        <div class="logo"><i class="fas fa-building"></i></div>
+        <div class="logo-text">PROPRIÉTAIRE</div>
+        <div class="logo-subtext">Gestion complète</div>
+    </div>
+    <div class="user-info">
+        <div class="user-avatar" id="user-avatar">P</div>
+        <div class="user-details">
+            <h3 id="user-name">Chargement...</h3>
+            <p id="user-email"></p>
+        </div>
+    </div>
     <div class="nav-menu">
         <a href="#" class="nav-item active" data-section="dashboard"><div class="nav-icon"><i class="fas fa-tachometer-alt"></i></div><div class="nav-label">Tableau de bord</div></a>
         <a href="#" class="nav-item" data-section="users"><div class="nav-icon"><i class="fas fa-users"></i></div><div class="nav-label">Utilisateurs</div></a>
@@ -118,43 +118,65 @@
 
 <div class="main-content">
     <div class="top-bar">
-        <div class="page-title"><i class="fas fa-tachometer-alt"></i><span id="page-title">Tableau de bord</span></div>
-        <div class="top-actions">
-            <button class="btn btn-primary" id="refresh-btn"><i class="fas fa-sync-alt"></i> Actualiser</button>
+        <div class="page-title"><i class="fas fa-tachometer-alt"></i> <span id="page-title">Tableau de bord</span></div>
+        <div>
+            <button class="btn" id="refresh-btn"><i class="fas fa-sync-alt"></i> Actualiser</button>
             <button class="btn btn-success" id="add-user-btn"><i class="fas fa-user-plus"></i> Nouvel utilisateur</button>
             <button class="btn btn-warning" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
         </div>
     </div>
 
+    <!-- Dashboard -->
     <div id="dashboard-section" class="section-content active">
         <div class="stats-cards">
-            <div class="stat-card"><div class="stat-icon icon-users"><i class="fas fa-users"></i></div><div class="stat-info"><div class="stat-value" id="total-users">0</div><div class="stat-label">Utilisateurs actifs</div></div></div>
-            <div class="stat-card"><div class="stat-icon icon-tickets"><i class="fas fa-ticket-alt"></i></div><div class="stat-info"><div class="stat-value" id="today-tickets">0</div><div class="stat-label">Tickets aujourd'hui</div></div></div>
-            <div class="stat-card"><div class="stat-icon icon-revenue"><i class="fas fa-money-bill-wave"></i></div><div class="stat-info"><div class="stat-value" id="today-revenue">0 HTG</div><div class="stat-label">Revenu du jour</div></div></div>
-            <div class="stat-card"><div class="stat-icon icon-active"><i class="fas fa-chart-line"></i></div><div class="stat-info"><div class="stat-value" id="active-rate">0%</div><div class="stat-label">Taux d'activité</div></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div><div class="stat-value" id="total-users">0</div><div>Utilisateurs actifs</div></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-ticket-alt"></i></div><div><div class="stat-value" id="today-tickets">0</div><div>Tickets aujourd'hui</div></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div><div><div class="stat-value" id="today-revenue">0 HTG</div><div>Revenu du jour</div></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div><div class="stat-value" id="active-rate">0%</div><div>Taux d'activité</div></div></div>
         </div>
-        <div class="table-container"><div class="table-header"><div class="table-title">Utilisateurs récents</div></div><div id="recent-users">Chargement...</div></div>
+        <div class="table-container">
+            <div class="table-title">Utilisateurs récents</div>
+            <div id="recent-users">Chargement...</div>
+        </div>
     </div>
 
+    <!-- Utilisateurs -->
     <div id="users-section" class="section-content" style="display:none;">
-        <div class="tabs"><button class="tab active" data-user-tab="agents">Agents</button><button class="tab" data-user-tab="supervisors">Superviseurs</button><button class="tab" data-user-tab="all">Tous</button></div>
-        <div id="agents-tab" class="tab-content active"><div class="table-container"><div id="agents-list"></div></div></div>
-        <div id="supervisors-tab" class="tab-content"><div class="table-container"><div id="supervisors-list"></div></div></div>
-        <div id="all-tab" class="tab-content"><div class="table-container"><div id="all-users-list"></div></div></div>
+        <div class="table-container">
+            <div class="table-title">Tous les utilisateurs</div>
+            <div id="all-users-list"></div>
+        </div>
     </div>
 
+    <!-- Tickets -->
     <div id="tickets-section" class="section-content" style="display:none;">
-        <div class="tabs"><button class="tab active" data-ticket-tab="today">Aujourd'hui</button><button class="tab" data-ticket-tab="winning">Gagnants</button></div>
-        <div id="today-tab" class="tab-content active"><div class="table-container"><div id="today-tickets-list"></div></div></div>
-        <div id="winning-tab" class="tab-content"><div class="table-container"><div id="winning-tickets-list"></div></div></div>
+        <div class="table-container">
+            <div class="table-title">Tickets du jour</div>
+            <div id="today-tickets-list"></div>
+        </div>
     </div>
 
+    <!-- Paramètres -->
     <div id="settings-section" class="section-content" style="display:none;">
-        <div class="table-container"><div class="table-header"><div class="table-title">Multiplicateurs</div></div><div id="multipliers-settings"></div><button class="btn btn-success" id="save-multipliers" style="margin-top:20px;">Enregistrer</button></div>
+        <div class="table-container">
+            <div class="table-title">Multiplicateurs</div>
+            <div id="multipliers-settings"></div>
+            <button class="btn btn-success" id="save-multipliers" style="margin-top:20px;">Enregistrer</button>
+        </div>
     </div>
 
+    <!-- Rapports -->
     <div id="reports-section" class="section-content" style="display:none;">
-        <div class="table-container"><div class="table-header"><div class="table-title">Rapports</div></div><select id="report-period" class="form-control" style="width:200px; margin-bottom:20px;"><option value="today">Aujourd'hui</option><option value="week">Cette semaine</option><option value="month">Ce mois</option></select><button class="btn btn-primary" id="generate-report">Générer</button><div id="report-result" style="margin-top:20px;"></div></div>
+        <div class="table-container">
+            <div class="table-title">Rapport</div>
+            <select id="report-period" class="form-control" style="width:200px; margin-bottom:20px;">
+                <option value="today">Aujourd'hui</option>
+                <option value="week">Cette semaine</option>
+                <option value="month">Ce mois</option>
+            </select>
+            <button class="btn btn-primary" id="generate-report">Générer</button>
+            <div id="report-result" style="margin-top:20px;"></div>
+        </div>
     </div>
 </div>
 
@@ -163,7 +185,10 @@
 <!-- Modal utilisateur -->
 <div class="modal" id="user-modal">
     <div class="modal-content">
-        <div class="modal-header"><div class="modal-title" id="modal-title">Nouvel utilisateur</div><button class="modal-close" id="close-modal">&times;</button></div>
+        <div class="modal-header">
+            <div class="modal-title" id="modal-title">Nouvel utilisateur</div>
+            <button class="modal-close" id="close-modal">&times;</button>
+        </div>
         <div class="modal-body">
             <form id="user-form">
                 <input type="hidden" id="user-id">
@@ -176,7 +201,10 @@
                 <div class="form-group"><label class="form-label">Superviseur 2</label><select class="form-control" id="supervisor2-select"><option value="">Aucun</option></select></div>
             </form>
         </div>
-        <div class="modal-footer"><button class="btn btn-secondary" id="cancel-modal">Annuler</button><button class="btn btn-success" id="save-user">Enregistrer</button></div>
+        <div class="modal-footer">
+            <button class="btn" id="cancel-modal">Annuler</button>
+            <button class="btn btn-success" id="save-user">Enregistrer</button>
+        </div>
     </div>
 </div>
 
@@ -185,7 +213,6 @@ const API_BASE = '';
 let currentUser = null;
 let usersList = [], supervisorsList = [], agentsList = [];
 
-function log(msg, data) { console.log(`[Subsystem] ${msg}`, data || ''); }
 function showNotification(msg, type='info') {
     const c = document.getElementById('notification-container');
     const n = document.createElement('div');
@@ -199,11 +226,9 @@ async function apiCall(url, method='GET', body=null) {
     if (!token) { logout(); throw new Error('No token'); }
     const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
     const options = { method, headers }; if (body) options.body = JSON.stringify(body);
-    try {
-        const res = await fetch(url, options);
-        if (res.status === 401) { logout(); return null; }
-        return await res.json();
-    } catch(e) { showNotification('Erreur réseau', 'error'); return null; }
+    const res = await fetch(url, options);
+    if (res.status === 401) { logout(); return null; }
+    return await res.json();
 }
 
 function logout() { localStorage.clear(); window.location.href = '/index.html'; }
@@ -212,10 +237,17 @@ async function loadDashboard() {
     const userRes = await apiCall('/api/auth/check');
     if (!userRes?.success) { logout(); return; }
     currentUser = userRes.user;
-    if (currentUser.role !== 'subsystem') { showNotification('Accès réservé aux propriétaires', 'error'); setTimeout(logout, 2000); return; }
+    console.log('Utilisateur connecté:', currentUser);
+
+    if (currentUser.role !== 'subsystem') {
+        showNotification('Accès réservé au propriétaire du sous-système.', 'error');
+        setTimeout(logout, 2000);
+        return;
+    }
+
     document.getElementById('user-name').textContent = currentUser.full_name || currentUser.username;
     document.getElementById('user-email').textContent = currentUser.email || '';
-    document.getElementById('user-avatar').textContent = (currentUser.full_name || 'A').charAt(0).toUpperCase();
+    document.getElementById('user-avatar').textContent = (currentUser.full_name || 'P').charAt(0).toUpperCase();
 
     const statsRes = await apiCall('/api/subsystem/stats');
     if (statsRes?.success) {
@@ -224,29 +256,34 @@ async function loadDashboard() {
         document.getElementById('today-revenue').textContent = statsRes.stats.today_sales.toLocaleString() + ' HTG';
         document.getElementById('active-rate').textContent = Math.round((statsRes.stats.active_users / statsRes.stats.max_users) * 100) + '%';
     }
+
     const usersRes = await apiCall('/api/subsystem/users');
     if (usersRes?.success) {
         usersList = usersRes.users;
         supervisorsList = usersList.filter(u => u.role === 'supervisor');
         agentsList = usersList.filter(u => u.role === 'agent');
-        document.getElementById('recent-users').innerHTML = usersList.slice(0,5).map(u => `<div>${u.full_name} (${u.role})</div>`).join('') || '<p>Aucun</p>';
+        document.getElementById('recent-users').innerHTML = usersList.slice(0,5).map(u => `<div>${u.full_name} (${u.role})</div>`).join('') || '<p>Aucun utilisateur</p>';
     }
 }
 
-async function loadUsersLists() {
-    document.getElementById('agents-list').innerHTML = agentsList.length ? `<table class="table"><tr><th>Nom</th><th>Superviseur</th><th>Statut</th><th>Actions</th></tr>${agentsList.map(a => `<tr><td>${a.full_name}</td><td>${supervisorsList.find(s=>s.id===a.supervisor_id)?.full_name||'-'}</td><td><span class="status-badge ${a.is_active?'status-active':'status-inactive'}">${a.is_active?'Actif':'Inactif'}</span></td><td><button class="action-btn edit" data-id="${a.id}"><i class="fas fa-edit"></i></button></td></tr>`).join('')}</table>` : '<p>Aucun agent</p>';
-    document.getElementById('supervisors-list').innerHTML = supervisorsList.length ? `<table class="table"><tr><th>Nom</th><th>Niveau</th><th>Statut</th><th>Actions</th></tr>${supervisorsList.map(s => `<tr><td>${s.full_name}</td><td>${s.level}</td><td><span class="status-badge ${s.is_active?'status-active':'status-inactive'}">${s.is_active?'Actif':'Inactif'}</span></td><td><button class="action-btn edit" data-id="${s.id}"><i class="fas fa-edit"></i></button></td></tr>`).join('')}</table>` : '<p>Aucun superviseur</p>';
-    document.getElementById('all-users-list').innerHTML = usersList.length ? `<table class="table"><tr><th>Nom</th><th>Rôle</th><th>Statut</th></tr>${usersList.map(u => `<tr><td>${u.full_name}</td><td>${u.role}</td><td>${u.is_active?'Actif':'Inactif'}</td></tr>`).join('')}</table>` : '<p>Aucun</p>';
+async function loadAllUsers() {
+    const container = document.getElementById('all-users-list');
+    if (!usersList.length) { container.innerHTML = '<p>Aucun utilisateur</p>'; return; }
+    let html = '<table class="table"><tr><th>Nom</th><th>Rôle</th><th>Statut</th><th>Actions</th></tr>';
+    usersList.forEach(u => {
+        html += `<tr><td>${u.full_name}</td><td>${u.role}</td><td><span class="status-badge ${u.is_active?'status-active':'status-inactive'}">${u.is_active?'Actif':'Inactif'}</span></td><td><button class="action-btn edit" data-id="${u.id}"><i class="fas fa-edit"></i></button></td></tr>`;
+    });
+    html += '</table>';
+    container.innerHTML = html;
 }
 
-async function loadTicketsLists() {
+async function loadTickets() {
     const res = await apiCall('/api/tickets');
+    const container = document.getElementById('today-tickets-list');
     if (res?.success) {
         const today = new Date().toISOString().split('T')[0];
         const todayTickets = res.tickets.filter(t => t.created_at?.startsWith(today));
-        document.getElementById('today-tickets-list').innerHTML = todayTickets.length ? `<table class="table">${todayTickets.map(t => `<tr><td>#${t.ticket_number}</td><td>${t.total_amount} HTG</td></tr>`).join('')}</table>` : '<p>Aucun ticket</p>';
-        const winRes = await apiCall('/api/tickets/winning');
-        document.getElementById('winning-tickets-list').innerHTML = winRes?.success && winRes.tickets.length ? `<table class="table">${winRes.tickets.map(w => `<tr><td>#${w.ticket_number}</td><td>${w.winning_amount} HTG</td></tr>`).join('')}</table>` : '<p>Aucun ticket gagnant</p>';
+        container.innerHTML = todayTickets.length ? `<table class="table"><tr><th>N°</th><th>Agent</th><th>Montant</th></tr>${todayTickets.map(t => `<tr><td>#${t.ticket_number}</td><td>${t.agent_name}</td><td>${t.total_amount} HTG</td></tr>`).join('')}</table>` : '<p>Aucun ticket aujourd\'hui</p>';
     }
 }
 
@@ -287,8 +324,8 @@ function showSection(section) {
     document.getElementById(section+'-section').style.display = 'block';
     document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
     document.querySelector(`.nav-item[data-section="${section}"]`).classList.add('active');
-    if (section === 'users') loadUsersLists();
-    else if (section === 'tickets') loadTicketsLists();
+    if (section === 'users') loadAllUsers();
+    else if (section === 'tickets') loadTickets();
     else if (section === 'settings') loadSettings();
 }
 
@@ -327,37 +364,41 @@ async function saveUser() {
         showNotification(id ? 'Utilisateur modifié' : 'Utilisateur créé', 'success');
         document.getElementById('user-modal').classList.remove('active');
         loadDashboard();
-        if (document.getElementById('users-section').style.display !== 'none') loadUsersLists();
+        if (document.getElementById('users-section').style.display !== 'none') loadAllUsers();
     }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
     await loadDashboard();
-    document.querySelectorAll('.nav-item').forEach(i => i.addEventListener('click', e => { e.preventDefault(); showSection(i.dataset.section); }));
+
+    document.querySelectorAll('.nav-item').forEach(i => i.addEventListener('click', e => {
+        e.preventDefault();
+        showSection(i.dataset.section);
+    }));
+
     document.getElementById('refresh-btn').addEventListener('click', loadDashboard);
     document.getElementById('logout-btn').addEventListener('click', logout);
     document.getElementById('add-user-btn').addEventListener('click', () => openUserModal());
     document.getElementById('close-modal').addEventListener('click', () => document.getElementById('user-modal').classList.remove('active'));
     document.getElementById('cancel-modal').addEventListener('click', () => document.getElementById('user-modal').classList.remove('active'));
     document.getElementById('save-user').addEventListener('click', saveUser);
-    document.getElementById('user-role').addEventListener('change', function() { document.getElementById('supervisor-level-group').style.display = this.value === 'supervisor' ? 'block' : 'none'; });
+    document.getElementById('user-role').addEventListener('change', function() {
+        document.getElementById('supervisor-level-group').style.display = this.value === 'supervisor' ? 'block' : 'none';
+    });
     document.getElementById('save-multipliers').addEventListener('click', saveMultipliers);
     document.getElementById('generate-report').addEventListener('click', async () => {
         const period = document.getElementById('report-period').value;
         const res = await apiCall(`/api/tickets?period=${period}`);
         document.getElementById('report-result').innerHTML = res?.success ? `<p>${res.tickets.length} tickets, total: ${res.tickets.reduce((s,t)=>s+t.total_amount,0)} HTG</p>` : '<p>Erreur</p>';
     });
-    document.querySelectorAll('[data-user-tab]').forEach(t => t.addEventListener('click', function() {
-        document.querySelectorAll('[data-user-tab]').forEach(b => b.classList.remove('active')); this.classList.add('active');
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        document.getElementById(this.dataset.userTab+'-tab').classList.add('active');
-    }));
-    document.querySelectorAll('[data-ticket-tab]').forEach(t => t.addEventListener('click', function() {
-        document.querySelectorAll('[data-ticket-tab]').forEach(b => b.classList.remove('active')); this.classList.add('active');
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        document.getElementById(this.dataset.ticketTab+'-tab').classList.add('active');
-    }));
-    document.addEventListener('click', e => { if (e.target.closest('.edit')) { const id = e.target.closest('.edit').dataset.id; const user = usersList.find(u => u.id == id); if (user) openUserModal(user); } });
+
+    document.addEventListener('click', e => {
+        if (e.target.closest('.edit')) {
+            const id = e.target.closest('.edit').dataset.id;
+            const user = usersList.find(u => u.id == id);
+            if (user) openUserModal(user);
+        }
+    });
 });
 </script>
 </body>
