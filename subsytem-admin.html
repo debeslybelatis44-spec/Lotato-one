@@ -17,16 +17,7 @@
         }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
         body { background: #f5f7fa; display: flex; min-height: 100vh; }
-        .sidebar {
-            width: var(--sidebar-width);
-            background: linear-gradient(180deg, var(--primary), #1a252f);
-            color: white;
-            position: fixed;
-            height: 100vh;
-            overflow-y: auto;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            z-index: 1000;
-        }
+        .sidebar { width: var(--sidebar-width); background: linear-gradient(180deg, var(--primary), #1a252f); color: white; position: fixed; height: 100vh; overflow-y: auto; box-shadow: 2px 0 10px rgba(0,0,0,0.1); z-index: 1000; }
         .logo-container { padding: 25px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .logo { font-size: 2.5rem; color: var(--warning); margin-bottom: 10px; }
         .logo-text { font-size: 1.3rem; font-weight: bold; }
@@ -36,10 +27,7 @@
         .user-details h3 { font-size: 1rem; margin-bottom: 5px; }
         .user-details p { font-size: 0.8rem; opacity: 0.7; }
         .nav-menu { padding: 20px 0; }
-        .nav-item {
-            display: flex; align-items: center; padding: 15px 25px; color: rgba(255,255,255,0.8);
-            text-decoration: none; transition: all 0.3s; border-left: 4px solid transparent;
-        }
+        .nav-item { display: flex; align-items: center; padding: 15px 25px; color: rgba(255,255,255,0.8); text-decoration: none; border-left: 4px solid transparent; }
         .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.15); color: white; border-left-color: white; }
         .nav-icon { width: 30px; font-size: 1.2rem; margin-right: 15px; }
         .nav-label { font-size: 0.95rem; font-weight: 500; }
@@ -63,10 +51,7 @@
         .status-inactive { background: #f8d7da; color: #721c24; }
         .action-btn { width: 32px; height: 32px; border-radius: 5px; border: none; background: #f8f9fa; color: #6c757d; cursor: pointer; }
         .action-btn:hover { background: #e9ecef; }
-        .modal {
-            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5);
-            z-index: 2000; align-items: center; justify-content: center; padding: 20px;
-        }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; padding: 20px; }
         .modal.active { display: flex; }
         .modal-content { background: white; border-radius: 10px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
         .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
@@ -77,36 +62,17 @@
         .form-group { margin-bottom: 15px; }
         .form-label { display: block; margin-bottom: 6px; font-weight: 600; }
         .form-control { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; }
-        .notification {
-            position: fixed; top: 20px; right: 20px; padding: 12px 18px; border-radius: 8px; color: white;
-            display: flex; align-items: center; gap: 10px; z-index: 3000; animation: slideIn 0.3s;
-        }
+        .notification { position: fixed; top: 20px; right: 20px; padding: 12px 18px; border-radius: 8px; color: white; display: flex; align-items: center; gap: 10px; z-index: 3000; animation: slideIn 0.3s; }
         .notification.success { background: var(--success); }
         .notification.error { background: var(--danger); }
         @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
-        @media (max-width: 1024px) {
-            .sidebar { width: 70px; }
-            .logo-text, .logo-subtext, .user-details, .nav-label { display: none; }
-            .main-content { margin-left: 70px; }
-            .nav-item { justify-content: center; }
-            .nav-icon { margin-right: 0; }
-        }
+        @media (max-width: 1024px) { .sidebar { width: 70px; } .logo-text, .logo-subtext, .user-details, .nav-label { display: none; } .main-content { margin-left: 70px; } .nav-item { justify-content: center; } .nav-icon { margin-right: 0; } }
     </style>
 </head>
 <body>
 <div class="sidebar">
-    <div class="logo-container">
-        <div class="logo"><i class="fas fa-building"></i></div>
-        <div class="logo-text">PROPRIÉTAIRE</div>
-        <div class="logo-subtext">Gestion complète</div>
-    </div>
-    <div class="user-info">
-        <div class="user-avatar" id="user-avatar">P</div>
-        <div class="user-details">
-            <h3 id="user-name">Chargement...</h3>
-            <p id="user-email"></p>
-        </div>
-    </div>
+    <div class="logo-container"><div class="logo"><i class="fas fa-building"></i></div><div class="logo-text">PROPRIÉTAIRE</div><div class="logo-subtext">Gestion complète</div></div>
+    <div class="user-info"><div class="user-avatar" id="user-avatar">P</div><div class="user-details"><h3 id="user-name">Chargement...</h3><p id="user-email"></p></div></div>
     <div class="nav-menu">
         <a href="#" class="nav-item active" data-section="dashboard"><div class="nav-icon"><i class="fas fa-tachometer-alt"></i></div><div class="nav-label">Tableau de bord</div></a>
         <a href="#" class="nav-item" data-section="users"><div class="nav-icon"><i class="fas fa-users"></i></div><div class="nav-label">Utilisateurs</div></a>
@@ -126,7 +92,6 @@
         </div>
     </div>
 
-    <!-- Dashboard -->
     <div id="dashboard-section" class="section-content active">
         <div class="stats-cards">
             <div class="stat-card"><div class="stat-icon"><i class="fas fa-users"></i></div><div><div class="stat-value" id="total-users">0</div><div>Utilisateurs actifs</div></div></div>
@@ -134,61 +99,20 @@
             <div class="stat-card"><div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div><div><div class="stat-value" id="today-revenue">0 HTG</div><div>Revenu du jour</div></div></div>
             <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div><div class="stat-value" id="active-rate">0%</div><div>Taux d'activité</div></div></div>
         </div>
-        <div class="table-container">
-            <div class="table-title">Utilisateurs récents</div>
-            <div id="recent-users">Chargement...</div>
-        </div>
+        <div class="table-container"><div class="table-title">Utilisateurs récents</div><div id="recent-users">Chargement...</div></div>
     </div>
 
-    <!-- Utilisateurs -->
-    <div id="users-section" class="section-content" style="display:none;">
-        <div class="table-container">
-            <div class="table-title">Tous les utilisateurs</div>
-            <div id="all-users-list"></div>
-        </div>
-    </div>
-
-    <!-- Tickets -->
-    <div id="tickets-section" class="section-content" style="display:none;">
-        <div class="table-container">
-            <div class="table-title">Tickets du jour</div>
-            <div id="today-tickets-list"></div>
-        </div>
-    </div>
-
-    <!-- Paramètres -->
-    <div id="settings-section" class="section-content" style="display:none;">
-        <div class="table-container">
-            <div class="table-title">Multiplicateurs</div>
-            <div id="multipliers-settings"></div>
-            <button class="btn btn-success" id="save-multipliers" style="margin-top:20px;">Enregistrer</button>
-        </div>
-    </div>
-
-    <!-- Rapports -->
-    <div id="reports-section" class="section-content" style="display:none;">
-        <div class="table-container">
-            <div class="table-title">Rapport</div>
-            <select id="report-period" class="form-control" style="width:200px; margin-bottom:20px;">
-                <option value="today">Aujourd'hui</option>
-                <option value="week">Cette semaine</option>
-                <option value="month">Ce mois</option>
-            </select>
-            <button class="btn btn-primary" id="generate-report">Générer</button>
-            <div id="report-result" style="margin-top:20px;"></div>
-        </div>
-    </div>
+    <div id="users-section" class="section-content" style="display:none;"><div class="table-container"><div class="table-title">Tous les utilisateurs</div><div id="all-users-list"></div></div></div>
+    <div id="tickets-section" class="section-content" style="display:none;"><div class="table-container"><div class="table-title">Tickets du jour</div><div id="today-tickets-list"></div></div></div>
+    <div id="settings-section" class="section-content" style="display:none;"><div class="table-container"><div class="table-title">Multiplicateurs</div><div id="multipliers-settings"></div><button class="btn btn-success" id="save-multipliers" style="margin-top:20px;">Enregistrer</button></div></div>
+    <div id="reports-section" class="section-content" style="display:none;"><div class="table-container"><div class="table-title">Rapport</div><select id="report-period" class="form-control" style="width:200px; margin-bottom:20px;"><option value="today">Aujourd'hui</option><option value="week">Cette semaine</option><option value="month">Ce mois</option></select><button class="btn btn-primary" id="generate-report">Générer</button><div id="report-result" style="margin-top:20px;"></div></div></div>
 </div>
 
 <div id="notification-container"></div>
 
-<!-- Modal utilisateur -->
 <div class="modal" id="user-modal">
     <div class="modal-content">
-        <div class="modal-header">
-            <div class="modal-title" id="modal-title">Nouvel utilisateur</div>
-            <button class="modal-close" id="close-modal">&times;</button>
-        </div>
+        <div class="modal-header"><div class="modal-title" id="modal-title">Nouvel utilisateur</div><button class="modal-close" id="close-modal">&times;</button></div>
         <div class="modal-body">
             <form id="user-form">
                 <input type="hidden" id="user-id">
@@ -201,10 +125,7 @@
                 <div class="form-group"><label class="form-label">Superviseur 2</label><select class="form-control" id="supervisor2-select"><option value="">Aucun</option></select></div>
             </form>
         </div>
-        <div class="modal-footer">
-            <button class="btn" id="cancel-modal">Annuler</button>
-            <button class="btn btn-success" id="save-user">Enregistrer</button>
-        </div>
+        <div class="modal-footer"><button class="btn" id="cancel-modal">Annuler</button><button class="btn btn-success" id="save-user">Enregistrer</button></div>
     </div>
 </div>
 
@@ -213,6 +134,7 @@ const API_BASE = '';
 let currentUser = null;
 let usersList = [], supervisorsList = [], agentsList = [];
 
+function log(step, data) { console.log(`[Subsystem] ${step}`, data || ''); }
 function showNotification(msg, type='info') {
     const c = document.getElementById('notification-container');
     const n = document.createElement('div');
@@ -223,23 +145,28 @@ function showNotification(msg, type='info') {
 
 async function apiCall(url, method='GET', body=null) {
     const token = localStorage.getItem('lotato_token');
-    if (!token) { logout(); throw new Error('No token'); }
+    if (!token) { log('apiCall - no token'); logout(); throw new Error('No token'); }
     const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
     const options = { method, headers }; if (body) options.body = JSON.stringify(body);
+    log(`apiCall ${method} ${url}`);
     const res = await fetch(url, options);
-    if (res.status === 401) { logout(); return null; }
-    return await res.json();
+    if (res.status === 401) { log('apiCall - 401'); logout(); return null; }
+    const data = await res.json();
+    log(`apiCall response ${url}`, data);
+    return data;
 }
 
 function logout() { localStorage.clear(); window.location.href = '/index.html'; }
 
 async function loadDashboard() {
+    log('loadDashboard start');
     const userRes = await apiCall('/api/auth/check');
-    if (!userRes?.success) { logout(); return; }
+    if (!userRes?.success) { log('auth/check failed'); logout(); return; }
     currentUser = userRes.user;
-    console.log('Utilisateur connecté:', currentUser);
+    log('currentUser', currentUser);
 
     if (currentUser.role !== 'subsystem') {
+        log(`wrong role: ${currentUser.role}`);
         showNotification('Accès réservé au propriétaire du sous-système.', 'error');
         setTimeout(logout, 2000);
         return;
@@ -254,7 +181,8 @@ async function loadDashboard() {
         document.getElementById('total-users').textContent = statsRes.stats.active_users;
         document.getElementById('today-tickets').textContent = statsRes.stats.today_tickets;
         document.getElementById('today-revenue').textContent = statsRes.stats.today_sales.toLocaleString() + ' HTG';
-        document.getElementById('active-rate').textContent = Math.round((statsRes.stats.active_users / statsRes.stats.max_users) * 100) + '%';
+        const rate = statsRes.stats.max_users > 0 ? Math.round((statsRes.stats.active_users / statsRes.stats.max_users) * 100) : 0;
+        document.getElementById('active-rate').textContent = rate + '%';
     }
 
     const usersRes = await apiCall('/api/subsystem/users');
@@ -264,17 +192,15 @@ async function loadDashboard() {
         agentsList = usersList.filter(u => u.role === 'agent');
         document.getElementById('recent-users').innerHTML = usersList.slice(0,5).map(u => `<div>${u.full_name} (${u.role})</div>`).join('') || '<p>Aucun utilisateur</p>';
     }
+    log('loadDashboard done');
 }
 
 async function loadAllUsers() {
     const container = document.getElementById('all-users-list');
     if (!usersList.length) { container.innerHTML = '<p>Aucun utilisateur</p>'; return; }
     let html = '<table class="table"><tr><th>Nom</th><th>Rôle</th><th>Statut</th><th>Actions</th></tr>';
-    usersList.forEach(u => {
-        html += `<tr><td>${u.full_name}</td><td>${u.role}</td><td><span class="status-badge ${u.is_active?'status-active':'status-inactive'}">${u.is_active?'Actif':'Inactif'}</span></td><td><button class="action-btn edit" data-id="${u.id}"><i class="fas fa-edit"></i></button></td></tr>`;
-    });
-    html += '</table>';
-    container.innerHTML = html;
+    usersList.forEach(u => { html += `<tr><td>${u.full_name}</td><td>${u.role}</td><td><span class="status-badge ${u.is_active?'status-active':'status-inactive'}">${u.is_active?'Actif':'Inactif'}</span></td><td><button class="action-btn edit" data-id="${u.id}"><i class="fas fa-edit"></i></button></td></tr>`; });
+    html += '</table>'; container.innerHTML = html;
 }
 
 async function loadTickets() {
@@ -305,16 +231,7 @@ async function loadSettings() {
 }
 
 async function saveMultipliers() {
-    const settings = {
-        borlette_first: document.getElementById('borlette_first').value,
-        borlette_second: document.getElementById('borlette_second').value,
-        borlette_third: document.getElementById('borlette_third').value,
-        lotto3: document.getElementById('lotto3').value,
-        lotto4: document.getElementById('lotto4').value,
-        lotto5: document.getElementById('lotto5').value,
-        grap: document.getElementById('grap').value,
-        marriage: document.getElementById('marriage').value
-    };
+    const settings = { borlette_first: document.getElementById('borlette_first').value, borlette_second: document.getElementById('borlette_second').value, borlette_third: document.getElementById('borlette_third').value, lotto3: document.getElementById('lotto3').value, lotto4: document.getElementById('lotto4').value, lotto5: document.getElementById('lotto5').value, grap: document.getElementById('grap').value, marriage: document.getElementById('marriage').value };
     const res = await apiCall('/api/settings', 'POST', { settings });
     if (res?.success) showNotification('Paramètres enregistrés', 'success');
 }
@@ -341,64 +258,33 @@ function openUserModal(user = null) {
     document.getElementById('supervisor-level').value = user?.level || '1';
     const sup1 = document.getElementById('supervisor1-select'), sup2 = document.getElementById('supervisor2-select');
     sup1.innerHTML = sup2.innerHTML = '<option value="">Aucun</option>';
-    supervisorsList.forEach(s => {
-        sup1.innerHTML += `<option value="${s.id}" ${user?.supervisor_id===s.id?'selected':''}>${s.full_name}</option>`;
-        sup2.innerHTML += `<option value="${s.id}" ${user?.supervisor2_id===s.id?'selected':''}>${s.full_name}</option>`;
-    });
+    supervisorsList.forEach(s => { sup1.innerHTML += `<option value="${s.id}" ${user?.supervisor_id===s.id?'selected':''}>${s.full_name}</option>`; sup2.innerHTML += `<option value="${s.id}" ${user?.supervisor2_id===s.id?'selected':''}>${s.full_name}</option>`; });
 }
 
 async function saveUser() {
     const id = document.getElementById('user-id').value;
-    const data = {
-        name: document.getElementById('user-fullname').value,
-        username: document.getElementById('user-username').value,
-        password: document.getElementById('user-password').value,
-        role: document.getElementById('user-role').value,
-        level: document.getElementById('user-role').value === 'supervisor' ? document.getElementById('supervisor-level').value : null,
-        supervisorId: document.getElementById('supervisor1-select').value || null
-    };
+    const data = { name: document.getElementById('user-fullname').value, username: document.getElementById('user-username').value, password: document.getElementById('user-password').value, role: document.getElementById('user-role').value, level: document.getElementById('user-role').value === 'supervisor' ? document.getElementById('supervisor-level').value : null, supervisorId: document.getElementById('supervisor1-select').value || null };
     const url = id ? `/api/subsystem/users/${id}` : '/api/subsystem/users/create';
     const method = id ? 'PUT' : 'POST';
     const res = await apiCall(url, method, data);
-    if (res?.success) {
-        showNotification(id ? 'Utilisateur modifié' : 'Utilisateur créé', 'success');
-        document.getElementById('user-modal').classList.remove('active');
-        loadDashboard();
-        if (document.getElementById('users-section').style.display !== 'none') loadAllUsers();
-    }
+    if (res?.success) { showNotification(id ? 'Utilisateur modifié' : 'Utilisateur créé', 'success'); document.getElementById('user-modal').classList.remove('active'); loadDashboard(); if (document.getElementById('users-section').style.display !== 'none') loadAllUsers(); }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+    log('DOM ready');
     await loadDashboard();
 
-    document.querySelectorAll('.nav-item').forEach(i => i.addEventListener('click', e => {
-        e.preventDefault();
-        showSection(i.dataset.section);
-    }));
-
+    document.querySelectorAll('.nav-item').forEach(i => i.addEventListener('click', e => { e.preventDefault(); showSection(i.dataset.section); }));
     document.getElementById('refresh-btn').addEventListener('click', loadDashboard);
     document.getElementById('logout-btn').addEventListener('click', logout);
     document.getElementById('add-user-btn').addEventListener('click', () => openUserModal());
     document.getElementById('close-modal').addEventListener('click', () => document.getElementById('user-modal').classList.remove('active'));
     document.getElementById('cancel-modal').addEventListener('click', () => document.getElementById('user-modal').classList.remove('active'));
     document.getElementById('save-user').addEventListener('click', saveUser);
-    document.getElementById('user-role').addEventListener('change', function() {
-        document.getElementById('supervisor-level-group').style.display = this.value === 'supervisor' ? 'block' : 'none';
-    });
+    document.getElementById('user-role').addEventListener('change', function() { document.getElementById('supervisor-level-group').style.display = this.value === 'supervisor' ? 'block' : 'none'; });
     document.getElementById('save-multipliers').addEventListener('click', saveMultipliers);
-    document.getElementById('generate-report').addEventListener('click', async () => {
-        const period = document.getElementById('report-period').value;
-        const res = await apiCall(`/api/tickets?period=${period}`);
-        document.getElementById('report-result').innerHTML = res?.success ? `<p>${res.tickets.length} tickets, total: ${res.tickets.reduce((s,t)=>s+t.total_amount,0)} HTG</p>` : '<p>Erreur</p>';
-    });
-
-    document.addEventListener('click', e => {
-        if (e.target.closest('.edit')) {
-            const id = e.target.closest('.edit').dataset.id;
-            const user = usersList.find(u => u.id == id);
-            if (user) openUserModal(user);
-        }
-    });
+    document.getElementById('generate-report').addEventListener('click', async () => { const period = document.getElementById('report-period').value; const res = await apiCall(`/api/tickets?period=${period}`); document.getElementById('report-result').innerHTML = res?.success ? `<p>${res.tickets.length} tickets, total: ${res.tickets.reduce((s,t)=>s+t.total_amount,0)} HTG</p>` : '<p>Erreur</p>'; });
+    document.addEventListener('click', e => { if (e.target.closest('.edit')) { const id = e.target.closest('.edit').dataset.id; const user = usersList.find(u => u.id == id); if (user) openUserModal(user); } });
 });
 </script>
 </body>
