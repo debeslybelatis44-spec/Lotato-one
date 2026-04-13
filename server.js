@@ -137,14 +137,7 @@ async function initializeDatabase() {
         );
     `);
 
-    const masterExists = await db.get("SELECT id FROM users WHERE role = 'master'");
-    if (!masterExists) {
-        const hashedPassword = await bcrypt.hash('master123', SALT_ROUNDS);
-        await db.run("INSERT INTO users (username, password, full_name, role, is_active) VALUES (?, ?, ?, ?, ?)",
-            ['master', hashedPassword, 'Administrateur Master', 'master', 1]);
-        console.log('✅ Compte master créé (master / master123)');
-    }
-
+    // Paramètres par défaut
     const defaultSettings = {
         'borlette_first': '60', 'borlette_second': '20', 'borlette_third': '10',
         'lotto3': '500', 'lotto4': '5000', 'lotto5': '25000',
@@ -153,6 +146,74 @@ async function initializeDatabase() {
     };
     for (const [key, value] of Object.entries(defaultSettings)) {
         await db.run("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", [key, value]);
+    }
+
+    // --- Création des utilisateurs de démonstration (si la base est vide) ---
+    const userCount = await db.get("SELECT COUNT(*) as count FROM users");
+    if (userCount.count === 0) {
+        console.log('📦 Initialisation des données de démonstration...');
+
+        // 1. Créer un sous-système par défaut
+        const subResult = await db.run(
+            "INSERT INTO subsystems (name, subdomain, contact_email, max_users) VALUES (?, ?, ?, ?)",
+            ['Sous-système Démo', 'demo', 'demo@lotato.local', 20]
+        );
+        const subsystemId = subResult.lastID;
+
+        // 2. Master (mot de passe: master123)
+        const masterHash = await bcrypt.hash('master123', SALT_ROUNDS);
+        await db.run(
+            "INSERT INTO users (username, password, full_name, role, is_active) VALUES (?, ?, ?, ?, ?)",
+            ['master', masterHash, 'Administrateur Master', 'master', 1]
+        );
+
+        // 3. Propriétaire du sous-système (mot de passe: 123)
+        const ownerHash = await bcrypt.hash('123', SALT_ROUNDS);
+        await db.run(
+            "INSERT INTO users (username, password, full_name, role, subsystem_id, is_active) VALUES (?, ?, ?, ?, ?, ?)",
+            ['proprietaire', ownerHash, 'Propriétaire Démo', 'subsystem', subsystemId, 1]
+        );
+
+        // 4. Superviseur niveau 1 (mot de passe: 123)
+        const sup1Hash = await bcrypt.hash('123', SALT_ROUNDS);
+        const sup1Result = await db.run(
+            "INSERT INTO users (username, password, full_name, role, level, subsystem_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ['superviseur1', sup1Hash, 'Superviseur Niveau 1', 'supervisor', 1, subsystemId, 1]
+        );
+        const sup1Id = sup1Result.lastID;
+
+        // 5. Superviseur niveau 2 (mot de passe: 123)
+        const sup2Hash = await bcrypt.hash('123', SALT_ROUNDS);
+        const sup2Result = await db.run(
+            "INSERT INTO users (username, password, full_name, role, level, subsystem_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ['superviseur2', sup2Hash, 'Superviseur Niveau 2', 'supervisor', 2, subsystemId, 1]
+        );
+        const sup2Id = sup2Result.lastID;
+
+        // 6. Agent (mot de passe: 123), assigné aux deux superviseurs
+        const agentHash = await bcrypt.hash('123', SALT_ROUNDS);
+        await db.run(
+            "INSERT INTO users (username, password, full_name, role, subsystem_id, supervisor_id, supervisor2_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            ['agent1', agentHash, 'Agent Démo', 'agent', subsystemId, sup1Id, sup2Id, 1]
+        );
+
+        console.log('✅ Données de démonstration créées :');
+        console.log('   - master / master123');
+        console.log('   - proprietaire / 123');
+        console.log('   - superviseur1 / 123');
+        console.log('   - superviseur2 / 123');
+        console.log('   - agent1 / 123');
+    } else {
+        // S'assurer que le master existe toujours (au cas où la base aurait été modifiée)
+        const masterExists = await db.get("SELECT id FROM users WHERE role = 'master'");
+        if (!masterExists) {
+            const masterHash = await bcrypt.hash('master123', SALT_ROUNDS);
+            await db.run(
+                "INSERT INTO users (username, password, full_name, role, is_active) VALUES (?, ?, ?, ?, ?)",
+                ['master', masterHash, 'Administrateur Master', 'master', 1]
+            );
+            console.log('✅ Compte master créé (master / master123)');
+        }
     }
 }
 
@@ -181,8 +242,8 @@ function requireRole(...roles) {
 
 app.post('/api/auth/login', async (req, res) => {
     try {
-        const { username, password, role } = req.body;
-        const user = await db.get("SELECT * FROM users WHERE username = ? AND role = ?", [username, role]);
+        const { username, password } = req.body;
+        const user = await db.get("SELECT * FROM users WHERE username = ?", [username]);
         if (!user) return res.status(401).json({ success: false, error: 'Identifiants incorrects' });
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return res.status(401).json({ success: false, error: 'Identifiants incorrects' });
@@ -375,7 +436,6 @@ app.put('/api/master/subsystems/:id/activate', authenticateToken, requireRole('m
     res.json({ success: true });
 });
 
-// --- NOUVELLE ROUTE : Réinitialisation des utilisateurs (sauf master) ---
 app.delete('/api/master/reset-users', authenticateToken, requireRole('master'), async (req, res) => {
     try {
         await db.run("DELETE FROM users WHERE role != 'master'");
