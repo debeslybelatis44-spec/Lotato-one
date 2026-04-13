@@ -2,273 +2,123 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#f39c12">
     <title>Lotato - Connexion</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-radius: 24px;
-            padding: 40px 30px;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
-        .logo {
-            text-align: center;
-            margin-bottom: 35px;
-        }
-        .logo-icon {
-            font-size: 3.5rem;
-            color: #f39c12;
-            margin-bottom: 10px;
-        }
-        .logo h1 {
-            font-size: 2.8rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #f39c12, #e74c3c, #f39c12);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: gradientShift 3s ease infinite;
-            letter-spacing: 2px;
-        }
-        @keyframes gradientShift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        .logo p {
-            color: #b3c7e5;
-            font-size: 1rem;
-            font-weight: 500;
-            letter-spacing: 1px;
-            margin-top: 5px;
-        }
-        .form-group {
-            margin-bottom: 22px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #e2e8f0;
-            font-weight: 500;
-            font-size: 0.9rem;
-            letter-spacing: 0.3px;
-        }
-        .form-group label i {
-            margin-right: 8px;
-            color: #f39c12;
-            width: 18px;
-        }
-        .form-group input {
-            width: 100%;
-            padding: 15px 18px;
-            background: rgba(255, 255, 255, 0.07);
-            border: 1.5px solid rgba(255, 255, 255, 0.1);
-            border-radius: 14px;
-            color: #ffffff;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-            outline: none;
-        }
-        .form-group input:focus {
-            border-color: #f39c12;
-            background: rgba(255, 255, 255, 0.12);
-            box-shadow: 0 0 0 4px rgba(243, 156, 18, 0.15);
-        }
-        .form-group input::placeholder {
-            color: rgba(255, 255, 255, 0.35);
-        }
-        .login-btn {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #f39c12, #e67e22);
-            color: white;
-            border: none;
-            border-radius: 14px;
-            font-size: 1.1rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 15px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 8px 20px rgba(243, 156, 18, 0.3);
-        }
-        .login-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 25px rgba(243, 156, 18, 0.4);
-        }
-        .status-message {
-            padding: 14px 18px;
-            border-radius: 14px;
-            margin-top: 25px;
-            text-align: center;
-            display: none;
-            font-weight: 500;
-            backdrop-filter: blur(8px);
-        }
-        .status-success {
-            background: rgba(16, 185, 129, 0.15);
-            color: #6ee7b7;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-        .status-error {
-            background: rgba(239, 68, 68, 0.15);
-            color: #fca5a5;
-            border: 1px solid rgba(239, 68, 68, 0.3);
-        }
-        .status-info {
-            background: rgba(59, 130, 246, 0.15);
-            color: #93c5fd;
-            border: 1px solid rgba(59, 130, 246, 0.3);
-        }
-        .footer {
-            text-align: center;
-            margin-top: 35px;
-            color: #64748b;
-            font-size: 0.85rem;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        .container { background: rgba(255,255,255,0.08); backdrop-filter: blur(12px); border-radius: 24px; padding: 40px 30px; width: 100%; max-width: 420px; box-shadow: 0 25px 50px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); }
+        .logo { text-align: center; margin-bottom: 35px; }
+        .logo-icon { font-size: 3.5rem; color: #f39c12; margin-bottom: 10px; }
+        .logo h1 { font-size: 2.8rem; font-weight: 800; background: linear-gradient(135deg, #f39c12, #e74c3c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .logo p { color: #b3c7e5; font-size: 1rem; margin-top: 5px; }
+        .form-group { margin-bottom: 22px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #e2e8f0; font-weight: 500; }
+        .form-group input { width: 100%; padding: 15px 18px; background: rgba(255,255,255,0.07); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 14px; color: white; font-size: 1rem; outline: none; }
+        .form-group input:focus { border-color: #f39c12; background: rgba(255,255,255,0.12); }
+        .login-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #f39c12, #e67e22); color: white; border: none; border-radius: 14px; font-size: 1.1rem; font-weight: 700; cursor: pointer; margin-top: 15px; }
+        .status-message { padding: 14px 18px; border-radius: 14px; margin-top: 25px; text-align: center; display: none; }
+        .status-error { background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+        .status-success { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+        .status-info { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+        .footer { text-align: center; margin-top: 35px; color: #64748b; font-size: 0.85rem; }
     </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-    <div class="container">
-        <div class="logo">
-            <div class="logo-icon"><i class="fas fa-dice"></i></div>
-            <h1>LOTATO</h1>
-            <p>JERE BòLET OU AK TOUT SEKIRITE</p>
-        </div>
-
-        <div class="form-group">
-            <label><i class="fas fa-user-circle"></i> Identifiant</label>
-            <input type="text" id="username" placeholder="Votre identifiant" autofocus>
-        </div>
-        <div class="form-group">
-            <label><i class="fas fa-lock"></i> Mot de passe</label>
-            <input type="password" id="password" placeholder="••••••••">
-        </div>
-        <button class="login-btn" id="login-btn">
-            <i class="fas fa-sign-in-alt"></i> Connexion
-        </button>
-
-        <div id="status-message" class="status-message"></div>
-
-        <div class="footer">
-            <p>© 2024 Lotato System | Version 5.0</p>
-        </div>
+<div class="container">
+    <div class="logo">
+        <div class="logo-icon"><i class="fas fa-dice"></i></div>
+        <h1>LOTATO</h1>
+        <p>JERE BòLET OU AK TOUT SEKIRITE</p>
     </div>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <script>
-        const API_BASE = '';
-        
-        function showStatus(msg, type) {
-            const el = document.getElementById('status-message');
-            el.textContent = msg;
-            el.className = `status-message status-${type}`;
-            el.style.display = 'block';
-        }
-        
-        function hideStatus() {
-            document.getElementById('status-message').style.display = 'none';
-        }
+    <div class="form-group">
+        <label><i class="fas fa-user-circle"></i> Identifiant</label>
+        <input type="text" id="username" placeholder="Votre identifiant" autofocus>
+    </div>
+    <div class="form-group">
+        <label><i class="fas fa-lock"></i> Mot de passe</label>
+        <input type="password" id="password" placeholder="••••••••">
+    </div>
+    <button class="login-btn" id="login-btn"><i class="fas fa-sign-in-alt"></i> Connexion</button>
 
-        async function login() {
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
-            
-            if (!username || !password) {
-                showStatus('Veuillez remplir tous les champs', 'error');
-                return;
-            }
-            
-            showStatus('Connexion en cours...', 'info');
-            
-            try {
-                // On n'envoie plus le rôle, le serveur le détectera
-                const response = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    localStorage.setItem('lotato_token', data.token);
-                    localStorage.setItem('lotato_user', JSON.stringify(data.user));
-                    showStatus('Connexion réussie ! Redirection...', 'success');
-                    setTimeout(() => {
-                        window.location.href = data.redirectUrl;
-                    }, 800);
-                } else {
-                    showStatus(data.error || 'Identifiants incorrects', 'error');
-                }
-            } catch (error) {
-                console.error('Erreur de connexion:', error);
-                showStatus('Erreur de connexion au serveur', 'error');
-            }
-        }
+    <div id="status-message" class="status-message"></div>
+    <div class="footer"><p>© 2024 Lotato System | Version 5.0</p></div>
+</div>
 
-        document.getElementById('login-btn').addEventListener('click', login);
-        
-        // Validation avec Entrée
-        document.getElementById('password').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') login();
+<script>
+const API_BASE = '';
+
+function showStatus(msg, type) {
+    const el = document.getElementById('status-message');
+    el.textContent = msg;
+    el.className = `status-message status-${type}`;
+    el.style.display = 'block';
+}
+function hideStatus() { document.getElementById('status-message').style.display = 'none'; }
+
+async function login() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    if (!username || !password) { showStatus('Veuillez remplir tous les champs', 'error'); return; }
+    showStatus('Connexion en cours...', 'info');
+    try {
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
         });
-        document.getElementById('username').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') document.getElementById('password').focus();
-        });
+        const data = await response.json();
+        if (data.success) {
+            localStorage.setItem('lotato_token', data.token);
+            localStorage.setItem('lotato_user', JSON.stringify(data.user));
+            showStatus('Connexion réussie ! Redirection...', 'success');
+            setTimeout(() => { window.location.href = data.redirectUrl; }, 500);
+        } else {
+            showStatus(data.error || 'Identifiants incorrects', 'error');
+        }
+    } catch (error) {
+        showStatus('Erreur de connexion au serveur', 'error');
+    }
+}
 
-        // Vérifier session existante
-        (async function checkExistingSession() {
-            const token = localStorage.getItem('lotato_token');
-            if (!token) return;
-            try {
-                const response = await fetch('/api/auth/check', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const data = await response.json();
-                if (data.success) {
-                    const user = data.user;
-                    let redirect = '/lotato.html';
-                    if (user.role === 'supervisor') {
-                        redirect = user.level === 1 ? '/control-level1.html' : '/control-level2.html';
-                    } else if (user.role === 'subsystem') {
-                        redirect = '/subsystem-admin.html';
-                    } else if (user.role === 'master') {
-                        redirect = '/master-dashboard.html';
-                    }
-                    showStatus('Session active détectée. Redirection...', 'info');
-                    setTimeout(() => { window.location.href = redirect; }, 1000);
-                } else {
-                    localStorage.removeItem('lotato_token');
-                    localStorage.removeItem('lotato_user');
-                }
-            } catch (error) {
-                console.error('Erreur vérification session:', error);
+document.getElementById('login-btn').addEventListener('click', login);
+document.getElementById('password').addEventListener('keypress', e => { if (e.key === 'Enter') login(); });
+document.getElementById('username').addEventListener('keypress', e => { if (e.key === 'Enter') document.getElementById('password').focus(); });
+
+// Vérification de session existante (SANS redirection automatique si déjà sur index)
+(async function checkExistingSession() {
+    const token = localStorage.getItem('lotato_token');
+    if (!token) return;
+
+    try {
+        const response = await fetch('/api/auth/check', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            const user = data.user;
+            let redirect = '/lotato.html';
+            if (user.role === 'supervisor') redirect = user.level === 1 ? '/control-level1.html' : '/control-level2.html';
+            else if (user.role === 'subsystem') redirect = '/subsystem-admin.html';
+            else if (user.role === 'master') redirect = '/master-dashboard.html';
+
+            // Ne pas rediriger si on est déjà sur la bonne page
+            if (window.location.pathname !== redirect) {
+                showStatus('Session active détectée. Redirection...', 'info');
+                setTimeout(() => { window.location.href = redirect; }, 800);
             }
-        })();
-    </script>
+        } else {
+            // Token invalide, on le supprime
+            localStorage.removeItem('lotato_token');
+            localStorage.removeItem('lotato_user');
+        }
+    } catch (error) {
+        console.error('Erreur vérification session:', error);
+    }
+})();
+</script>
 </body>
 </html>
