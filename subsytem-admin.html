@@ -2,70 +2,81 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Diagnostic Propriétaire</title>
+    <title>Diagnostic Propriétaire (Statique)</title>
     <style>
         body { font-family: sans-serif; padding: 20px; background: #f5f7fa; }
-        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto; }
+        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
         .error { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; }
         .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 8px; }
         pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
-        button { padding: 10px 20px; margin-top: 20px; }
+        button { padding: 10px 20px; margin-top: 20px; margin-right: 10px; }
     </style>
 </head>
 <body>
 <div class="card">
-    <h2>🔍 Diagnostic – Page Propriétaire</h2>
-    <div id="status">Vérification de l'authentification...</div>
+    <h2>🔍 Diagnostic Propriétaire – Résultat</h2>
+    <div id="status">Analyse en cours...</div>
     <div id="details" style="display:none;">
         <h3>Informations utilisateur :</h3>
         <pre id="user-info"></pre>
         <h3>Token (20 premiers caractères) :</h3>
         <pre id="token-preview"></pre>
     </div>
-    <button id="logout-btn" style="display:none;">Se déconnecter</button>
+    <div>
+        <button id="retry-btn">🔄 Relancer le diagnostic</button>
+        <button id="logout-btn">🚪 Déconnexion</button>
+        <button id="continue-btn" style="display:none;">➡️ Continuer vers l'interface complète</button>
+    </div>
+    <p style="margin-top:20px; color:#6c757d;"><i>Si une erreur s'affiche, faites une capture d'écran ou copiez le message.</i></p>
 </div>
 <script>
 const API_BASE = '';
 
-function log(msg) { console.log('[Diag]', msg); }
+function log(msg, data) { console.log('[Diag]', msg, data || ''); }
 
-async function check() {
-    const token = localStorage.getItem('lotato_token');
+async function runDiagnostic() {
     const statusDiv = document.getElementById('status');
     const detailsDiv = document.getElementById('details');
     const userInfoPre = document.getElementById('user-info');
     const tokenPreview = document.getElementById('token-preview');
-    const logoutBtn = document.getElementById('logout-btn');
+    const continueBtn = document.getElementById('continue-btn');
+    
+    statusDiv.className = '';
+    statusDiv.innerHTML = '⏳ Vérification...';
+    detailsDiv.style.display = 'none';
+    continueBtn.style.display = 'none';
 
+    const token = localStorage.getItem('lotato_token');
+    
     if (!token) {
         statusDiv.className = 'error';
-        statusDiv.innerHTML = '❌ Aucun token trouvé dans localStorage. Redirection vers login dans 3 secondes...';
-        setTimeout(() => window.location.href = '/index.html', 3000);
+        statusDiv.innerHTML = '❌ Aucun token trouvé dans localStorage.';
+        log('No token');
         return;
     }
 
     tokenPreview.textContent = token.substring(0, 20) + '...';
-    logoutBtn.style.display = 'block';
+    log('Token found', tokenPreview.textContent);
 
     try {
         const res = await fetch('/api/auth/check', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         
+        log('HTTP status', res.status);
+        
         if (!res.ok) {
             statusDiv.className = 'error';
-            statusDiv.innerHTML = `❌ Erreur HTTP ${res.status} lors de /api/auth/check. Redirection...`;
-            setTimeout(() => window.location.href = '/index.html', 3000);
+            statusDiv.innerHTML = `❌ Erreur HTTP ${res.status} lors de /api/auth/check.`;
             return;
         }
 
         const data = await res.json();
-        log('auth/check response:', data);
+        log('Response data', data);
 
         if (!data.success) {
             statusDiv.className = 'error';
-            statusDiv.innerHTML = `❌ /api/auth/check a répondu success: false. Message: ${data.error || 'inconnu'}. Redirection...`;
-            setTimeout(() => window.location.href = '/index.html', 3000);
+            statusDiv.innerHTML = `❌ /api/auth/check a répondu success: false. Message: ${data.error || 'inconnu'}.`;
             return;
         }
 
@@ -75,27 +86,32 @@ async function check() {
 
         if (user.role !== 'subsystem') {
             statusDiv.className = 'error';
-            statusDiv.innerHTML = `❌ Rôle incorrect : "${user.role}". Attendu : "subsystem". Redirection...`;
-            setTimeout(() => window.location.href = '/index.html', 3000);
+            statusDiv.innerHTML = `❌ Rôle incorrect : "${user.role}". Attendu : "subsystem".`;
         } else {
             statusDiv.className = 'success';
-            statusDiv.innerHTML = '✅ Authentification réussie ! Vous êtes bien un propriétaire de sous‑système.<br><br>👉 Si cette page s\'affiche correctement, le problème vient du code de l\'interface complète. Sinon, le problème est côté serveur/base de données.';
-            // Pas de redirection, on reste sur cette page de diagnostic.
+            statusDiv.innerHTML = '✅ Authentification réussie ! Vous êtes bien un propriétaire de sous‑système.';
+            continueBtn.style.display = 'inline-block';
         }
 
     } catch (error) {
         statusDiv.className = 'error';
-        statusDiv.innerHTML = `❌ Erreur réseau : ${error.message}. Redirection...`;
-        setTimeout(() => window.location.href = '/index.html', 3000);
+        statusDiv.innerHTML = `❌ Erreur réseau : ${error.message}.`;
+        log('Network error', error);
     }
 }
 
+document.getElementById('retry-btn').addEventListener('click', runDiagnostic);
 document.getElementById('logout-btn').addEventListener('click', () => {
     localStorage.clear();
     window.location.href = '/index.html';
 });
+document.getElementById('continue-btn').addEventListener('click', () => {
+    // Rediriger vers la version allégée mais fonctionnelle (celle avec logs console)
+    window.location.href = '/subsystem-admin-full.html'; // ou le nom que vous voulez
+});
 
-check();
+// Lancer automatiquement au chargement
+runDiagnostic();
 </script>
 </body>
 </html>
