@@ -167,13 +167,24 @@
             document.body.appendChild(toast); setTimeout(()=>toast.remove(), 3500);
         }
 
+        // --- API Call résistant aux erreurs 403 (ne déconnecte pas) ---
         async function apiCall(url, method='GET', body=null) {
             const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
             const opts = { method, headers };
             if(body) opts.body = JSON.stringify(body);
-            const resp = await fetch(url, opts);
-            if(resp.status === 401) { logout(); return null; }
-            return resp.json();
+            try {
+                const resp = await fetch(url, opts);
+                if (resp.status === 401) { logout(); return null; }
+                if (resp.status === 403) { 
+                    console.warn(`Accès refusé à ${url}`);
+                    showNotification(`Permission refusée pour ${url}`, 'error');
+                    return null; 
+                }
+                return await resp.json();
+            } catch(e) { 
+                showNotification('Erreur réseau', 'error'); 
+                return null; 
+            }
         }
 
         function logout() { localStorage.clear(); window.location.href='/index.html'; }
