@@ -11,6 +11,11 @@
     --newyork-color: #e99700;
     --texas-color: #5d0b2a;
     --tunisia-color: #1abc9c;
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+    --shadow-md: 0 4px 8px rgba(0,0,0,0.12);
+    --shadow-lg: 0 8px 16px rgba(0,0,0,0.15);
+    --transition-fast: 0.2s ease;
+    --transition-normal: 0.3s ease;
 }
 
 * {
@@ -35,14 +40,16 @@ body {
     padding-bottom: 80px;
 }
 
+/* ========== HEADER ========== */
 header {
     background: linear-gradient(135deg, #ad00f1, #1a2530);
     color: white;
     padding: 15px;
     border-radius: 12px;
     margin-bottom: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-md);
     position: relative;
+    animation: fadeInDown 0.5s ease;
 }
 
 .header-content {
@@ -64,6 +71,11 @@ header {
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid var(--warning-color);
+    transition: transform var(--transition-fast);
+}
+
+.logo-image:hover {
+    transform: scale(1.05);
 }
 
 .logo {
@@ -89,11 +101,12 @@ header {
     padding: 8px 12px;
     border-radius: 8px;
     cursor: pointer;
-    transition: background 0.3s;
+    transition: all var(--transition-fast);
 }
 
 .logout-btn:hover {
     background: rgba(255,255,255,0.3);
+    transform: scale(1.02);
 }
 
 .time-display {
@@ -105,6 +118,7 @@ header {
     text-align: center;
 }
 
+/* ========== CARTES DES TIRAGES ========== */
 .draws-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -115,16 +129,23 @@ header {
 .draw-card {
     background-color: white;
     border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
     padding: 15px;
     text-align: center;
-    transition: transform 0.3s, box-shadow 0.3s;
+    transition: all var(--transition-normal);
     cursor: pointer;
+    animation: fadeInUp 0.4s ease backwards;
 }
+
+.draw-card:nth-child(1) { animation-delay: 0.05s; }
+.draw-card:nth-child(2) { animation-delay: 0.1s; }
+.draw-card:nth-child(3) { animation-delay: 0.15s; }
+.draw-card:nth-child(4) { animation-delay: 0.2s; }
+.draw-card:nth-child(5) { animation-delay: 0.25s; }
 
 .draw-card:hover {
     transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--shadow-lg);
 }
 
 .draw-card.miami { border-top: 5px solid var(--miami-color); }
@@ -163,11 +184,12 @@ header {
     font-size: 0.7rem;
     cursor: pointer;
     background-color: var(--light-color);
-    transition: background-color 0.3s;
+    transition: all var(--transition-fast);
 }
 
 .draw-btn:hover {
     background-color: #dde4e6;
+    transform: scale(0.98);
 }
 
 .draw-btn.active {
@@ -185,10 +207,17 @@ header {
     color: white;
 }
 
+.draw-countdown {
+    font-size: 0.7rem;
+    color: #666;
+    margin-top: 8px;
+}
+
+/* ========== SECTION RÉSULTATS ========== */
 .results-section {
     background-color: white;
     border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
     padding: 15px;
     margin-bottom: 20px;
 }
@@ -204,6 +233,7 @@ header {
 .section-title i {
     margin-right: 10px;
     color: var(--secondary-color);
+    font-size: 1.2rem;
 }
 
 .section-title h2 {
@@ -222,6 +252,12 @@ header {
     padding: 10px;
     border-radius: 8px;
     text-align: center;
+    transition: all var(--transition-fast);
+}
+
+.result-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
 }
 
 .result-card h4 {
@@ -236,7 +272,7 @@ header {
     color: var(--accent-color);
 }
 
-/* Navigation inférieure plus petite */
+/* ========== NAVIGATION INFÉRIEURE ========== */
 .bottom-nav {
     position: fixed;
     bottom: 0;
@@ -250,6 +286,7 @@ header {
     max-width: 500px;
     margin: 0 auto;
     z-index: 1000;
+    border-radius: 20px 20px 0 0;
 }
 
 .nav-item {
@@ -261,7 +298,7 @@ header {
     cursor: pointer;
     padding: 5px 8px;
     border-radius: 8px;
-    transition: background 0.3s;
+    transition: all var(--transition-fast);
 }
 
 .nav-item.active {
@@ -274,711 +311,4 @@ header {
     margin-bottom: 3px;
 }
 
-/* Panneau multi-tirages */
-.multi-draw-panel {
-    background-color: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    padding: 15px;
-    margin-bottom: 20px;
-}
-
-.multi-draw-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-}
-
-.multi-draw-title {
-    font-size: 1rem;
-    color: var(--primary-color);
-}
-
-.multi-draw-toggle {
-    background: none;
-    border: none;
-    color: var(--secondary-color);
-    font-size: 1rem;
-    cursor: pointer;
-}
-
-.multi-draw-content {
-    display: none;
-}
-
-.multi-draw-content.expanded {
-    display: block;
-}
-
-.multi-draw-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    margin-bottom: 15px;
-}
-
-.multi-draw-option {
-    background-color: var(--light-color);
-    padding: 8px;
-    border-radius: 8px;
-    text-align: center;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: all 0.3s;
-}
-
-.multi-draw-option:hover {
-    background-color: var(--secondary-color);
-    color: white;
-}
-
-.multi-draw-option.selected {
-    background-color: var(--success-color);
-    color: white;
-}
-
-/* Onglets catégories */
-.category-tabs {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-    background: var(--light-color);
-    padding: 5px;
-    border-radius: 30px;
-}
-
-.category-tab {
-    flex: 1;
-    padding: 8px;
-    border: none;
-    border-radius: 25px;
-    font-size: 0.8rem;
-    font-weight: bold;
-    cursor: pointer;
-    background: transparent;
-    transition: all 0.3s;
-}
-
-.category-tab.active {
-    background: var(--secondary-color);
-    color: white;
-}
-
-/* Écran de pari */
-.betting-screen {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: white;
-    z-index: 100;
-    padding: 20px;
-    overflow-y: auto;
-    max-width: 500px;
-    margin: 0 auto;
-}
-
-.betting-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid var(--light-color);
-}
-
-.back-button {
-    background: none;
-    border: none;
-    font-size: 1.3rem;
-    color: var(--primary-color);
-    margin-right: 15px;
-    cursor: pointer;
-}
-
-.betting-title {
-    font-size: 1.3rem;
-    color: var(--primary-color);
-}
-
-/* Grille des jeux - taille réduite 80% */
-.game-category-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-}
-
-.game-item {
-    background-color: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    padding: 8px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s;
-    border-left: 3px solid var(--secondary-color);
-}
-
-.game-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-}
-
-.game-item.borlette { border-left-color: var(--miami-color); }
-.game-item.lotto { border-left-color: var(--newyork-color); }
-.game-item.special { border-left-color: var(--success-color); }
-
-.game-name {
-    font-weight: bold;
-    font-size: 0.8rem;
-    margin-bottom: 3px;
-}
-
-.game-multiplier {
-    font-size: 0.7rem;
-    color: var(--warning-color);
-    font-weight: bold;
-}
-
-.game-item small {
-    font-size: 0.6rem;
-    display: block;
-    color: #666;
-}
-
-/* Formulaire de pari */
-.bet-form {
-    background-color: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    padding: 15px;
-    margin-bottom: 20px;
-}
-
-.form-group {
-    margin-bottom: 12px;
-}
-
-label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
-    font-size: 0.85rem;
-}
-
-input, select {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    font-size: 0.9rem;
-}
-
-.number-inputs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.number-inputs input {
-    text-align: center;
-    font-size: 1rem;
-}
-
-.bet-actions {
-    display: flex;
-    gap: 8px;
-}
-
-button {
-    padding: 10px 16px;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.btn-primary {
-    background-color: var(--secondary-color);
-    color: white;
-    flex: 2;
-}
-
-.btn-primary:hover {
-    background-color: #2980b9;
-}
-
-.btn-secondary {
-    background-color: var(--light-color);
-    color: var(--dark-color);
-    flex: 1;
-}
-
-.btn-secondary:hover {
-    background-color: #dde4e6;
-}
-
-/* Boules Nx */
-.nx-button {
-    background-color: var(--secondary-color);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    margin-bottom: 10px;
-    cursor: pointer;
-    display: inline-block;
-}
-
-.n-balls-container {
-    display: none;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 8px;
-    margin-top: 10px;
-}
-
-.n-balls-container.show {
-    display: grid;
-}
-
-.n-ball {
-    background-color: var(--light-color);
-    padding: 8px;
-    text-align: center;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: all 0.3s;
-}
-
-.n-ball:hover {
-    background-color: var(--secondary-color);
-    color: white;
-}
-
-/* Paires GRAP */
-.pair-ball {
-    background-color: var(--light-color);
-    padding: 8px;
-    text-align: center;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: all 0.3s;
-}
-
-.pair-ball:hover {
-    background-color: var(--success-color);
-    color: white;
-}
-
-.active-bets {
-    background-color: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    padding: 15px;
-    margin-bottom: 20px;
-}
-
-.bet-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--light-color);
-    font-size: 0.85rem;
-}
-
-.bet-details {
-    flex: 2;
-}
-
-.bet-amount {
-    flex: 1;
-    text-align: right;
-    font-weight: bold;
-}
-
-.bet-remove {
-    color: var(--accent-color);
-    margin-left: 10px;
-    cursor: pointer;
-}
-
-.bet-total {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 2px solid var(--light-color);
-    font-weight: bold;
-    font-size: 1rem;
-}
-
-/* Écrans */
-.screen {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: white;
-    z-index: 100;
-    padding: 20px;
-    overflow-y: auto;
-    max-width: 500px;
-    margin: 0 auto;
-}
-
-.screen-header {
-    display: flex;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid var(--light-color);
-}
-
-.screen-title {
-    font-size: 1.3rem;
-    color: var(--primary-color);
-}
-
-/* Rapport */
-.report-filters {
-    margin-bottom: 20px;
-}
-
-.filter-buttons {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 15px;
-}
-
-.filter-btn {
-    background-color: var(--light-color);
-    padding: 8px 12px;
-    font-size: 0.75rem;
-}
-
-.filter-btn.active {
-    background-color: var(--secondary-color);
-    color: white;
-}
-
-.custom-range {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.custom-range input {
-    flex: 1;
-    padding: 8px;
-    font-size: 0.8rem;
-}
-
-.report-stats {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.stat-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px;
-    padding: 15px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: white;
-}
-
-.stat-card:nth-child(2) { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-.stat-card:nth-child(3) { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-.stat-card:nth-child(4) { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-.stat-card:nth-child(5) { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-
-.stat-icon {
-    font-size: 1.5rem;
-}
-
-.stat-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-label {
-    font-size: 0.7rem;
-    opacity: 0.9;
-}
-
-.stat-value {
-    font-size: 1.1rem;
-    font-weight: bold;
-}
-
-.report-detail {
-    background-color: white;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.report-detail h3 {
-    font-size: 1rem;
-    margin-bottom: 10px;
-    color: var(--primary-color);
-}
-
-.report-detail-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--light-color);
-    font-size: 0.8rem;
-}
-
-/* Notifications */
-.notification {
-    position: fixed;
-    bottom: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: var(--primary-color);
-    color: white;
-    padding: 10px 16px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    max-width: 90%;
-    font-size: 0.8rem;
-    animation: slideUp 0.3s ease-out;
-}
-
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translate(-50%, 20px);
-    }
-    to {
-        opacity: 1;
-        transform: translate(-50%, 0);
-    }
-}
-
-.notification.success { background-color: var(--success-color); }
-.notification.warning { background-color: var(--warning-color); }
-.notification.error { background-color: var(--accent-color); }
-
-/* Options */
-.options-container {
-    background-color: #f8f9fa;
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 12px;
-}
-
-.option-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-    padding: 6px;
-    background-color: white;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.8rem;
-}
-
-.option-checkbox .option-multiplier {
-    margin-left: auto;
-    font-weight: bold;
-    color: var(--success-color);
-}
-
-/* Boutons d'action */
-.ticket-actions {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.ticket-action-btn {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.save-print-btn {
-    background-color: var(--success-color);
-    color: white;
-}
-
-.save-print-btn:hover {
-    background-color: #e67e22;
-}
-
-/* Recherche */
-.search-history {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 15px;
-}
-
-.search-input {
-    flex: 2;
-    padding: 10px;
-}
-
-.search-btn {
-    flex: 1;
-    background-color: var(--secondary-color);
-    color: white;
-    padding: 10px;
-}
-
-/* Vérification résultats */
-.results-check-screen {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: white;
-    z-index: 100;
-    padding: 20px;
-    overflow-y: auto;
-    max-width: 500px;
-    margin: 0 auto;
-}
-
-.check-results-btn {
-    background-color: var(--success-color);
-    color: white;
-    padding: 10px;
-    border-radius: 8px;
-    border: none;
-    font-size: 0.9rem;
-    font-weight: bold;
-    cursor: pointer;
-    width: 100%;
-    margin-top: 10px;
-}
-
-.winning-ticket {
-    background-color: #d4edda;
-    border-left: 4px solid var(--success-color);
-    padding: 12px;
-    margin-bottom: 8px;
-    border-radius: 8px;
-    font-size: 0.85rem;
-}
-
-.lot-result {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px;
-    background-color: #f8f9fa;
-    border-radius: 8px;
-    margin-bottom: 5px;
-    font-size: 0.8rem;
-}
-
-/* Multi-tirages */
-.multi-game-select {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.multi-game-option {
-    background-color: var(--light-color);
-    padding: 8px;
-    border-radius: 8px;
-    text-align: center;
-    cursor: pointer;
-    font-size: 0.75rem;
-    transition: all 0.3s;
-}
-
-.multi-game-option.selected {
-    background-color: var(--success-color);
-    color: white;
-}
-
-.multi-draw-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-}
-
-.multi-draw-action-btn {
-    flex: 1;
-    padding: 8px;
-    font-size: 0.75rem;
-    border-radius: 8px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.add-to-multi-draw {
-    background-color: var(--secondary-color);
-    color: white;
-}
-
-.view-multi-draw-ticket {
-    background-color: var(--warning-color);
-    color: white;
-}
-
-/* Écran rapport fin tiraj */
-.report-screen {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: white;
-    z-index: 100;
-    padding: 20px;
-    overflow-y: auto;
-    max-width: 500px;
-    margin: 0 auto;
-}
-
-.report-container {
-    padding: 15px;
-}
-
-/* Responsive */
-@media print {
-    body * {
-        visibility: hidden;
-    }
-    .print-ticket, .print-ticket * {
-        visibility: visible;
-    }
-    .print-ticket {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-    }
-}
+/* ========== PAN

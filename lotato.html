@@ -243,6 +243,11 @@
                         <div class="game-multiplier">x 5000</div>
                         <small>Lotto 4 otomatik</small>
                     </div>
+                    <div class="game-item special" data-game="nx">
+                        <div class="game-name">NX (Boul N0-N9)</div>
+                        <div class="game-multiplier">x 60</div>
+                        <small>10 boule Nx</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -347,7 +352,7 @@
         <div id="winning-tickets-list"></div>
     </div>
     
-    <!-- Écran historique -->
+    <!-- Écran historique avec gestion des tickets -->
     <div class="screen" id="history-screen">
         <div class="screen-header">
             <button class="back-button" data-screen="home">
@@ -362,7 +367,7 @@
         <div id="history-list"></div>
     </div>
     
-    <!-- Écran de vérification des résultats -->
+    <!-- Écran de vérification des résultats (3 lots) -->
     <div class="results-check-screen" id="results-check-screen">
         <div class="screen-header">
             <button class="back-button" id="back-from-results">
@@ -372,7 +377,7 @@
         </div>
         <div style="margin-bottom: 20px;">
             <div class="draw-info">
-                <h4>Rezilta Dènye Tiraj</h4>
+                <h4>Rezilta Dènye Tiraj (3 lot)</h4>
                 <div id="latest-results"></div>
             </div>
             <button class="check-results-btn" id="check-winners-btn">
@@ -403,6 +408,37 @@
             <h2 class="screen-title">Rapò Fin Tiraj</h2>
         </div>
         <div class="report-container" id="report-content"></div>
+    </div>
+    
+    <!-- Modal pour rejouer un ticket (choix du tirage) -->
+    <div class="modal" id="replay-ticket-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Rejoue fiche</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Chwazi tiraj pou rejoue fiche #<span id="replay-ticket-number"></span></p>
+                <select id="replay-draw-select" class="modal-select"></select>
+                <select id="replay-time-select" class="modal-select"></select>
+                <button id="confirm-replay" class="btn-primary">Konfime Rejoue</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal pour modifier un ticket -->
+    <div class="modal" id="edit-ticket-modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Modifye fiche</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Fiche #<span id="edit-ticket-number"></span></p>
+                <div id="edit-bets-container"></div>
+                <button id="save-edited-ticket" class="btn-primary">Sove Modifyasyon</button>
+            </div>
+        </div>
     </div>
 
     <script src="lotato.js"></script>
