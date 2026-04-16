@@ -175,15 +175,15 @@
             try {
                 const resp = await fetch(url, opts);
                 if (resp.status === 401) { logout(); return null; }
-                // Pour les autres erreurs, on retourne null mais on ne déconnecte pas
                 if (!resp.ok) {
-                    console.warn(`API ${url} a retourné ${resp.status}`);
-                    showNotification(`Erreur ${resp.status} sur ${url}`, 'error');
+                    const errorData = await resp.json().catch(() => ({}));
+                    console.warn(`API ${url} a retourné ${resp.status}:`, errorData);
+                    showToast(`Erreur ${resp.status}: ${errorData.error || 'inconnue'}`, 'error');
                     return null;
                 }
                 return await resp.json();
             } catch(e) { 
-                showNotification('Erreur réseau', 'error'); 
+                showToast('Erreur réseau', 'error'); 
                 return null; 
             }
         }
@@ -277,19 +277,57 @@
 
         async function saveUser() {
             const id = document.getElementById('editUserId').value;
+            const fullname = document.getElementById('userFullname').value.trim();
+            const username = document.getElementById('userUsername').value.trim();
+            const password = document.getElementById('userPassword').value;
+            const roleSelect = document.getElementById('userRole').value;
+            const isActive = document.getElementById('userActive').checked;
+
+            // Validation
+            if (!fullname || !username) {
+                showToast('Nom complet et identifiant requis', 'error');
+                return;
+            }
+            if (!id && !password) {
+                showToast('Mot de passe obligatoire pour un nouvel utilisateur', 'error');
+                return;
+            }
+
+            // Déterminer rôle et niveau
+            let role = roleSelect;
+            let level = null;
+            if (roleSelect === 'supervisor') {
+                role = 'supervisor';
+                level = 1;
+            } else if (roleSelect === 'supervisor2') {
+                role = 'supervisor';
+                level = 2;
+            }
+
             const payload = {
-                name: document.getElementById('userFullname').value,
-                username: document.getElementById('userUsername').value,
-                password: document.getElementById('userPassword').value || undefined,
-                role: document.getElementById('userRole').value === 'supervisor2' ? 'supervisor' : document.getElementById('userRole').value,
-                level: document.getElementById('userRole').value === 'supervisor2' ? 2 : (document.getElementById('userRole').value === 'supervisor' ? 1 : null),
-                is_active: document.getElementById('userActive').checked
+                name: fullname,
+                username: username,
+                password: password || undefined,
+                role: role,
+                level: level,
+                is_active: isActive
             };
+
+            console.log('Sauvegarde utilisateur:', payload);
+
             const url = id ? `/api/subsystem/users/${id}` : '/api/subsystem/users/create';
             const method = id ? 'PUT' : 'POST';
+            
             const resp = await apiCall(url, method, payload);
-            if(resp?.success) { showToast("Utilisateur enregistré", "success"); document.getElementById('userModal').classList.remove('active'); loadUsers(); }
-            else showToast("Erreur lors de l'enregistrement", "error");
+            console.log('Réponse API:', resp);
+            if(resp?.success) {
+                showToast(id ? 'Utilisateur modifié' : 'Utilisateur créé', 'success');
+                document.getElementById('userModal').classList.remove('active');
+                loadUsers();
+            } else {
+                // L'erreur est déjà affichée par apiCall, mais on peut ajouter un message générique
+                if (resp) showToast(resp.error || 'Erreur lors de l\'enregistrement', 'error');
+            }
         }
 
         // ---------- TICKETS ----------
