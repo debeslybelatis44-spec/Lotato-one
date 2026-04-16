@@ -14,7 +14,7 @@
         <header>
             <div class="header-content">
                 <div class="logo-container">
-                    <img src="logo-borlette.jpg" alt="Logo" class="logo-image" id="company-logo">
+                    <img src="" alt="Logo" class="logo-image" id="company-logo">
                     <div class="logo">
                         <i class="fas fa-dice"></i>
                     </div>
@@ -89,7 +89,6 @@
                 </div>
                 <div class="draw-countdown">18 h 30 min</div>
             </div>
-            
             <div class="draw-card georgia" data-draw="georgia">
                 <div class="draw-icon"><i class="fas fa-map-marker-alt"></i></div>
                 <h3>Georgia</h3>
@@ -99,7 +98,6 @@
                 </div>
                 <div class="draw-countdown">17 h 29 min</div>
             </div>
-            
             <div class="draw-card newyork" data-draw="newyork">
                 <div class="draw-icon"><i class="fas fa-building"></i></div>
                 <h3>New York</h3>
@@ -109,7 +107,6 @@
                 </div>
                 <div class="draw-countdown">19 h 30 min</div>
             </div>
-            
             <div class="draw-card texas" data-draw="texas">
                 <div class="draw-icon"><i class="fas fa-hat-cowboy"></i></div>
                 <h3>Texas</h3>
@@ -119,7 +116,6 @@
                 </div>
                 <div class="draw-countdown">18 h 27 min</div>
             </div>
-            
             <div class="draw-card tunisia" data-draw="tunisia">
                 <div class="draw-icon"><i class="fas fa-flag"></i></div>
                 <h3>Tunisie</h3>
@@ -131,18 +127,11 @@
             </div>
         </div>
         
-        <!-- Derniers résultats -->
-        <div class="results-section">
-            <div class="section-title">
-                <i class="fas fa-trophy"></i>
-                <h2>Dènye Rezilta</h2>
-            </div>
-            <div class="results-grid" id="results-grid"></div>
-            <div class="ticket-actions" style="margin-top: 15px;">
-                <button class="ticket-action-btn save-print-btn" id="generate-report-btn">
-                    <i class="fas fa-file-alt"></i> Jenere Rapò Fin Tiraj
-                </button>
-            </div>
+        <!-- Bouton pour afficher les résultats (remplace l'affichage permanent) -->
+        <div class="action-buttons" style="margin: 15px 0;">
+            <button id="show-results-btn" class="btn-primary" style="width:100%;">
+                <i class="fas fa-trophy"></i> Voir Dènye Rezilta
+            </button>
         </div>
     </div>
     
@@ -277,7 +266,6 @@
             </button>
             <h2 class="screen-title">Rapò & Komisyon</h2>
         </div>
-        
         <div class="report-filters">
             <div class="filter-buttons">
                 <button class="filter-btn active" data-period="15days">15 dènye jou</button>
@@ -292,97 +280,36 @@
                 <button class="filter-btn" id="apply-custom">Aplike</button>
             </div>
         </div>
-        
         <div class="report-stats" id="report-stats">
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-chart-simple"></i></div>
-                <div class="stat-info">
-                    <span class="stat-label">Total Vant</span>
-                    <span class="stat-value" id="total-sales">0 G</span>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-percent"></i></div>
-                <div class="stat-info">
-                    <span class="stat-label">Komisyon Agent</span>
-                    <span class="stat-value" id="commission-rate">0%</span>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-coins"></i></div>
-                <div class="stat-info">
-                    <span class="stat-label">Komisyon Ganyen</span>
-                    <span class="stat-value" id="commission-earned">0 G</span>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-trophy"></i></div>
-                <div class="stat-info">
-                    <span class="stat-label">Total Pyman</span>
-                    <span class="stat-value" id="total-payouts">0 G</span>
-                </div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
-                <div class="stat-info">
-                    <span class="stat-label">Bénéfis Net</span>
-                    <span class="stat-value" id="net-profit">0 G</span>
-                </div>
-            </div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-simple"></i></div><div class="stat-info"><span class="stat-label">Total Vant</span><span class="stat-value" id="total-sales">0 G</span></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-percent"></i></div><div class="stat-info"><span class="stat-label">Komisyon Agent</span><span class="stat-value" id="commission-rate">0%</span></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-coins"></i></div><div class="stat-info"><span class="stat-label">Komisyon Ganyen</span><span class="stat-value" id="commission-earned">0 G</span></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-trophy"></i></div><div class="stat-info"><span class="stat-label">Total Pyman</span><span class="stat-value" id="total-payouts">0 G</span></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-info"><span class="stat-label">Bénéfis Net</span><span class="stat-value" id="net-profit">0 G</span></div></div>
         </div>
-        
-        <div class="report-detail">
-            <h3>Detay pa Tiraj</h3>
-            <div id="report-detail-list"></div>
-        </div>
+        <div class="report-detail"><h3>Detay pa Tiraj</h3><div id="report-detail-list"></div></div>
     </div>
     
     <!-- Écran des fiches gagnantes -->
     <div class="screen" id="winning-tickets-screen">
-        <div class="screen-header">
-            <button class="back-button" data-screen="home">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <h2 class="screen-title">Fich Genyen</h2>
-        </div>
-        <div class="search-history">
-            <input type="text" id="search-winning-tickets" class="search-input" placeholder="Chache fiche...">
-            <button class="search-btn" id="search-winning-btn"><i class="fas fa-search"></i> Chache</button>
-        </div>
+        <div class="screen-header"><button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Fich Genyen</h2></div>
+        <div class="search-history"><input type="text" id="search-winning-tickets" class="search-input" placeholder="Chache fiche..."><button class="search-btn" id="search-winning-btn"><i class="fas fa-search"></i> Chache</button></div>
         <div id="winning-tickets-list"></div>
     </div>
     
     <!-- Écran historique avec gestion des tickets -->
     <div class="screen" id="history-screen">
-        <div class="screen-header">
-            <button class="back-button" data-screen="home">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <h2 class="screen-title">Istorik Parye</h2>
-        </div>
-        <div class="search-history">
-            <input type="text" id="search-history" class="search-input" placeholder="Chache fiche...">
-            <button class="search-btn" id="search-history-btn"><i class="fas fa-search"></i> Chache</button>
-        </div>
+        <div class="screen-header"><button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Istorik Parye</h2></div>
+        <div class="search-history"><input type="text" id="search-history" class="search-input" placeholder="Chache fiche..."><button class="search-btn" id="search-history-btn"><i class="fas fa-search"></i> Chache</button></div>
         <div id="history-list"></div>
     </div>
     
     <!-- Écran de vérification des résultats (3 lots) -->
     <div class="results-check-screen" id="results-check-screen">
-        <div class="screen-header">
-            <button class="back-button" id="back-from-results">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <h2 class="screen-title">Verifye fich ki genyen</h2>
-        </div>
+        <div class="screen-header"><button class="back-button" id="back-from-results"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Verifye fich ki genyen</h2></div>
         <div style="margin-bottom: 20px;">
-            <div class="draw-info">
-                <h4>Rezilta Dènye Tiraj (3 lot)</h4>
-                <div id="latest-results"></div>
-            </div>
-            <button class="check-results-btn" id="check-winners-btn">
-                <i class="fas fa-trophy"></i> Fich ki Genyen
-            </button>
+            <div class="draw-info"><h4>Rezilta Dènye Tiraj (3 lot)</h4><div id="latest-results"></div></div>
+            <button class="check-results-btn" id="check-winners-btn"><i class="fas fa-trophy"></i> Fich ki Genyen</button>
             <div style="margin-top: 20px;" id="winning-summary"></div>
         </div>
         <div id="winning-tickets-container"></div>
@@ -390,33 +317,20 @@
     
     <!-- Écran des fiches multi-tirages -->
     <div class="multi-tickets-screen" id="multi-tickets-screen">
-        <div class="screen-header">
-            <button class="back-button" id="back-from-multi-tickets">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <h2 class="screen-title">Fiche Multi-Tirages</h2>
-        </div>
+        <div class="screen-header"><button class="back-button" id="back-from-multi-tickets"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Fiche Multi-Tirages</h2></div>
         <div id="multi-tickets-list"></div>
     </div>
     
-    <!-- Écran de rapport de fin tiraj (rapide) -->
+    <!-- Écran de rapport de fin tiraj -->
     <div class="report-screen" id="end-draw-report-screen">
-        <div class="screen-header">
-            <button class="back-button" id="back-from-report">
-                <i class="fas fa-arrow-left"></i>
-            </button>
-            <h2 class="screen-title">Rapò Fin Tiraj</h2>
-        </div>
+        <div class="screen-header"><button class="back-button" id="back-from-report"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Rapò Fin Tiraj</h2></div>
         <div class="report-container" id="report-content"></div>
     </div>
     
-    <!-- Modal pour rejouer un ticket (choix du tirage) -->
+    <!-- Modal pour rejouer un ticket -->
     <div class="modal" id="replay-ticket-modal" style="display: none;">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>Rejoue fiche</h3>
-                <button class="modal-close">&times;</button>
-            </div>
+            <div class="modal-header"><h3>Rejoue fiche</h3><button class="modal-close">&times;</button></div>
             <div class="modal-body">
                 <p>Chwazi tiraj pou rejoue fiche #<span id="replay-ticket-number"></span></p>
                 <select id="replay-draw-select" class="modal-select"></select>
@@ -429,10 +343,7 @@
     <!-- Modal pour modifier un ticket -->
     <div class="modal" id="edit-ticket-modal" style="display: none;">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>Modifye fiche</h3>
-                <button class="modal-close">&times;</button>
-            </div>
+            <div class="modal-header"><h3>Modifye fiche</h3><button class="modal-close">&times;</button></div>
             <div class="modal-body">
                 <p>Fiche #<span id="edit-ticket-number"></span></p>
                 <div id="edit-bets-container"></div>
@@ -442,7 +353,6 @@
     </div>
 
     <script src="lotato.js"></script>
-    
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/service-worker.js')

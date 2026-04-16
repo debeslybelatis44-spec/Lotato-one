@@ -1,5 +1,5 @@
 // ==========================================
-// LOTATO - Interface Agent (Version Améliorée)
+// LOTATO - Interface Agent (Version Complète Améliorée)
 // ==========================================
 
 const API_BASE_URL = '';
@@ -101,6 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadMyTickets();
     await loadMultiDrawTickets();
     await loadWinningTickets();
+    await loadLotteryConfig();
 
     updateCurrentTime();
     setInterval(updateCurrentTime, 60000);
@@ -110,7 +111,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('main-container').style.display = 'block';
     document.getElementById('bottom-nav').style.display = 'flex';
-    updateResultsDisplay();
     updateCompanyDisplay();
 });
 
@@ -137,6 +137,21 @@ async function loadSettings() {
     }
 }
 
+async function loadLotteryConfig() {
+    try {
+        const res = await apiCall('/api/lottery/config');
+        if (res?.success && res.config) {
+            const cfg = res.config;
+            if (cfg.name) companyInfo.name = cfg.name;
+            if (cfg.slogan) companyInfo.slogan = cfg.slogan;
+            if (cfg.logo) companyInfo.logo = cfg.logo;
+            if (cfg.address) companyInfo.address = cfg.address;
+            if (cfg.phone) companyInfo.phone = cfg.phone;
+            updateCompanyDisplay();
+        }
+    } catch (e) { console.warn("Impossible de charger la config du propriétaire", e); }
+}
+
 function updateCompanyDisplay() {
     document.getElementById('company-name').textContent = companyInfo.name;
     document.getElementById('company-slogan').textContent = companyInfo.slogan;
@@ -148,7 +163,6 @@ function updateCompanyDisplay() {
 async function loadResults() {
     const res = await apiCall('/api/results');
     if (res?.success) resultsDatabase = res.results;
-    updateResultsDisplay();
 }
 
 async function loadMyTickets() {
@@ -164,19 +178,6 @@ async function loadMultiDrawTickets() {
 async function loadWinningTickets() {
     const res = await apiCall('/api/tickets/winning');
     if (res?.success) winningTickets = res.tickets;
-}
-
-function updateResultsDisplay() {
-    const grid = document.getElementById('results-grid');
-    if (!grid) return;
-    grid.innerHTML = '';
-    Object.keys(draws).forEach(drawId => {
-        const card = document.createElement('div');
-        card.className = 'result-card';
-        const result = resultsDatabase[drawId]?.morning || { lot1: '---', lot2: '---', lot3: '---' };
-        card.innerHTML = `<h4>${draws[drawId].name}</h4><div class="result-number">${result.lot1} | ${result.lot2} | ${result.lot3}</div>`;
-        grid.appendChild(card);
-    });
 }
 
 // ==========================================
@@ -203,6 +204,7 @@ function setupEventListeners() {
         if (activeBets.length) saveAndPrintTicket();
         else showNotification("Pa gen parye", "warning");
     });
+    document.getElementById('show-results-btn').addEventListener('click', openResultsCheckScreen);
     document.getElementById('generate-report-btn').addEventListener('click', generateEndOfDrawReport);
     document.getElementById('open-results-check').addEventListener('click', openResultsCheckScreen);
     document.getElementById('check-winners-btn').addEventListener('click', checkWinningTickets);
@@ -222,7 +224,6 @@ function setupEventListeners() {
     document.getElementById('search-winning-btn').addEventListener('click', searchWinningTickets);
     document.getElementById('search-history-btn').addEventListener('click', searchHistory);
     
-    // Report filters
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -238,7 +239,6 @@ function setupEventListeners() {
         else showNotification("Chwazi de dat", "warning");
     });
     
-    // Modal close buttons
     document.querySelectorAll('.modal-close').forEach(btn => {
         btn.addEventListener('click', () => {
             document.getElementById('replay-ticket-modal').style.display = 'none';
@@ -301,7 +301,6 @@ function closeBettingScreen() {
 }
 
 function setupGameSelection() {
-    // Recréer les écouteurs pour tous les jeux (y compris le nouveau jeu nx)
     document.querySelectorAll('.game-item').forEach(item => {
         item.replaceWith(item.cloneNode(true));
     });
@@ -319,71 +318,6 @@ function setupGameSelection() {
     });
 }
 
-// Formulaire pour le jeu NX (dans spéciaux)
-function showNxGameForm() {
-    const bet = betTypes.nx;
-    document.getElementById('games-interface').style.display = 'none';
-    const form = document.getElementById('bet-form');
-    form.style.display = 'block';
-    let html = `<h3>${bet.name}</h3>
-                <div class="bulk-add-container">
-                    <input type="text" id="nx-bulk-numbers" class="bulk-numbers-input" placeholder="Eg: N0,N1,N2 ou N0,N1,N2,N3,N4,N5,N6,N7,N8,N9">
-                    <button class="bulk-add-btn" id="bulk-add-nx">+ Ajoute tout</button>
-                </div>
-                <div class="n-balls-container show" id="n-balls-container-nx">
-                    ${[...Array(10)].map((_, i) => `<div class="n-ball" data-n="${i}">N${i}</div>`).join('')}
-                </div>
-                <div class="quick-bet-form">
-                    <label>Kantite pou chak boule</label>
-                    <input type="number" id="nx-amount" placeholder="Kantite" min="1" value="1">
-                </div>
-                <div class="bet-actions">
-                    <button class="btn-primary" id="add-nx-bet">Ajoute seleksyon</button>
-                    <button class="btn-secondary" id="return-to-types">Retounen</button>
-                </div>`;
-    form.innerHTML = html;
-
-    document.getElementById('return-to-types').addEventListener('click', () => { form.style.display = 'none'; document.getElementById('games-interface').style.display = 'block'; });
-    
-    // Ajout groupé via champ texte
-    document.getElementById('bulk-add-nx').addEventListener('click', () => {
-        const input = document.getElementById('nx-bulk-numbers').value;
-        const amount = parseInt(document.getElementById('nx-amount').value);
-        if (!amount || amount <= 0) return showNotification("Kantite valab obligatwa", "warning");
-        const matches = input.match(/N(\d)/gi);
-        if (matches) {
-            const numbers = matches.map(m => parseInt(m.replace('N',''))).filter(n => !isNaN(n) && n >=0 && n <=9);
-            const unique = [...new Set(numbers)];
-            if (unique.length) {
-                unique.forEach(n => {
-                    const numbersList = Array.from({ length: 10 }, (_, i) => String(i + n).padStart(2, '0'));
-                    activeBets.push({ type: 'borlette', name: bet.name + ` N${n}`, number: `${n}0-${n}9`, amount: amount * 10, multiplier: bet.multiplier, isGroup: true, details: numbersList.map(num => ({ number: num, amount: amount })) });
-                });
-                updateBetsList();
-                showNotification(`${unique.length} seri Nx ajoute!`, "success");
-            }
-        }
-    });
-    
-    // Ajout individuel par clic sur les boules
-    document.querySelectorAll('.n-ball').forEach(ball => {
-        ball.addEventListener('click', () => {
-            const n = ball.dataset.n;
-            const amount = parseInt(document.getElementById('nx-amount').value);
-            if (!amount || amount <= 0) return showNotification("Kantite valab obligatwa", "warning");
-            const numbers = Array.from({ length: 10 }, (_, i) => String(i + parseInt(n)).padStart(2, '0'));
-            activeBets.push({ type: 'borlette', name: bet.name + ` N${n}`, number: `${n}0-${n}9`, amount: amount * 10, multiplier: bet.multiplier, isGroup: true, details: numbers.map(num => ({ number: num, amount: amount })) });
-            updateBetsList();
-            showNotification(`10 boule N${n} ajoute!`, "success");
-        });
-    });
-    
-    document.getElementById('add-nx-bet').addEventListener('click', () => {
-        // Ajoute les boules sélectionnées (par défaut aucune, mais on peut ajouter une sélection)
-        showNotification("Klike sou boule Nx pou ajoute", "info");
-    });
-}
-
 function showBetForm(gameType) {
     const bet = betTypes[gameType];
     document.getElementById('games-interface').style.display = 'none';
@@ -393,13 +327,17 @@ function showBetForm(gameType) {
 
     if (gameType === 'borlette' || gameType === 'boulpe') {
         html += `<div class="bulk-add-container">
-                    <input type="text" id="bulk-numbers" class="bulk-numbers-input" placeholder="Eg: 12 23 45 67 (separe pa espas)" maxlength="50">
+                    <input type="text" id="bulk-numbers" class="bulk-numbers-input" placeholder="Eg: 12 23 45 67" maxlength="50">
                     <button class="bulk-add-btn" id="bulk-add-bet">+ Ajoute tout</button>
                  </div>
                  <div class="quick-bet-form">
                     <input type="text" id="${gameType}-number" placeholder="00" maxlength="2" class="quick-number-input">
                     <input type="number" id="${gameType}-amount" placeholder="Kantite" min="1" value="1" class="quick-amount-input">
                     <button class="btn-primary" id="add-bet">Ajoute</button>
+                 </div>
+                 <div class="nx-button" id="show-nx-balls"><i class="fas fa-chart-simple"></i> Nx</div>
+                 <div class="n-balls-container" id="n-balls-container">
+                    ${[...Array(10)].map((_, i) => `<div class="n-ball" data-n="${i}">N${i}</div>`).join('')}
                  </div>`;
     } else if (gameType === 'lotto3' || gameType === 'grap') {
         html += `<div class="quick-bet-form">
@@ -431,7 +369,6 @@ function showBetForm(gameType) {
     document.getElementById('return-to-types').addEventListener('click', () => { form.style.display = 'none'; document.getElementById('games-interface').style.display = 'block'; });
     document.getElementById('add-bet').addEventListener('click', () => addBet(gameType));
     
-    // Ajout groupé pour borlette/boulpe
     const bulkAddBtn = document.getElementById('bulk-add-bet');
     if (bulkAddBtn) {
         bulkAddBtn.addEventListener('click', () => {
@@ -450,8 +387,27 @@ function showBetForm(gameType) {
         });
     }
     
-    setupAutoFocusInputs();
-
+    const nxBtn = document.getElementById('show-nx-balls');
+    if (nxBtn) {
+        nxBtn.addEventListener('click', () => {
+            const container = document.getElementById('n-balls-container');
+            if (container) container.classList.toggle('show');
+        });
+    }
+    
+    if (gameType === 'borlette' || gameType === 'boulpe') {
+        document.querySelectorAll('.n-ball').forEach(ball => {
+            ball.addEventListener('click', () => {
+                const n = ball.dataset.n;
+                const amount = document.getElementById(`${gameType}-amount`).value;
+                if (!amount || amount <= 0) return showNotification("Kantite valab obligatwa", "warning");
+                const numbers = Array.from({ length: 10 }, (_, i) => String(i + parseInt(n)).padStart(2, '0'));
+                activeBets.push({ type: gameType, name: bet.name + ` N${n}`, number: `${n}0-${n}9`, amount: parseInt(amount) * 10, multiplier: bet.multiplier, isGroup: true, details: numbers.map(num => ({ number: num, amount: parseInt(amount) })) });
+                updateBetsList();
+                showNotification(`10 boule N${n} ajoute!`, "success");
+            });
+        });
+    }
     if (gameType === 'grap') {
         document.querySelectorAll('.pair-ball').forEach(ball => {
             ball.addEventListener('click', () => {
@@ -460,6 +416,65 @@ function showBetForm(gameType) {
             });
         });
     }
+    setupAutoFocusInputs();
+}
+
+function showNxGameForm() {
+    const bet = betTypes.nx;
+    document.getElementById('games-interface').style.display = 'none';
+    const form = document.getElementById('bet-form');
+    form.style.display = 'block';
+    let html = `<h3>${bet.name}</h3>
+                <div class="bulk-add-container">
+                    <input type="text" id="nx-bulk-numbers" class="bulk-numbers-input" placeholder="Eg: N0,N1,N2 ou N0,N1,N2,N3,N4,N5,N6,N7,N8,N9">
+                    <button class="bulk-add-btn" id="bulk-add-nx">+ Ajoute tout</button>
+                </div>
+                <div class="n-balls-container show" id="n-balls-container-nx">
+                    ${[...Array(10)].map((_, i) => `<div class="n-ball" data-n="${i}">N${i}</div>`).join('')}
+                </div>
+                <div class="quick-bet-form">
+                    <label>Kantite pou chak boule</label>
+                    <input type="number" id="nx-amount" placeholder="Kantite" min="1" value="1">
+                </div>
+                <div class="bet-actions">
+                    <button class="btn-primary" id="add-nx-bet">Ajoute seleksyon</button>
+                    <button class="btn-secondary" id="return-to-types">Retounen</button>
+                </div>`;
+    form.innerHTML = html;
+
+    document.getElementById('return-to-types').addEventListener('click', () => { form.style.display = 'none'; document.getElementById('games-interface').style.display = 'block'; });
+    document.getElementById('bulk-add-nx').addEventListener('click', () => {
+        const input = document.getElementById('nx-bulk-numbers').value;
+        const amount = parseInt(document.getElementById('nx-amount').value);
+        if (!amount || amount <= 0) return showNotification("Kantite valab obligatwa", "warning");
+        const matches = input.match(/N(\d)/gi);
+        if (matches) {
+            const numbers = matches.map(m => parseInt(m.replace('N',''))).filter(n => !isNaN(n) && n >=0 && n <=9);
+            const unique = [...new Set(numbers)];
+            if (unique.length) {
+                unique.forEach(n => {
+                    const numbersList = Array.from({ length: 10 }, (_, i) => String(i + n).padStart(2, '0'));
+                    activeBets.push({ type: 'borlette', name: bet.name + ` N${n}`, number: `${n}0-${n}9`, amount: amount * 10, multiplier: bet.multiplier, isGroup: true, details: numbersList.map(num => ({ number: num, amount: amount })) });
+                });
+                updateBetsList();
+                showNotification(`${unique.length} seri Nx ajoute!`, "success");
+            }
+        }
+    });
+    document.querySelectorAll('.n-ball').forEach(ball => {
+        ball.addEventListener('click', () => {
+            const n = ball.dataset.n;
+            const amount = parseInt(document.getElementById('nx-amount').value);
+            if (!amount || amount <= 0) return showNotification("Kantite valab obligatwa", "warning");
+            const numbers = Array.from({ length: 10 }, (_, i) => String(i + parseInt(n)).padStart(2, '0'));
+            activeBets.push({ type: 'borlette', name: bet.name + ` N${n}`, number: `${n}0-${n}9`, amount: amount * 10, multiplier: bet.multiplier, isGroup: true, details: numbers.map(num => ({ number: num, amount: amount })) });
+            updateBetsList();
+            showNotification(`10 boule N${n} ajoute!`, "success");
+        });
+    });
+    document.getElementById('add-nx-bet').addEventListener('click', () => {
+        showNotification("Klike sou boule Nx pou ajoute", "info");
+    });
 }
 
 function showAutoGameForm(gameType) {
@@ -521,7 +536,8 @@ function showAutoGameForm(gameType) {
 }
 
 function updateSelectedBallsDisplay() {
-    document.getElementById('selected-balls-list').textContent = selectedBalls.length ? selectedBalls.join(', ') : 'Pa gen boul';
+    const span = document.getElementById('selected-balls-list');
+    if (span) span.textContent = selectedBalls.length ? selectedBalls.join(', ') : 'Pa gen boul';
 }
 
 function addBet(gameType) {
@@ -656,196 +672,6 @@ function printTicket(ticketId, ticketNumber) {
     `);
     printWindow.document.close();
     printWindow.print();
-}
-
-// ==========================================
-// Gestion des tickets (Modifier, Supprimer, Rejouer)
-// ==========================================
-function updateHistoryScreen() {
-    const list = document.getElementById('history-list');
-    if (!savedTickets.length) {
-        list.innerHTML = '<p>Pa gen fich pou montre</p>';
-        return;
-    }
-    const now = new Date();
-    list.innerHTML = savedTickets.map(ticket => {
-        const createdAt = new Date(ticket.created_at);
-        const diffMinutes = (now - createdAt) / (1000 * 60);
-        const canEditDelete = companyInfo.allowEditDelete && diffMinutes <= companyInfo.editDeleteDelay;
-        return `
-            <div class="ticket-item" data-ticket-id="${ticket.id}" data-ticket-number="${ticket.ticket_number}">
-                <div class="ticket-header">
-                    <span class="ticket-number">#${ticket.ticket_number}</span>
-                    <span class="ticket-date">${createdAt.toLocaleString()}</span>
-                    <span class="ticket-amount">${ticket.total_amount} G</span>
-                </div>
-                <div class="ticket-details">
-                    ${ticket.bets.map(b => `${b.bet_type}: ${b.numbers} (${b.amount}G)`).join(' | ')}
-                </div>
-                <div class="ticket-actions-buttons">
-                    ${canEditDelete ? `<button class="ticket-action-icon edit" data-action="edit" title="Modifye"><i class="fas fa-edit"></i></button>` : ''}
-                    ${canEditDelete ? `<button class="ticket-action-icon delete" data-action="delete" title="Supprime"><i class="fas fa-trash"></i></button>` : ''}
-                    <button class="ticket-action-icon replay" data-action="replay" title="Rejoue nan lòt tiraj"><i class="fas fa-redo"></i></button>
-                </div>
-            </div>
-        `;
-    }).join('');
-    
-    // Ajouter les écouteurs pour les actions
-    document.querySelectorAll('.ticket-item').forEach(item => {
-        const ticketId = item.dataset.ticketId;
-        const ticketNumber = item.dataset.ticketNumber;
-        item.querySelectorAll('.ticket-action-icon').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const action = btn.dataset.action;
-                if (action === 'edit') openEditTicket(ticketId);
-                else if (action === 'delete') deleteTicket(ticketId);
-                else if (action === 'replay') openReplayTicket(ticketId, ticketNumber);
-            });
-        });
-    });
-}
-
-async function deleteTicket(ticketId) {
-    if (!confirm("Èske ou sèten ou vle efase fiche sa?")) return;
-    const res = await apiCall(`/api/tickets/${ticketId}`, 'DELETE');
-    if (res?.success) {
-        showNotification("Fiche efase!", "success");
-        await loadMyTickets();
-        updateHistoryScreen();
-    } else {
-        showNotification("Erreur efasman", "error");
-    }
-}
-
-function openEditTicket(ticketId) {
-    const ticket = savedTickets.find(t => t.id == ticketId);
-    if (!ticket) return;
-    document.getElementById('edit-ticket-number').textContent = ticket.ticket_number;
-    const container = document.getElementById('edit-bets-container');
-    // Afficher les paris actuels pour modification simple (on peut proposer de modifier les montants)
-    container.innerHTML = ticket.bets.map((bet, idx) => `
-        <div class="edit-bet-item">
-            <span>${bet.bet_type}: ${bet.numbers}</span>
-            <input type="number" id="edit-amount-${idx}" value="${bet.amount}" min="1" style="width:80px">
-        </div>
-    `).join('');
-    document.getElementById('edit-ticket-modal').style.display = 'flex';
-    
-    document.getElementById('save-edited-ticket').onclick = async () => {
-        const newBets = ticket.bets.map((bet, idx) => ({
-            ...bet,
-            amount: parseInt(document.getElementById(`edit-amount-${idx}`).value) || bet.amount
-        }));
-        const newTotal = newBets.reduce((s, b) => s + b.amount, 0);
-        const res = await apiCall(`/api/tickets/${ticketId}`, 'PUT', { bets: newBets, total: newTotal });
-        if (res?.success) {
-            showNotification("Fiche modifye!", "success");
-            document.getElementById('edit-ticket-modal').style.display = 'none';
-            await loadMyTickets();
-            updateHistoryScreen();
-        } else {
-            showNotification("Erreur modifikasyon", "error");
-        }
-    };
-}
-
-function openReplayTicket(ticketId, ticketNumber) {
-    const ticket = savedTickets.find(t => t.id == ticketId);
-    if (!ticket) return;
-    document.getElementById('replay-ticket-number').textContent = ticketNumber;
-    const drawSelect = document.getElementById('replay-draw-select');
-    const timeSelect = document.getElementById('replay-time-select');
-    drawSelect.innerHTML = '';
-    Object.keys(draws).forEach(drawId => {
-        const option = document.createElement('option');
-        option.value = drawId;
-        option.textContent = draws[drawId].name;
-        drawSelect.appendChild(option);
-    });
-    drawSelect.onchange = () => {
-        const drawId = drawSelect.value;
-        timeSelect.innerHTML = '';
-        Object.keys(draws[drawId].times).forEach(time => {
-            const opt = document.createElement('option');
-            opt.value = time;
-            opt.textContent = time === 'morning' ? 'Maten' : 'Swè';
-            timeSelect.appendChild(opt);
-        });
-    };
-    drawSelect.dispatchEvent(new Event('change'));
-    document.getElementById('replay-ticket-modal').style.display = 'flex';
-    
-    document.getElementById('confirm-replay').onclick = async () => {
-        const newDraw = drawSelect.value;
-        const newTime = timeSelect.value;
-        // Recréer les paris du ticket dans le nouveau tirage
-        const newBets = ticket.bets.map(b => ({
-            type: b.bet_type,
-            number: b.numbers,
-            amount: b.amount,
-            multiplier: b.multiplier,
-            options: b.options || null
-        }));
-        const newTicket = { draw: newDraw, draw_time: newTime, bets: newBets, total: ticket.total_amount };
-        const res = await apiCall('/api/tickets', 'POST', { ticket: newTicket });
-        if (res?.success) {
-            showNotification(`Fiche rejoue nan ${draws[newDraw].name} ${newTime}!`, "success");
-            document.getElementById('replay-ticket-modal').style.display = 'none';
-            await loadMyTickets();
-            updateHistoryScreen();
-        } else {
-            showNotification("Erreur rejoue", "error");
-        }
-    };
-}
-
-function searchHistory() {
-    const term = document.getElementById('search-history').value.toLowerCase();
-    const filtered = savedTickets.filter(t => t.ticket_number.toLowerCase().includes(term));
-    const list = document.getElementById('history-list');
-    if (!filtered.length) {
-        list.innerHTML = '<p>Aucun résultat</p>';
-        return;
-    }
-    const now = new Date();
-    list.innerHTML = filtered.map(ticket => {
-        const createdAt = new Date(ticket.created_at);
-        const diffMinutes = (now - createdAt) / (1000 * 60);
-        const canEditDelete = companyInfo.allowEditDelete && diffMinutes <= companyInfo.editDeleteDelay;
-        return `
-            <div class="ticket-item" data-ticket-id="${ticket.id}" data-ticket-number="${ticket.ticket_number}">
-                <div class="ticket-header">
-                    <span class="ticket-number">#${ticket.ticket_number}</span>
-                    <span class="ticket-date">${createdAt.toLocaleString()}</span>
-                    <span class="ticket-amount">${ticket.total_amount} G</span>
-                </div>
-                <div class="ticket-details">
-                    ${ticket.bets.map(b => `${b.bet_type}: ${b.numbers} (${b.amount}G)`).join(' | ')}
-                </div>
-                <div class="ticket-actions-buttons">
-                    ${canEditDelete ? `<button class="ticket-action-icon edit" data-action="edit" title="Modifye"><i class="fas fa-edit"></i></button>` : ''}
-                    ${canEditDelete ? `<button class="ticket-action-icon delete" data-action="delete" title="Supprime"><i class="fas fa-trash"></i></button>` : ''}
-                    <button class="ticket-action-icon replay" data-action="replay" title="Rejoue"><i class="fas fa-redo"></i></button>
-                </div>
-            </div>
-        `;
-    }).join('');
-    // Réattacher les événements (similaire à updateHistoryScreen)
-    document.querySelectorAll('.ticket-item').forEach(item => {
-        const ticketId = item.dataset.ticketId;
-        const ticketNumber = item.dataset.ticketNumber;
-        item.querySelectorAll('.ticket-action-icon').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const action = btn.dataset.action;
-                if (action === 'edit') openEditTicket(ticketId);
-                else if (action === 'delete') deleteTicket(ticketId);
-                else if (action === 'replay') openReplayTicket(ticketId, ticketNumber);
-            });
-        });
-    });
 }
 
 // ==========================================
@@ -991,20 +817,11 @@ function loadReportByPeriod(period) {
     const end = new Date();
     let start = new Date();
     switch(period) {
-        case 'today':
-            start.setHours(0,0,0,0);
-            break;
-        case '7days':
-            start.setDate(end.getDate() - 7);
-            break;
-        case '15days':
-            start.setDate(end.getDate() - 15);
-            break;
-        case 'month':
-            start = new Date(end.getFullYear(), end.getMonth(), 1);
-            break;
-        default:
-            start.setDate(end.getDate() - 15);
+        case 'today': start.setHours(0,0,0,0); break;
+        case '7days': start.setDate(end.getDate() - 7); break;
+        case '15days': start.setDate(end.getDate() - 15); break;
+        case 'month': start = new Date(end.getFullYear(), end.getMonth(), 1); break;
+        default: start.setDate(end.getDate() - 15);
     }
     const startStr = start.toISOString().split('T')[0];
     const endStr = end.toISOString().split('T')[0];
@@ -1025,11 +842,9 @@ function loadReportData(startDate, endDate) {
         const createdAt = new Date(t.created_at);
         return createdAt >= startDate && createdAt <= endDate;
     });
-    
     const totalSales = filteredTickets.reduce((sum, t) => sum + t.total_amount, 0);
     const commissionRate = companyInfo.agentCommission;
     const commissionEarned = totalSales * (commissionRate / 100);
-    
     const filteredWinnings = winningTickets.filter(w => {
         const createdAt = new Date(w.created_at);
         return createdAt >= startDate && createdAt <= endDate;
@@ -1078,6 +893,194 @@ function generateEndOfDrawReport() {
     document.getElementById('end-draw-report-screen').style.display = 'block';
     const total = savedTickets.reduce((s, t) => s + t.total_amount, 0);
     document.getElementById('report-content').innerHTML = `<h3>Rapò Fin Tiraj</h3><p>Total tickets: ${savedTickets.length}</p><p>Total montant: ${total} HTG</p>`;
+}
+
+// ==========================================
+// Historique, modification, rejeu
+// ==========================================
+function updateHistoryScreen() {
+    const list = document.getElementById('history-list');
+    if (!savedTickets.length) {
+        list.innerHTML = '<p>Pa gen fich pou montre</p>';
+        return;
+    }
+    const now = new Date();
+    list.innerHTML = savedTickets.map(ticket => {
+        const createdAt = new Date(ticket.created_at);
+        const diffMinutes = (now - createdAt) / (1000 * 60);
+        const canEditDelete = companyInfo.allowEditDelete && diffMinutes <= companyInfo.editDeleteDelay;
+        return `
+            <div class="ticket-item" data-ticket-id="${ticket.id}" data-ticket-number="${ticket.ticket_number}">
+                <div class="ticket-header">
+                    <span class="ticket-number">#${ticket.ticket_number}</span>
+                    <span class="ticket-date">${createdAt.toLocaleString()}</span>
+                    <span class="ticket-amount">${ticket.total_amount} G</span>
+                </div>
+                <div class="ticket-details">
+                    ${ticket.bets.map(b => `${b.bet_type}: ${b.numbers} (${b.amount}G)`).join(' | ')}
+                </div>
+                <div class="ticket-actions-buttons">
+                    ${canEditDelete ? `<button class="ticket-action-icon edit" data-action="edit" title="Modifye"><i class="fas fa-edit"></i></button>` : ''}
+                    ${canEditDelete ? `<button class="ticket-action-icon delete" data-action="delete" title="Supprime"><i class="fas fa-trash"></i></button>` : ''}
+                    <button class="ticket-action-icon replay" data-action="replay" title="Rejoue nan lòt tiraj"><i class="fas fa-redo"></i></button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    document.querySelectorAll('.ticket-item').forEach(item => {
+        const ticketId = item.dataset.ticketId;
+        const ticketNumber = item.dataset.ticketNumber;
+        item.querySelectorAll('.ticket-action-icon').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = btn.dataset.action;
+                if (action === 'edit') openEditTicket(ticketId);
+                else if (action === 'delete') deleteTicket(ticketId);
+                else if (action === 'replay') openReplayTicket(ticketId, ticketNumber);
+            });
+        });
+    });
+}
+
+async function deleteTicket(ticketId) {
+    if (!confirm("Èske ou sèten ou vle efase fiche sa?")) return;
+    const res = await apiCall(`/api/tickets/${ticketId}`, 'DELETE');
+    if (res?.success) {
+        showNotification("Fiche efase!", "success");
+        await loadMyTickets();
+        updateHistoryScreen();
+    } else {
+        showNotification("Erreur efasman", "error");
+    }
+}
+
+function openEditTicket(ticketId) {
+    const ticket = savedTickets.find(t => t.id == ticketId);
+    if (!ticket) return;
+    document.getElementById('edit-ticket-number').textContent = ticket.ticket_number;
+    const container = document.getElementById('edit-bets-container');
+    container.innerHTML = ticket.bets.map((bet, idx) => `
+        <div class="edit-bet-item">
+            <span>${bet.bet_type}: ${bet.numbers}</span>
+            <input type="number" id="edit-amount-${idx}" value="${bet.amount}" min="1" style="width:80px">
+        </div>
+    `).join('');
+    document.getElementById('edit-ticket-modal').style.display = 'flex';
+    
+    document.getElementById('save-edited-ticket').onclick = async () => {
+        const newBets = ticket.bets.map((bet, idx) => ({
+            ...bet,
+            amount: parseInt(document.getElementById(`edit-amount-${idx}`).value) || bet.amount
+        }));
+        const newTotal = newBets.reduce((s, b) => s + b.amount, 0);
+        const res = await apiCall(`/api/tickets/${ticketId}`, 'PUT', { bets: newBets, total: newTotal });
+        if (res?.success) {
+            showNotification("Fiche modifye!", "success");
+            document.getElementById('edit-ticket-modal').style.display = 'none';
+            await loadMyTickets();
+            updateHistoryScreen();
+        } else {
+            showNotification("Erreur modifikasyon", "error");
+        }
+    };
+}
+
+function openReplayTicket(ticketId, ticketNumber) {
+    const ticket = savedTickets.find(t => t.id == ticketId);
+    if (!ticket) return;
+    document.getElementById('replay-ticket-number').textContent = ticketNumber;
+    const drawSelect = document.getElementById('replay-draw-select');
+    const timeSelect = document.getElementById('replay-time-select');
+    drawSelect.innerHTML = '';
+    Object.keys(draws).forEach(drawId => {
+        const option = document.createElement('option');
+        option.value = drawId;
+        option.textContent = draws[drawId].name;
+        drawSelect.appendChild(option);
+    });
+    drawSelect.onchange = () => {
+        const drawId = drawSelect.value;
+        timeSelect.innerHTML = '';
+        Object.keys(draws[drawId].times).forEach(time => {
+            const opt = document.createElement('option');
+            opt.value = time;
+            opt.textContent = time === 'morning' ? 'Maten' : 'Swè';
+            timeSelect.appendChild(opt);
+        });
+    };
+    drawSelect.dispatchEvent(new Event('change'));
+    document.getElementById('replay-ticket-modal').style.display = 'flex';
+    
+    document.getElementById('confirm-replay').onclick = async () => {
+        const newDraw = drawSelect.value;
+        const newTime = timeSelect.value;
+        // Recréer les paris du ticket dans le nouveau tirage
+        const newBets = ticket.bets.map(b => ({
+            type: b.bet_type,
+            number: b.numbers,
+            amount: b.amount,
+            multiplier: b.multiplier,
+            options: b.options || null
+        }));
+        const newTicket = { draw: newDraw, draw_time: newTime, bets: newBets, total: ticket.total_amount };
+        const res = await apiCall('/api/tickets', 'POST', { ticket: newTicket });
+        if (res?.success) {
+            showNotification(`Fiche rejoue nan ${draws[newDraw].name} ${newTime}!`, "success");
+            document.getElementById('replay-ticket-modal').style.display = 'none';
+            await loadMyTickets();
+            updateHistoryScreen();
+        } else {
+            showNotification("Erreur rejoue", "error");
+        }
+    };
+}
+
+function searchHistory() {
+    const term = document.getElementById('search-history').value.toLowerCase();
+    const filtered = savedTickets.filter(t => t.ticket_number.toLowerCase().includes(term));
+    const list = document.getElementById('history-list');
+    if (!filtered.length) {
+        list.innerHTML = '<p>Aucun résultat</p>';
+        return;
+    }
+    const now = new Date();
+    list.innerHTML = filtered.map(ticket => {
+        const createdAt = new Date(ticket.created_at);
+        const diffMinutes = (now - createdAt) / (1000 * 60);
+        const canEditDelete = companyInfo.allowEditDelete && diffMinutes <= companyInfo.editDeleteDelay;
+        return `
+            <div class="ticket-item" data-ticket-id="${ticket.id}" data-ticket-number="${ticket.ticket_number}">
+                <div class="ticket-header">
+                    <span class="ticket-number">#${ticket.ticket_number}</span>
+                    <span class="ticket-date">${createdAt.toLocaleString()}</span>
+                    <span class="ticket-amount">${ticket.total_amount} G</span>
+                </div>
+                <div class="ticket-details">
+                    ${ticket.bets.map(b => `${b.bet_type}: ${b.numbers} (${b.amount}G)`).join(' | ')}
+                </div>
+                <div class="ticket-actions-buttons">
+                    ${canEditDelete ? `<button class="ticket-action-icon edit" data-action="edit" title="Modifye"><i class="fas fa-edit"></i></button>` : ''}
+                    ${canEditDelete ? `<button class="ticket-action-icon delete" data-action="delete" title="Supprime"><i class="fas fa-trash"></i></button>` : ''}
+                    <button class="ticket-action-icon replay" data-action="replay" title="Rejoue"><i class="fas fa-redo"></i></button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    // Réattacher les événements
+    document.querySelectorAll('.ticket-item').forEach(item => {
+        const ticketId = item.dataset.ticketId;
+        const ticketNumber = item.dataset.ticketNumber;
+        item.querySelectorAll('.ticket-action-icon').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const action = btn.dataset.action;
+                if (action === 'edit') openEditTicket(ticketId);
+                else if (action === 'delete') deleteTicket(ticketId);
+                else if (action === 'replay') openReplayTicket(ticketId, ticketNumber);
+            });
+        });
+    });
 }
 
 function setupAutoFocusInputs() {
