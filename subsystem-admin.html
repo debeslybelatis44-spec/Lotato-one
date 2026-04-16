@@ -2,34 +2,389 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Test Propriétaire</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Lotato - Administration Sous‑système</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background: #f1f5f9; min-height: 100vh; }
+        .app-container { display: flex; min-height: 100vh; }
+        .sidebar { width: 280px; background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); color: #e2e8f0; position: fixed; height: 100vh; overflow-y: auto; box-shadow: 4px 0 20px rgba(0,0,0,0.08); z-index: 100; }
+        .sidebar-header { padding: 24px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-header i { font-size: 2.8rem; color: #f59e0b; margin-bottom: 8px; }
+        .sidebar-header h2 { font-size: 1.4rem; font-weight: 700; }
+        .sidebar-header p { font-size: 0.75rem; opacity: 0.7; }
+        .user-badge { background: rgba(255,255,255,0.08); margin: 20px 16px; padding: 12px; border-radius: 16px; display: flex; align-items: center; gap: 12px; }
+        .user-avatar { width: 44px; height: 44px; background: #f59e0b; border-radius: 40px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; color: #0f172a; }
+        .user-info h4 { font-size: 0.9rem; }
+        .user-info span { font-size: 0.7rem; opacity: 0.7; }
+        .nav-menu { margin-top: 20px; }
+        .nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 20px; margin: 4px 12px; border-radius: 12px; color: #cbd5e1; cursor: pointer; transition: all 0.2s; }
+        .nav-item i { width: 24px; font-size: 1.2rem; }
+        .nav-item.active { background: #f59e0b; color: white; box-shadow: 0 6px 12px rgba(245,158,11,0.2); }
+        .nav-item:hover:not(.active) { background: rgba(255,255,255,0.05); color: white; }
+        .main-content { flex: 1; margin-left: 280px; padding: 24px 32px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+        .page-title { font-size: 1.8rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 10px; }
+        .btn { padding: 10px 20px; border-radius: 40px; border: none; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; background: #f59e0b; color: white; }
+        .btn-outline { background: white; border: 1px solid #cbd5e1; color: #1e293b; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 32px; }
+        .stat-card { background: white; border-radius: 24px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+        .stat-left h3 { font-size: 1.8rem; font-weight: 800; color: #0f172a; }
+        .stat-icon { width: 52px; height: 52px; background: #fef3c7; border-radius: 40px; display: flex; align-items: center; justify-content: center; color: #f59e0b; font-size: 1.6rem; }
+        .card-panel { background: white; border-radius: 28px; padding: 24px; margin-bottom: 28px; box-shadow: 0 8px 20px rgba(0,0,0,0.02); border: 1px solid #eef2ff; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 12px 8px; border-bottom: 1px solid #e2e8f0; }
+        th { font-weight: 600; color: #334155; }
+        .badge { padding: 4px 10px; border-radius: 40px; font-size: 0.7rem; font-weight: 600; }
+        .badge-active { background: #dcfce7; color: #15803d; }
+        .badge-inactive { background: #fee2e2; color: #b91c1c; }
+        .action-icon { cursor: pointer; margin: 0 6px; color: #64748b; transition: 0.2s; }
+        .action-icon:hover { color: #f59e0b; }
+        .modal { display: none; position: fixed; top:0;left:0;right:0;bottom:0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; max-width: 550px; width: 90%; border-radius: 32px; padding: 24px; max-height: 85vh; overflow-y: auto; }
+        .form-group { margin-bottom: 18px; }
+        .form-group label { font-weight: 600; display: block; margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 16px; }
+        .tabs { display: flex; gap: 8px; border-bottom: 1px solid #e2e8f0; margin-bottom: 24px; }
+        .tab-btn { background: none; border: none; padding: 8px 20px; font-weight: 600; cursor: pointer; border-radius: 30px; transition: 0.2s; }
+        .tab-btn.active { background: #f59e0b; color: white; }
+        .toast { position: fixed; bottom: 30px; right: 30px; background: #1e293b; color: white; padding: 12px 20px; border-radius: 40px; z-index: 1100; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px);} to { opacity: 1; transform: translateY(0);} }
+        @media (max-width: 800px) {
+            .sidebar { width: 80px; }
+            .sidebar-header p, .user-info span, .nav-item span, .user-info h4 { display: none; }
+            .nav-item { justify-content: center; padding: 12px; }
+            .main-content { margin-left: 80px; padding: 16px; }
+            .user-badge { justify-content: center; }
+        }
+    </style>
 </head>
 <body>
-    <h1>Test Propriétaire</h1>
-    <div id="result">Chargement...</div>
-    <script>
-        const token = localStorage.getItem('lotato_token');
-        if (!token) {
-            document.getElementById('result').innerHTML = 'Aucun token. <a href="/index.html">Se connecter</a>';
-        } else {
-            fetch('/api/auth/check', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('result').innerHTML = `
-                        <p>✅ Authentifié</p>
-                        <pre>${JSON.stringify(data.user, null, 2)}</pre>
-                    `;
-                } else {
-                    document.getElementById('result').innerHTML = `❌ Échec: ${data.error}`;
+<div class="app-container">
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-building"></i>
+            <h2>LOTATO</h2>
+            <p>Espace propriétaire</p>
+        </div>
+        <div class="user-badge">
+            <div class="user-avatar" id="adminAvatar">P</div>
+            <div class="user-info">
+                <h4 id="adminName">Propriétaire</h4>
+                <span id="adminSubdomain">sous-système</span>
+            </div>
+        </div>
+        <div class="nav-menu">
+            <div class="nav-item active" data-tab="dashboard"><i class="fas fa-chart-line"></i><span>Tableau de bord</span></div>
+            <div class="nav-item" data-tab="users"><i class="fas fa-users"></i><span>Utilisateurs</span></div>
+            <div class="nav-item" data-tab="tickets"><i class="fas fa-ticket-alt"></i><span>Tickets</span></div>
+            <div class="nav-item" data-tab="config"><i class="fas fa-sliders-h"></i><span>Configuration</span></div>
+        </div>
+        <div style="padding: 20px; margin-top: auto;">
+            <button class="btn-outline" id="logoutBtn" style="width:100%; background:transparent; border-color:#475569; color:white">Déconnexion</button>
+        </div>
+    </div>
+    <div class="main-content">
+        <div class="top-bar">
+            <div class="page-title"><i class="fas fa-tachometer-alt"></i> Administration</div>
+            <div><button class="btn" id="refreshData"><i class="fas fa-sync-alt"></i> Actualiser</button></div>
+        </div>
+
+        <!-- DASHBOARD -->
+        <div id="dashboardPanel" class="tab-panel">
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-left"><h3 id="todaySales">0</h3><span>Ventes aujourd'hui (HTG)</span></div><div class="stat-icon"><i class="fas fa-money-bill"></i></div></div>
+                <div class="stat-card"><div class="stat-left"><h3 id="todayTickets">0</h3><span>Tickets aujourd'hui</span></div><div class="stat-icon"><i class="fas fa-receipt"></i></div></div>
+                <div class="stat-card"><div class="stat-left"><h3 id="connectedUsers">0</h3><span>Utilisateurs connectés</span></div><div class="stat-icon"><i class="fas fa-user-check"></i></div></div>
+            </div>
+            <div class="card-panel"><h3><i class="fas fa-trophy"></i> Derniers tickets</h3><div id="recentTickets">Aucun ticket récent</div></div>
+        </div>
+
+        <!-- UTILISATEURS -->
+        <div id="usersPanel" class="tab-panel" style="display:none;">
+            <div class="card-panel">
+                <div class="section-header"><h3><i class="fas fa-user-plus"></i> Gestion des utilisateurs</h3><button class="btn btn-sm" id="createUserBtn"><i class="fas fa-plus"></i> Nouvel utilisateur</button></div>
+                <div class="tabs" id="userTabs">
+                    <button class="tab-btn active" data-role="all">Tous</button>
+                    <button class="tab-btn" data-role="agent">Agents</button>
+                    <button class="tab-btn" data-role="supervisor">Superviseurs</button>
+                </div>
+                <div style="overflow-x:auto"><table id="usersTable"><thead><tr><th>Nom</th><th>Rôle</th><th>Identifiant</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="usersTbody"></tbody></table></div>
+            </div>
+        </div>
+
+        <!-- TICKETS -->
+        <div id="ticketsPanel" class="tab-panel" style="display:none;">
+            <div class="card-panel">
+                <div class="section-header"><h3><i class="fas fa-list"></i> Tous les tickets</h3></div>
+                <div style="overflow-x:auto"><table id="ticketsTable"><thead><tr><th>#Ticket</th><th>Agent</th><th>Tirage</th><th>Montant</th><th>Date</th></tr></thead><tbody id="ticketsTbody"></tbody></table></div>
+            </div>
+        </div>
+
+        <!-- CONFIGURATION -->
+        <div id="configPanel" class="tab-panel" style="display:none;">
+            <div class="card-panel">
+                <h3><i class="fas fa-building"></i> Informations société</h3>
+                <div class="form-group"><label>Nom de l'entreprise</label><input type="text" id="companyName" class="form-control"></div>
+                <div class="form-group"><label>Slogan</label><input type="text" id="companySlogan" class="form-control"></div>
+                <div class="form-group"><label>Téléphone</label><input type="text" id="companyPhone" class="form-control"></div>
+                <div class="form-group"><label>Commission par défaut (%)</label><input type="number" id="defaultCommission" class="form-control" step="0.5"></div>
+                <button class="btn" id="saveCompanyConfig">Sauvegarder</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL UTILISATEUR -->
+<div id="userModal" class="modal">
+    <div class="modal-content">
+        <h3>Créer / Modifier utilisateur</h3>
+        <input type="hidden" id="editUserId">
+        <div class="form-group"><label>Nom complet</label><input id="userFullname" class="form-control"></div>
+        <div class="form-group"><label>Nom d'utilisateur</label><input id="userUsername" class="form-control"></div>
+        <div class="form-group"><label>Mot de passe (laisser vide si inchangé)</label><input id="userPassword" type="password" class="form-control"></div>
+        <div class="form-group"><label>Rôle</label><select id="userRole" class="form-control"><option value="agent">Agent</option><option value="supervisor">Superviseur N1</option><option value="supervisor2">Superviseur N2</option></select></div>
+        <div class="form-group"><label>Actif</label><input type="checkbox" id="userActive" checked></div>
+        <div style="display:flex; justify-content:flex-end; gap:12px"><button class="btn-outline" id="closeUserModal">Annuler</button><button class="btn" id="saveUserBtn">Enregistrer</button></div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const API_BASE = '';
+        let token = localStorage.getItem('lotato_token');
+        let allUsers = [];
+        let allTickets = [];
+
+        function showToast(msg, type='success') {
+            const toast = document.createElement('div'); toast.className = 'toast';
+            toast.innerHTML = `<i class="fas fa-${type==='success'?'check-circle':'exclamation-circle'}"></i> ${msg}`;
+            document.body.appendChild(toast); setTimeout(()=>toast.remove(), 3500);
+        }
+
+        // --- API Call robuste : ne déconnecte JAMAIS sur 403/500 ---
+        async function apiCall(url, method='GET', body=null) {
+            const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+            const opts = { method, headers };
+            if(body) opts.body = JSON.stringify(body);
+            try {
+                const resp = await fetch(url, opts);
+                if (resp.status === 401) { logout(); return null; }
+                // Pour les autres erreurs, on retourne null mais on ne déconnecte pas
+                if (!resp.ok) {
+                    console.warn(`API ${url} a retourné ${resp.status}`);
+                    showNotification(`Erreur ${resp.status} sur ${url}`, 'error');
+                    return null;
                 }
-            })
-            .catch(err => {
-                document.getElementById('result').innerHTML = `❌ Erreur: ${err.message}`;
+                return await resp.json();
+            } catch(e) { 
+                showNotification('Erreur réseau', 'error'); 
+                return null; 
+            }
+        }
+
+        function logout() { localStorage.clear(); window.location.href='/index.html'; }
+
+        // ---------- DASHBOARD ----------
+        async function loadDashboardData() {
+            const stats = await apiCall('/api/subsystem/stats');
+            if(stats?.success) {
+                document.getElementById('todaySales').innerText = (stats.stats.today_sales || 0).toLocaleString();
+                document.getElementById('todayTickets').innerText = stats.stats.today_tickets || 0;
+            }
+            const usersRes = await apiCall('/api/subsystem/users');
+            if(usersRes?.success) {
+                const connected = usersRes.users.filter(u => u.is_online === 1).length;
+                document.getElementById('connectedUsers').innerText = connected;
+            }
+            const ticketsRes = await apiCall('/api/tickets');
+            if(ticketsRes?.success) {
+                const recent = ticketsRes.tickets.slice(0,5).map(t => `<div>#${t.ticket_number} - ${t.total_amount} HTG (${t.agent_name||'Agent'})</div>`).join('');
+                document.getElementById('recentTickets').innerHTML = recent || 'Aucun ticket récent';
+            }
+        }
+
+        // ---------- UTILISATEURS ----------
+        async function loadUsers() {
+            const res = await apiCall('/api/subsystem/users');
+            if(res?.success) {
+                allUsers = res.users;
+                renderUsersTable(allUsers);
+            }
+        }
+
+        function renderUsersTable(users) {
+            const tbody = document.getElementById('usersTbody');
+            tbody.innerHTML = '';
+            users.forEach(u => {
+                const roleLabel = u.role === 'agent' ? 'Agent' : (u.level === 1 ? 'Superviseur N1' : 'Superviseur N2');
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${u.full_name || u.username}</td>
+                    <td>${roleLabel}</td>
+                    <td>${u.username}</td>
+                    <td><span class="badge ${u.is_active ? 'badge-active' : 'badge-inactive'}">${u.is_active ? 'Actif' : 'Inactif'}</span></td>
+                    <td>
+                        <i class="fas fa-edit action-icon edit-user" data-id="${u.id}"></i>
+                        <i class="fas fa-toggle-${u.is_active?'off':'on'} action-icon toggle-status" data-id="${u.id}" data-status="${u.is_active}"></i>
+                        <i class="fas fa-trash-alt action-icon delete-user" data-id="${u.id}"></i>
+                    </td>`;
+                tbody.appendChild(tr);
+            });
+            attachUserActions();
+        }
+
+        function attachUserActions() {
+            document.querySelectorAll('.edit-user').forEach(el => el.addEventListener('click', (e) => openUserModal(el.dataset.id)));
+            document.querySelectorAll('.toggle-status').forEach(el => el.addEventListener('click', async (e) => {
+                const id = el.dataset.id; const current = el.dataset.status === 'true';
+                await apiCall(`/api/subsystem/users/${id}/status`, 'PUT', { is_active: !current });
+                loadUsers(); showToast("Statut modifié", "success");
+            }));
+            document.querySelectorAll('.delete-user').forEach(el => el.addEventListener('click', async (e) => {
+                if(confirm("Supprimer définitivement ?")) {
+                    await apiCall(`/api/subsystem/users/${el.dataset.id}`, 'DELETE');
+                    loadUsers(); showToast("Utilisateur supprimé","success");
+                }
+            }));
+        }
+
+        async function openUserModal(userId = null) {
+            document.getElementById('userModal').classList.add('active');
+            if(userId) {
+                const user = allUsers.find(u=>u.id == userId);
+                if(user) {
+                    document.getElementById('editUserId').value = user.id;
+                    document.getElementById('userFullname').value = user.full_name || '';
+                    document.getElementById('userUsername').value = user.username;
+                    document.getElementById('userRole').value = user.role === 'supervisor' ? (user.level===1?'supervisor':'supervisor2') : user.role;
+                    document.getElementById('userActive').checked = user.is_active === 1;
+                }
+            } else {
+                document.getElementById('editUserId').value = '';
+                document.getElementById('userFullname').value = '';
+                document.getElementById('userUsername').value = '';
+                document.getElementById('userPassword').value = '';
+                document.getElementById('userRole').value = 'agent';
+                document.getElementById('userActive').checked = true;
+            }
+        }
+
+        async function saveUser() {
+            const id = document.getElementById('editUserId').value;
+            const payload = {
+                name: document.getElementById('userFullname').value,
+                username: document.getElementById('userUsername').value,
+                password: document.getElementById('userPassword').value || undefined,
+                role: document.getElementById('userRole').value === 'supervisor2' ? 'supervisor' : document.getElementById('userRole').value,
+                level: document.getElementById('userRole').value === 'supervisor2' ? 2 : (document.getElementById('userRole').value === 'supervisor' ? 1 : null),
+                is_active: document.getElementById('userActive').checked
+            };
+            const url = id ? `/api/subsystem/users/${id}` : '/api/subsystem/users/create';
+            const method = id ? 'PUT' : 'POST';
+            const resp = await apiCall(url, method, payload);
+            if(resp?.success) { showToast("Utilisateur enregistré", "success"); document.getElementById('userModal').classList.remove('active'); loadUsers(); }
+            else showToast("Erreur lors de l'enregistrement", "error");
+        }
+
+        // ---------- TICKETS ----------
+        async function loadTickets() {
+            const res = await apiCall('/api/tickets');
+            if(res?.success) {
+                allTickets = res.tickets;
+                renderTickets(allTickets);
+            }
+        }
+
+        function renderTickets(tickets) {
+            const tbody = document.getElementById('ticketsTbody');
+            tbody.innerHTML = '';
+            tickets.slice(0,200).forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${t.ticket_number}</td><td>${t.agent_name || 'Agent'}</td><td>${t.draw} (${t.draw_time})</td><td>${t.total_amount} HTG</td><td>${new Date(t.created_at).toLocaleDateString()}</td>`;
+                tbody.appendChild(tr);
             });
         }
-    </script>
+
+        // ---------- CONFIGURATION ----------
+        async function loadSettings() {
+            const res = await apiCall('/api/settings');
+            if(res?.success) {
+                const s = res.settings;
+                document.getElementById('companyName').value = s.company_name || '';
+                document.getElementById('companySlogan').value = s.company_slogan || '';
+                document.getElementById('companyPhone').value = s.company_phone || '';
+                document.getElementById('defaultCommission').value = s.default_commission || 10;
+            }
+        }
+
+        async function saveSettings() {
+            const settings = {
+                company_name: document.getElementById('companyName').value,
+                company_slogan: document.getElementById('companySlogan').value,
+                company_phone: document.getElementById('companyPhone').value,
+                default_commission: document.getElementById('defaultCommission').value
+            };
+            await apiCall('/api/settings', 'POST', { settings });
+            showToast("Configuration sauvegardée", "success");
+        }
+
+        // ---------- INITIALISATION ----------
+        document.addEventListener('DOMContentLoaded', async () => {
+            token = localStorage.getItem('lotato_token');
+            if(!token) { window.location.href='/index.html'; return; }
+            const check = await apiCall('/api/auth/check');
+            if(!check?.success || (check.user.role !== 'subsystem')) { logout(); return; }
+            document.getElementById('adminName').innerText = check.user.full_name || 'Propriétaire';
+            
+            await loadDashboardData();
+            await loadUsers();
+            await loadTickets();
+            await loadSettings();
+
+            // Navigation
+            document.querySelectorAll('.nav-item').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.nav-item').forEach(t=>t.classList.remove('active'));
+                    tab.classList.add('active');
+                    const tabId = tab.dataset.tab;
+                    document.querySelectorAll('.tab-panel').forEach(p=>p.style.display='none');
+                    document.getElementById(tabId+'Panel').style.display = 'block';
+                    if(tabId === 'users') loadUsers();
+                    if(tabId === 'tickets') loadTickets();
+                    if(tabId === 'config') loadSettings();
+                    if(tabId === 'dashboard') loadDashboardData();
+                });
+            });
+
+            document.getElementById('refreshData').addEventListener('click', ()=>{
+                loadDashboardData(); loadUsers(); loadTickets();
+            });
+            document.getElementById('createUserBtn').addEventListener('click', ()=>openUserModal());
+            document.getElementById('closeUserModal').addEventListener('click', ()=>document.getElementById('userModal').classList.remove('active'));
+            document.getElementById('saveUserBtn').addEventListener('click', saveUser);
+            document.getElementById('saveCompanyConfig').addEventListener('click', saveSettings);
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+
+            // Filtres utilisateurs
+            document.querySelectorAll('#userTabs .tab-btn').forEach(btn=>{
+                btn.addEventListener('click', ()=>{
+                    document.querySelectorAll('#userTabs .tab-btn').forEach(b=>b.classList.remove('active'));
+                    btn.classList.add('active');
+                    const role = btn.dataset.role;
+                    let filtered = allUsers;
+                    if(role === 'agent') filtered = allUsers.filter(u=>u.role === 'agent');
+                    else if(role === 'supervisor') filtered = allUsers.filter(u=>u.role === 'supervisor');
+                    renderUsersTable(filtered);
+                });
+            });
+        });
+    })();
+</script>
 </body>
 </html>
