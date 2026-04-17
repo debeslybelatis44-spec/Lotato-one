@@ -168,7 +168,6 @@
                 <i class="fas fa-arrow-left"></i>
             </button>
             <h2 class="betting-title" id="betting-title">parye</h2>
-            <!-- Le bouton "Konfime Parye" a été supprimé -->
         </div>
         
         <div id="total-notification-container" style="margin-bottom: 15px;"></div>
@@ -238,11 +237,16 @@
                         <div class="game-multiplier">x 5000</div>
                         <small>Lotto 4 otomatik</small>
                     </div>
+                    <div class="game-item special" data-game="nx">
+                        <div class="game-name">NX (Boul N0-N9)</div>
+                        <div class="game-multiplier">x 60</div>
+                        <small>10 boule Nx</small>
+                    </div>
                 </div>
             </div>
         </div>
         
-        <!-- Boutons automatiques (cachés, gardés pour compatibilité) -->
+        <!-- Boutons automatiques -->
         <div class="auto-buttons" id="auto-buttons" style="display: none;">
             <button class="auto-btn" id="auto-marriage-btn">Maryaj Otomatik</button>
             <button class="auto-btn" id="auto-lotto4-btn">Lotto 4 Otomatik</button>
@@ -369,18 +373,6 @@
             <h2 class="screen-title">Rapò Fin Tiraj</h2>
         </div>
         <div class="report-container" id="report-content"></div>
-    </div>
-    
-    <!-- Modale pour modifier un ticket -->
-    <div class="modal" id="edit-ticket-modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header"><h3>Modifye fiche</h3><button class="modal-close">&times;</button></div>
-            <div class="modal-body">
-                <p>Fiche #<span id="edit-ticket-number"></span></p>
-                <div id="edit-bets-container"></div>
-                <button id="save-edited-ticket" class="btn-primary">Sove Modifyasyon</button>
-            </div>
-        </div>
     </div>
 
     <script src="lotato.js"></script>
