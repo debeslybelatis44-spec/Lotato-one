@@ -10,6 +10,9 @@
     <meta name="theme-color" content="#ad00f1">
 </head>
 <body>
+    <div class="sync-status" id="sync-status" style="display: none;"><i class="fas fa-cloud"></i> <span>Hors ligne</span></div>
+
+    <!-- ÉCRAN D'ACCUEIL (TIER LIST) -->
     <div class="container" id="main-container">
         <header>
             <div class="header-content">
@@ -30,7 +33,6 @@
             </div>
         </header>
 
-        <!-- Cartes des tirages -->
         <div class="draws-container">
             <div class="draw-card miami" data-draw="miami"><div class="draw-icon"><i class="fas fa-sun"></i></div><h3>Miami</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">1:30 PM</button><button class="draw-btn evening" data-time="evening">9:50 PM</button></div><div class="draw-countdown">18 h 30 min</div></div>
             <div class="draw-card georgia" data-draw="georgia"><div class="draw-icon"><i class="fas fa-map-marker-alt"></i></div><h3>Georgia</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">12:30 PM</button><button class="draw-btn evening" data-time="evening">7:00 PM</button></div><div class="draw-countdown">17 h 29 min</div></div>
@@ -38,21 +40,37 @@
             <div class="draw-card texas" data-draw="texas"><div class="draw-icon"><i class="fas fa-hat-cowboy"></i></div><h3>Texas</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">12:00 PM</button><button class="draw-btn evening" data-time="evening">6:00 PM</button></div><div class="draw-countdown">18 h 27 min</div></div>
             <div class="draw-card tunisia" data-draw="tunisia"><div class="draw-icon"><i class="fas fa-flag"></i></div><h3>Tunisie</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">10:30 AM</button><button class="draw-btn evening" data-time="evening">2:00 PM</button></div><div class="draw-countdown">8 h 30 min</div></div>
         </div>
+    </div>
 
-        <!-- 3 boutons catégories -->
+    <!-- ÉCRAN DE PARI -->
+    <div class="betting-screen" id="betting-screen">
+        <div class="betting-header">
+            <button class="back-button" id="back-button"><i class="fas fa-arrow-left"></i></button>
+            <h2 class="betting-title" id="betting-title">Parye</h2>
+        </div>
+
         <div class="game-category-buttons">
             <button class="game-category-btn active" data-category="borlette"><i class="fas fa-dice"></i> Borlette</button>
             <button class="game-category-btn" data-category="lotto"><i class="fas fa-list-ol"></i> Lotto</button>
             <button class="game-category-btn" data-category="special"><i class="fas fa-star"></i> Espesyal</button>
         </div>
 
-        <!-- Panneau des jeux -->
         <div id="games-panel" class="games-panel"></div>
 
-        <!-- Formulaire de pari -->
-        <div id="bet-form" class="bet-form"></div>
+        <div id="bet-form" class="bet-form">
+            <div class="form-group">
+                <label id="bet-form-label">Nimewo</label>
+                <div class="inline-form">
+                    <input type="text" id="bet-number" placeholder="Eg: 12" maxlength="2" autocomplete="off">
+                    <input type="number" id="bet-amount" placeholder="Montan" value="1" min="1">
+                    <button id="add-bet-btn" class="add-icon"><i class="fas fa-check"></i></button>
+                </div>
+            </div>
+            <div class="bet-actions">
+                <button id="close-form-btn" class="btn-secondary">Fèmen</button>
+            </div>
+        </div>
 
-        <!-- Panier actif -->
         <div class="active-bets" id="active-bets">
             <div class="ticket-actions">
                 <button class="save-print-btn" id="save-print-ticket"><i class="fas fa-save"></i> <i class="fas fa-print"></i> Anrejistre & Enprime</button>
@@ -63,15 +81,7 @@
         </div>
     </div>
 
-    <!-- Navigation basse -->
-    <div class="bottom-nav">
-        <div class="nav-item active" data-screen="home"><div class="nav-icon"><i class="fas fa-home"></i></div><span>Akèy</span></div>
-        <div class="nav-item" data-screen="report"><div class="nav-icon"><i class="fas fa-chart-line"></i></div><span>Rapò</span></div>
-        <div class="nav-item" data-screen="winning-tickets"><div class="nav-icon"><i class="fas fa-trophy"></i></div><span>Fich Genyen</span></div>
-        <div class="nav-item" data-screen="history"><div class="nav-icon"><i class="fas fa-history"></i></div><span>Istorik</span></div>
-    </div>
-
-    <!-- Écran Rapport -->
+    <!-- ÉCRAN RAPPORT -->
     <div class="screen" id="report-screen">
         <div class="screen-header"><button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Rapò & Komisyon</h2></div>
         <div class="report-filters">
@@ -108,21 +118,21 @@
         <div class="report-detail"><h3>Detay pa Tiraj</h3><div id="report-detail-list"></div></div>
     </div>
 
-    <!-- Écran Fiches gagnantes -->
+    <!-- ÉCRAN FICHES GAGNANTES -->
     <div class="screen" id="winning-tickets-screen">
         <div class="screen-header"><button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Fich Genyen</h2></div>
         <div class="search-history"><input type="text" id="search-winning-tickets" placeholder="Chache fiche..."><button id="search-winning-btn">Chache</button></div>
         <div id="winning-tickets-list"></div>
     </div>
 
-    <!-- Écran Historique -->
+    <!-- ÉCRAN HISTORIQUE -->
     <div class="screen" id="history-screen">
         <div class="screen-header"><button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Istorik Parye</h2></div>
         <div class="search-history"><input type="text" id="search-history" placeholder="Chache fiche..."><button id="search-history-btn">Chache</button></div>
         <div id="history-list"></div>
     </div>
 
-    <!-- Écran vérification résultats -->
+    <!-- ÉCRAN VÉRIFICATION RÉSULTATS -->
     <div class="results-check-screen" id="results-check-screen">
         <div class="screen-header"><button class="back-button" id="back-from-results"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Verifye fich ki genyen</h2></div>
         <div id="latest-results"></div>
@@ -130,7 +140,7 @@
         <div id="winning-tickets-container"></div>
     </div>
 
-    <!-- Écran multi-tickets -->
+    <!-- ÉCRAN MULTI-TIRAGES -->
     <div class="multi-tickets-screen" id="multi-tickets-screen">
         <div class="screen-header"><button class="back-button" id="back-from-multi-tickets"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Fiche Multi-Tirages</h2></div>
         <div id="multi-tickets-list"></div>
