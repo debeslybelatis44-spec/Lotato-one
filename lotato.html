@@ -3,253 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>LOTATO - Agent Professionnel</title>
+    <title>LOTATO - Agent</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="lotato.css">
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#2c3e50">
+    <meta name="theme-color" content="#ad00f1">
 </head>
 <body>
-    <div class="app-wrapper">
-        <!-- ÉCRAN D'ACCUEIL (TIER LIST) -->
-        <div class="container" id="main-container">
-            <header>
-                <div class="header-content">
-                    <div class="logo-container">
-                        <img src="logo-borlette.jpg" alt="Logo" class="logo-image" id="company-logo">
-                        <div class="logo"><i class="fas fa-dice-d6"></i></div>
-                    </div>
-                    <div class="header-text">
-                        <h1 id="company-name">Lotato</h1>
-                        <p id="company-slogan">Chwazi yon Jwet</p>
-                    </div>
-                    <button class="logout-btn" id="logout-btn"><i class="fas fa-sign-out-alt"></i></button>
+    <div class="container" id="main-container">
+        <header>
+            <div class="header-content">
+                <div class="logo-container">
+                    <img src="logo-borlette.jpg" alt="Logo" class="logo-image" id="company-logo">
+                    <div class="logo"><i class="fas fa-dice"></i></div>
                 </div>
-                <div class="time-display"><i class="fas fa-clock"></i> <span id="current-time">Chargement...</span></div>
-                <div class="action-row">
-                    <button class="action-btn secondary" id="open-results-check"><i class="fas fa-search"></i> Tcheke Rezilta</button>
-                    <button class="action-btn secondary" id="open-multi-tickets"><i class="fas fa-layer-group"></i> Fich milti-tiraj</button>
+                <div class="header-text">
+                    <h1 id="company-name">Lotato</h1>
+                    <p id="company-slogan">Chwazi yon Jwet</p>
                 </div>
-            </header>
-
-            <div class="draws-container">
-                <div class="draw-card" data-draw="miami" data-name="Miami">
-                    <div class="draw-icon"><i class="fas fa-sun"></i></div>
-                    <h3>Miami</h3>
-                    <div class="draw-buttons">
-                        <button class="draw-time morning active" data-time="morning">1:30 PM</button>
-                        <button class="draw-time evening" data-time="evening">9:50 PM</button>
-                    </div>
-                    <div class="draw-countdown">--:--</div>
-                </div>
-                <div class="draw-card" data-draw="georgia" data-name="Georgia">
-                    <div class="draw-icon"><i class="fas fa-map-marker-alt"></i></div>
-                    <h3>Georgia</h3>
-                    <div class="draw-buttons">
-                        <button class="draw-time morning active" data-time="morning">12:30 PM</button>
-                        <button class="draw-time evening" data-time="evening">7:00 PM</button>
-                    </div>
-                    <div class="draw-countdown">--:--</div>
-                </div>
-                <div class="draw-card" data-draw="newyork" data-name="New York">
-                    <div class="draw-icon"><i class="fas fa-building"></i></div>
-                    <h3>New York</h3>
-                    <div class="draw-buttons">
-                        <button class="draw-time morning active" data-time="morning">2:30 PM</button>
-                        <button class="draw-time evening" data-time="evening">8:00 PM</button>
-                    </div>
-                    <div class="draw-countdown">--:--</div>
-                </div>
-                <div class="draw-card" data-draw="texas" data-name="Texas">
-                    <div class="draw-icon"><i class="fas fa-hat-cowboy"></i></div>
-                    <h3>Texas</h3>
-                    <div class="draw-buttons">
-                        <button class="draw-time morning active" data-time="morning">12:00 PM</button>
-                        <button class="draw-time evening" data-time="evening">6:00 PM</button>
-                    </div>
-                    <div class="draw-countdown">--:--</div>
-                </div>
-                <div class="draw-card" data-draw="tunisia" data-name="Tunisie">
-                    <div class="draw-icon"><i class="fas fa-flag"></i></div>
-                    <h3>Tunisie</h3>
-                    <div class="draw-buttons">
-                        <button class="draw-time morning active" data-time="morning">10:30 AM</button>
-                        <button class="draw-time evening" data-time="evening">2:00 PM</button>
-                    </div>
-                    <div class="draw-countdown">--:--</div>
-                </div>
+                <button class="logout-btn" id="logout-btn"><i class="fas fa-sign-out-alt"></i></button>
             </div>
-        </div>
-
-        <!-- ÉCRAN DE PARI -->
-        <div class="betting-screen" id="betting-screen">
-            <div class="betting-header">
-                <button class="back-button" id="back-button"><i class="fas fa-arrow-left"></i></button>
-                <h2 class="betting-title" id="betting-title">Parye</h2>
-                <div class="multi-draw-toggle-badge" id="multi-draw-indicator" style="display:none;">
-                    <i class="fas fa-layer-group"></i> <span>Multi</span>
-                </div>
+            <div class="time-display"><i class="fas fa-clock"></i> <span id="current-time">Chargement...</span></div>
+            <div class="action-row">
+                <button class="check-results-btn" id="open-results-check"><i class="fas fa-search"></i> Tcheke Rezilta</button>
+                <button class="check-results-btn" id="open-multi-tickets"><i class="fas fa-ticket-alt"></i> Jwe plizyè tiraj</button>
             </div>
+        </header>
 
-            <!-- Panneau multi-tirages (déroulant) -->
-            <div class="multi-draw-panel" id="multi-draw-panel">
-                <div class="multi-draw-header" onclick="toggleMultiDrawPanel()">
-                    <span><i class="fas fa-layer-group"></i> Jwe nan plizyè tiraj</span>
-                    <i class="fas fa-chevron-down" id="multi-draw-chevron"></i>
-                </div>
-                <div class="multi-draw-content" id="multi-draw-content">
-                    <div class="multi-draw-grid" id="multi-draw-options"></div>
+        <!-- Panneau Multi-Tirages -->
+        <div class="multi-draw-panel">
+            <div class="multi-draw-header">
+                <h3 class="multi-draw-title">Jwe nan Plizyè Tiraj</h3>
+                <button class="multi-draw-toggle" id="multi-draw-toggle"><i class="fas fa-chevron-down"></i></button>
+            </div>
+            <div class="multi-draw-content" id="multi-draw-content">
+                <div class="multi-draw-grid" id="multi-draw-options"></div>
+                <div class="multi-game-select" id="multi-game-select"></div>
+                <div class="multi-draw-form">
+                    <div class="form-group" id="multi-number-inputs"></div>
+                    <div class="form-group">
+                        <label for="multi-draw-amount">Kantite pa tiraj</label>
+                        <input type="number" id="multi-draw-amount" value="1">
+                    </div>
                     <div class="multi-draw-actions">
-                        <button class="btn-sm" id="clear-multi-draw">Clear</button>
-                        <button class="btn-sm primary" id="apply-multi-draw">Aplike</button>
+                        <button class="multi-draw-action-btn add-to-multi-draw" id="add-to-multi-draw"><i class="fas fa-plus"></i> Ajoute nan Fiche</button>
+                        <button class="multi-draw-action-btn view-multi-draw-ticket" id="view-current-multi-ticket"><i class="fas fa-eye"></i> Wè Fich aktyèl</button>
+                    </div>
+                </div>
+                <div id="current-multi-ticket-info" style="display:none; margin-top:15px; padding:10px; background:#f8f9fa; border-radius:8px;">
+                    <h4>Fiche Multi-Tirages Aktuèl</h4>
+                    <div id="multi-ticket-summary"></div>
+                    <div class="multi-draw-actions" style="margin-top:10px;">
+                        <button class="ticket-action-btn save-print-btn" id="save-print-multi-ticket"><i class="fas fa-save"></i> <i class="fas fa-print"></i> Anrejistre & Enprime</button>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div class="game-category-buttons">
-                <button class="category-btn active" data-category="borlette"><i class="fas fa-dice"></i> Borlette</button>
-                <button class="category-btn" data-category="lotto"><i class="fas fa-list-ol"></i> Lotto</button>
-                <button class="category-btn" data-category="special"><i class="fas fa-star"></i> Espesyal</button>
-            </div>
+        <!-- Cartes des tirages -->
+        <div class="draws-container">
+            <div class="draw-card miami" data-draw="miami"><div class="draw-icon"><i class="fas fa-sun"></i></div><h3>Miami</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">1:30 PM</button><button class="draw-btn evening" data-time="evening">9:50 PM</button></div></div>
+            <div class="draw-card georgia" data-draw="georgia"><div class="draw-icon"><i class="fas fa-map-marker-alt"></i></div><h3>Georgia</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">12:30 PM</button><button class="draw-btn evening" data-time="evening">7:00 PM</button></div></div>
+            <div class="draw-card newyork" data-draw="newyork"><div class="draw-icon"><i class="fas fa-building"></i></div><h3>New York</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">2:30 PM</button><button class="draw-btn evening" data-time="evening">8:00 PM</button></div></div>
+            <div class="draw-card texas" data-draw="texas"><div class="draw-icon"><i class="fas fa-hat-cowboy"></i></div><h3>Texas</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">12:00 PM</button><button class="draw-btn evening" data-time="evening">6:00 PM</button></div></div>
+            <div class="draw-card tunisia" data-draw="tunisia"><div class="draw-icon"><i class="fas fa-flag"></i></div><h3>Tunisie</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">10:30 AM</button><button class="draw-btn evening" data-time="evening">2:00 PM</button></div></div>
+        </div>
 
-            <div id="games-panel" class="games-panel"></div>
+        <!-- Bouton pour afficher les résultats -->
+        <div class="action-buttons" style="margin:15px 0;"><button id="show-results-btn" class="btn-primary" style="width:100%; background:#f08c00;"><i class="fas fa-trophy"></i> Voir Dènye Rezilta</button></div>
+    </div>
 
-            <div id="bet-form" class="bet-form">
-                <div class="form-group">
-                    <label id="bet-form-label">Nimewo</label>
-                    <div class="inline-form">
-                        <input type="text" id="bet-number" placeholder="Eg: 12" maxlength="2" autocomplete="off">
-                        <input type="number" id="bet-amount" placeholder="Montan" value="1" min="1">
-                        <button id="add-bet-btn" class="add-icon"><i class="fas fa-check-circle"></i></button>
-                    </div>
+    <!-- Navigation inférieure -->
+    <div class="bottom-nav" id="bottom-nav">
+        <div class="nav-item active" data-screen="home"><div class="nav-icon"><i class="fas fa-home"></i></div><span>Akèy</span></div>
+        <div class="nav-item" data-screen="report"><div class="nav-icon"><i class="fas fa-chart-line"></i></div><span>Rapò</span></div>
+        <div class="nav-item" data-screen="winning-tickets"><div class="nav-icon"><i class="fas fa-trophy"></i></div><span>Fich Genyen</span></div>
+        <div class="nav-item" data-screen="history"><div class="nav-icon"><i class="fas fa-history"></i></div><span>Istorik</span></div>
+    </div>
+
+    <!-- Écran de pari -->
+    <div class="betting-screen" id="betting-screen">
+        <div class="betting-header"><button class="back-button" id="back-button"><i class="fas fa-arrow-left"></i></button><h2 class="betting-title" id="betting-title">parye</h2></div>
+        <div class="category-tabs" id="category-tabs">
+            <button class="category-tab active" data-category="borlette">Borlette</button>
+            <button class="category-tab" data-category="lotto">Lotto</button>
+            <button class="category-tab" data-category="special">Spéciaux</button>
+        </div>
+        <div id="games-interface">
+            <div class="game-category" id="borlette-category">
+                <div class="game-category-grid">
+                    <div class="game-item borlette" data-game="borlette"><div class="game-name">BORLETTE</div><div class="game-multiplier">x60 (1er lot)</div><small>2 chif</small></div>
+                    <div class="game-item borlette" data-game="boulpe"><div class="game-name">BOUL PE</div><div class="game-multiplier">x60</div><small>00-99</small></div>
                 </div>
-                <div class="bet-actions">
-                    <button id="close-form-btn" class="btn-secondary">Fèmen</button>
+            </div>
+            <div class="game-category" id="lotto-category" style="display:none;">
+                <div class="game-category-grid">
+                    <div class="game-item lotto" data-game="lotto3"><div class="game-name">LOTO 3</div><div class="game-multiplier">x500</div><small>3 chif</small></div>
+                    <div class="game-item lotto" data-game="lotto4"><div class="game-name">LOTO 4</div><div class="game-multiplier">x5000</div><small>4 chif - 3 opsyon</small></div>
+                    <div class="game-item lotto" data-game="lotto5"><div class="game-name">LOTO 5</div><div class="game-multiplier">x25000</div><small>5 chif - 3 opsyon</small></div>
                 </div>
             </div>
-
-            <div class="active-bets" id="active-bets">
-                <div class="ticket-actions">
-                    <button class="save-print-btn" id="save-print-ticket"><i class="fas fa-save"></i> <i class="fas fa-print"></i> Anrejistre & Enprime</button>
+            <div class="game-category" id="special-category" style="display:none;">
+                <div class="game-category-grid">
+                    <div class="game-item special" data-game="grap"><div class="game-name">GRAP</div><div class="game-multiplier">x500</div><small>Boule paire</small></div>
+                    <div class="game-item special" data-game="marriage"><div class="game-name">MARYAJ</div><div class="game-multiplier">x1000</div><small>Maryaj 2 chif</small></div>
+                    <div class="game-item special" data-game="auto-marriage"><div class="game-name">MARYAJ OTOMATIK</div><div class="game-multiplier">x1000</div><small>Marie otomatik</small></div>
+                    <div class="game-item special" data-game="auto-lotto4"><div class="game-name">LOTO 4 OTOMATIK</div><div class="game-multiplier">x5000</div><small>Lotto 4 otomatik</small></div>
                 </div>
-                <h3>Parye Aktif</h3>
-                <div id="bets-list" class="bets-list-scroll"></div>
-                <div class="bet-total"><span>Total:</span><span id="bet-total">0 goud</span></div>
             </div>
         </div>
-
-        <!-- ÉCRAN RAPPORT -->
-        <div class="screen" id="report-screen">
-            <div class="screen-header">
-                <button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button>
-                <h2 class="screen-title">Rapò & Komisyon</h2>
-            </div>
-            <div class="report-filters">
-                <div class="filter-row">
-                    <div class="filter-group">
-                        <label>Peryòd</label>
-                        <div class="filter-buttons">
-                            <button class="filter-btn" data-period="today">Jodi a</button>
-                            <button class="filter-btn" data-period="7days">7 jou</button>
-                            <button class="filter-btn active" data-period="15days">15 jou</button>
-                            <button class="filter-btn" data-period="month">Mwa sa a</button>
-                        </div>
-                    </div>
-                    <div class="filter-group">
-                        <label>Tiraj</label>
-                        <select id="report-draw-select" class="draw-select">
-                            <option value="all">Tout tiraj</option>
-                            <option value="miami">Miami</option>
-                            <option value="georgia">Georgia</option>
-                            <option value="newyork">New York</option>
-                            <option value="texas">Texas</option>
-                            <option value="tunisia">Tunisie</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="custom-range">
-                    <input type="date" id="start-date">
-                    <span>→</span>
-                    <input type="date" id="end-date">
-                    <button class="btn-sm" id="apply-custom">Aplike</button>
-                </div>
-                <button id="print-report-btn" class="print-report-btn"><i class="fas fa-print"></i> Enprime rapò</button>
-            </div>
-            <div class="report-stats" id="report-stats">
-                <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div><span class="stat-label">Total Vant</span><span class="stat-value" id="total-sales">0 G</span></div></div>
-                <div class="stat-card"><div class="stat-icon"><i class="fas fa-percent"></i></div><div><span class="stat-label">Komisyon</span><span class="stat-value" id="commission-rate">0%</span></div></div>
-                <div class="stat-card"><div class="stat-icon"><i class="fas fa-coins"></i></div><div><span class="stat-label">Komisyon Ganyen</span><span class="stat-value" id="commission-earned">0 G</span></div></div>
-                <div class="stat-card"><div class="stat-icon"><i class="fas fa-trophy"></i></div><div><span class="stat-label">Total Pyman</span><span class="stat-value" id="total-payouts">0 G</span></div></div>
-                <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-simple"></i></div><div><span class="stat-label">Bénéfis Net</span><span class="stat-value" id="net-profit">0 G</span></div></div>
-            </div>
-            <div class="report-detail">
-                <h3>Detay pa tiraj</h3>
-                <div id="report-detail-list"></div>
-            </div>
-        </div>
-
-        <!-- ÉCRAN HISTORIQUE -->
-        <div class="screen" id="history-screen">
-            <div class="screen-header">
-                <button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button>
-                <h2 class="screen-title">Istorik Parye</h2>
-            </div>
-            <div class="search-box">
-                <input type="text" id="search-history" placeholder="Chache fiche...">
-                <button id="search-history-btn"><i class="fas fa-search"></i></button>
-            </div>
-            <div id="history-list" class="history-list"></div>
-        </div>
-
-        <!-- ÉCRAN FICHES GAGNANTES -->
-        <div class="screen" id="winning-tickets-screen">
-            <div class="screen-header">
-                <button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button>
-                <h2 class="screen-title">Fich Genyen</h2>
-            </div>
-            <div class="search-box">
-                <input type="text" id="search-winning-tickets" placeholder="Chache fiche...">
-                <button id="search-winning-btn"><i class="fas fa-search"></i></button>
-            </div>
-            <div id="winning-tickets-list"></div>
-        </div>
-
-        <!-- ÉCRAN RÉSULTATS -->
-        <div class="results-check-screen" id="results-check-screen">
-            <div class="screen-header">
-                <button class="back-button" id="back-from-results"><i class="fas fa-arrow-left"></i></button>
-                <h2 class="screen-title">Verifye fich ki genyen</h2>
-            </div>
-            <div id="latest-results" class="latest-results"></div>
-            <button class="check-winners-btn" id="check-winners-btn"><i class="fas fa-trophy"></i> Fich ki Genyen</button>
-            <div id="winning-tickets-container"></div>
-        </div>
-
-        <!-- ÉCRAN MULTI-TIRAGES (liste des fiches multi) -->
-        <div class="multi-tickets-screen" id="multi-tickets-screen">
-            <div class="screen-header">
-                <button class="back-button" id="back-from-multi-tickets"><i class="fas fa-arrow-left"></i></button>
-                <h2 class="screen-title">Fiche Multi-Tirages</h2>
-            </div>
-            <div id="multi-tickets-list"></div>
-        </div>
-
-        <!-- Navigation inférieure -->
-        <div class="bottom-nav">
-            <div class="nav-item active" data-screen="home"><div class="nav-icon"><i class="fas fa-home"></i></div><span>Akèy</span></div>
-            <div class="nav-item" data-screen="report"><div class="nav-icon"><i class="fas fa-chart-line"></i></div><span>Rapò</span></div>
-            <div class="nav-item" data-screen="winning-tickets"><div class="nav-icon"><i class="fas fa-trophy"></i></div><span>Fich Genyen</span></div>
-            <div class="nav-item" data-screen="history"><div class="nav-icon"><i class="fas fa-history"></i></div><span>Istorik</span></div>
+        <div class="bet-form" id="bet-form"></div>
+        <div class="active-bets" id="active-bets">
+            <div class="ticket-actions"><button class="ticket-action-btn save-print-btn" id="save-print-ticket"><i class="fas fa-save"></i> <i class="fas fa-print"></i> Anrejistre & Enprime</button></div>
+            <h3>Parye Aktif</h3>
+            <div id="bets-list"></div>
+            <div class="bet-total"><span>Total:</span><span id="bet-total">0 goud</span></div>
         </div>
     </div>
 
+    <!-- Écran de rapport -->
+    <div class="screen" id="report-screen">
+        <div class="screen-header"><button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Rapò & Komisyon</h2></div>
+        <div class="report-filters">
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-period="15days">15 dènye jou</button>
+                <button class="filter-btn" data-period="7days">7 dènye jou</button>
+                <button class="filter-btn" data-period="month">Mwa sa a</button>
+                <button class="filter-btn" data-period="today">Jodi a</button>
+            </div>
+            <div class="custom-range"><input type="date" id="start-date"><span>à</span><input type="date" id="end-date"><button class="filter-btn" id="apply-custom">Aplike</button></div>
+        </div>
+        <div class="report-stats" id="report-stats">
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-simple"></i></div><div class="stat-info"><span class="stat-label">Total Vant</span><span class="stat-value" id="total-sales">0 G</span></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-percent"></i></div><div class="stat-info"><span class="stat-label">Komisyon Agent</span><span class="stat-value" id="commission-rate">0%</span></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-coins"></i></div><div class="stat-info"><span class="stat-label">Komisyon Ganyen</span><span class="stat-value" id="commission-earned">0 G</span></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-trophy"></i></div><div class="stat-info"><span class="stat-label">Total Pyman</span><span class="stat-value" id="total-payouts">0 G</span></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-info"><span class="stat-label">Bénéfis Net</span><span class="stat-value" id="net-profit">0 G</span></div></div>
+        </div>
+        <div class="report-detail"><h3>Detay pa Tiraj</h3><div id="report-detail-list"></div></div>
+    </div>
+
+    <!-- Écran des fiches gagnantes -->
+    <div class="screen" id="winning-tickets-screen">
+        <div class="screen-header"><button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Fich Genyen</h2></div>
+        <div class="search-history"><input type="text" id="search-winning-tickets" class="search-input" placeholder="Chache..."><button class="search-btn" id="search-winning-btn"><i class="fas fa-search"></i> Chache</button></div>
+        <div id="winning-tickets-list"></div>
+    </div>
+
+    <!-- Écran historique -->
+    <div class="screen" id="history-screen">
+        <div class="screen-header"><button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Istorik Parye</h2></div>
+        <div class="search-history"><input type="text" id="search-history" class="search-input" placeholder="Chache..."><button class="search-btn" id="search-history-btn"><i class="fas fa-search"></i> Chache</button></div>
+        <div id="history-list"></div>
+    </div>
+
+    <!-- Écran de vérification des résultats -->
+    <div class="results-check-screen" id="results-check-screen">
+        <div class="screen-header"><button class="back-button" id="back-from-results"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Verifye fich ki genyen</h2></div>
+        <div><div class="draw-info"><h4>Rezilta Dènye Tiraj (3 lot)</h4><div id="latest-results"></div></div><button class="check-results-btn" id="check-winners-btn"><i class="fas fa-trophy"></i> Fich ki Genyen</button><div id="winning-summary"></div></div>
+        <div id="winning-tickets-container"></div>
+    </div>
+
+    <!-- Écran des fiches multi-tirages -->
+    <div class="multi-tickets-screen" id="multi-tickets-screen">
+        <div class="screen-header"><button class="back-button" id="back-from-multi-tickets"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Fiche Multi-Tirages</h2></div>
+        <div id="multi-tickets-list"></div>
+    </div>
+
+    <!-- Écran de rapport de fin tiraj -->
+    <div class="report-screen" id="end-draw-report-screen">
+        <div class="screen-header"><button class="back-button" id="back-from-report"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Rapò Fin Tiraj</h2></div>
+        <div class="report-container" id="report-content"></div>
+    </div>
+
     <script src="lotato.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/service-worker.js')
-                .then(reg => console.log('SW enregistré'))
-                .catch(err => console.log('SW échec', err));
-        }
-    </script>
+    <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js');</script>
 </body>
 </html>
