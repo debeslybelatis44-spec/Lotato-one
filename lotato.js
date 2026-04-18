@@ -1,6 +1,6 @@
 // ==========================================
-// LOTATO - Agent (version finale professionnelle)
-// Intègre le CartManager et l'impression thermique
+// LOTATO - Agent Professionnel
+// Toutes fonctionnalités : multi-tirage, historique modifiable 3min, design soigné
 // ==========================================
 
 const API_BASE_URL = '';
@@ -11,36 +11,24 @@ let savedTickets = [];
 let winningTickets = [];
 let resultsDatabase = {};
 let currentDraw = null, currentDrawTime = null;
+let multiDrawMode = false;
+let selectedMultiDraws = new Set();
 
-// ---------- Configuration globale pour CartManager ----------
-window.APP_STATE = {
-    currentCart: [],
-    agentId: null,
-    agentName: '',
-    selectedDraw: null,
-    selectedDraws: new Set(),
-    multiDrawMode: false,
-    draws: [],
-    lotteryConfig: { name: "Lotato", slogan: "Chwazi yon Jwet", logo: "" },
-    globalBlockedNumbers: [],
-    drawBlockedNumbers: {},
-    numberLimits: {},
-    isDrawBlocked: false,
-    ticketsHistory: []
-};
+// Panier
+let currentCart = [];
 
-// ---------- Types de jeux ----------
+// Types de jeux (NX uniquement dans borlette)
 const betTypes = {
     borlette: { name: "BORLETTE", multiplier: 60, category: "borlette", digits: 2 },
     boulpe: { name: "BOUL PE", multiplier: 60, category: "borlette", digits: 2 },
-    nx: { name: "NX", multiplier: 60, category: "borlette" },
+    nx: { name: "NX", multiplier: 60, category: "borlette", special: true },
     lotto3: { name: "LOTO 3", multiplier: 500, category: "lotto", digits: 3 },
-    lotto4: { name: "LOTO 4", multiplier: 5000, category: "lotto", digits: 2 },
-    lotto5: { name: "LOTO 5", multiplier: 25000, category: "lotto", digits: 3 },
+    lotto4: { name: "LOTO 4", multiplier: 5000, category: "lotto", digits: 4 },
+    lotto5: { name: "LOTO 5", multiplier: 25000, category: "lotto", digits: 5 },
     grap: { name: "GRAP", multiplier: 500, category: "special", digits: 3 },
-    marriage: { name: "MARYAJ", multiplier: 1000, category: "special" },
-    'auto-marriage': { name: "MARYAJ OTOMATIK", multiplier: 1000, category: "special" },
-    'auto-lotto4': { name: "LOTO 4 OTOMATIK", multiplier: 5000, category: "special" }
+    marriage: { name: "MARYAJ", multiplier: 1000, category: "special", digits: 2 },
+    'auto-marriage': { name: "MARYAJ OTOMATIK", multiplier: 1000, category: "special", auto: true },
+    'auto-lotto4': { name: "LOTO 4 OTOMATIK", multiplier: 5000, category: "special", auto: true }
 };
 
 const draws = {
@@ -68,10 +56,11 @@ function logout() { localStorage.removeItem('lotato_token'); window.location.hre
 function showNotification(msg, type = 'info') {
     const notif = document.createElement('div');
     notif.className = `notification ${type}`;
-    notif.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'info'}-circle"></i> ${msg}`;
+    notif.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i> ${msg}`;
     document.body.appendChild(notif);
     setTimeout(() => notif.remove(), 3000);
 }
+
 async function loadMyTickets() { const res = await apiCall('/api/tickets'); if (res?.success) savedTickets = res.tickets; }
 async function loadWinningTickets() { const res = await apiCall('/api/tickets/winning'); if (res?.success) winningTickets = res.tickets; }
 async function loadResults() { const res = await apiCall('/api/results'); if (res?.success) resultsDatabase = res.results; }
@@ -90,135 +79,129 @@ function updateCompanyDisplay() {
     document.getElementById('company-name').innerText = companyInfo.name;
     document.getElementById('company-slogan').innerText = companyInfo.slogan;
     if (companyInfo.logo) document.getElementById('company-logo').src = companyInfo.logo;
-    APP_STATE.lotteryConfig = { name: companyInfo.name, slogan: companyInfo.slogan, logo: companyInfo.logo };
 }
 
-// ---------- CartManager (adapté de cartManager.js) ----------
-const CartManager = {
-    renderCart() {
-        const display = document.getElementById('cart-display');
-        const totalEl = document.getElementById('cart-total-display');
-        const itemsCount = document.getElementById('items-count');
-        if (!APP_STATE.currentCart.length) {
-            display.innerHTML = '<div class="empty-msg">Panye vid</div>';
-            totalEl.innerText = '0 Gdes';
-            if (itemsCount) itemsCount.innerText = '0 jwèt';
-            return;
-        }
-        let total = 0;
-        let count = 0;
-        display.innerHTML = APP_STATE.currentCart.map(bet => {
-            total += bet.amount;
-            count++;
-            const abbr = this.getGameAbbreviation(bet.game, bet);
-            let displayNumber = bet.number;
-            if (bet.game === 'auto_marriage' && bet.number.includes('&')) displayNumber = bet.number.replace('&', '*');
-            return `<div class="cart-item">
-                        <span>${abbr} ${displayNumber}</span>
-                        <span>${bet.amount} G</span>
-                        <button onclick="CartManager.removeBet('${bet.id}')">✕</button>
-                    </div>`;
-        }).join('');
-        totalEl.innerText = total.toLocaleString('fr-FR') + ' Gdes';
-        if (itemsCount) itemsCount.innerText = count + ' jwèt';
-    },
-    removeBet(id) {
-        APP_STATE.currentCart = APP_STATE.currentCart.filter(b => b.id != id);
-        this.renderCart();
-    },
-    getGameAbbreviation(gameName, bet) {
-        if (bet && bet.free && bet.freeType === 'special_marriage') return 'marg';
-        const map = {
-            'borlette':'bor', 'lotto3':'lo3', 'lotto4':'lo4', 'lotto5':'lo5',
-            'auto_marriage':'mara', 'auto_lotto4':'loa4', 'auto_lotto5':'loa5',
-            'mariage':'mar', 'grap':'grap', 'nx':'nx', 'boulpe':'bpe'
-        };
-        return map[gameName] || gameName;
-    },
-    addBet(gameType, number, amount, options = null) {
-        const bet = betTypes[gameType];
-        if (!bet) return false;
-        const newBet = {
-            id: Date.now() + Math.random(),
-            game: gameType,
-            name: bet.name,
-            number: number,
-            cleanNumber: number,
-            amount: amount,
-            multiplier: bet.multiplier,
-            drawId: currentDraw,
-            drawName: currentDraw ? draws[currentDraw]?.name : 'Tiraj',
-            timestamp: new Date().toISOString()
-        };
-        if (options) newBet.options = options;
-        APP_STATE.currentCart.push(newBet);
-        this.renderCart();
-        return true;
+// ---------- PANIER ----------
+function renderCart() {
+    const container = document.getElementById('bets-list');
+    const totalEl = document.getElementById('bet-total');
+    let total = 0;
+    if (!currentCart.length) {
+        container.innerHTML = '<p class="empty-cart">Pa gen parye aktif.</p>';
+        totalEl.innerText = '0 goud';
+        return;
     }
-};
+    container.innerHTML = currentCart.map(bet => {
+        total += bet.amount;
+        return `<div class="bet-item">
+                    <div><strong>${bet.name}</strong><br>${bet.number}</div>
+                    <div>${bet.amount} goud <span class="bet-remove" data-id="${bet.id}"><i class="fas fa-trash-alt"></i></span></div>
+                </div>`;
+    }).join('');
+    totalEl.innerText = total + ' goud';
+    document.querySelectorAll('.bet-remove').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const id = parseFloat(btn.dataset.id);
+            currentCart = currentCart.filter(b => b.id !== id);
+            renderCart();
+        });
+    });
+}
+function addToCart(bet) {
+    currentCart.push(bet);
+    renderCart();
+}
 
-// ---------- Impression ticket (inspirée de cartManager) ----------
+// ---------- SAUVEGARDE TICKET ----------
 async function saveAndPrintTicket() {
-    if (!APP_STATE.currentCart.length) { showNotification("Panye vid", "warning"); return; }
+    if (!currentCart.length) { showNotification("Pa gen parye", "warning"); return; }
     if (!currentDraw || !currentDrawTime) { showNotification("Chwazi yon tiraj anvan", "warning"); return; }
-
-    const ticket = {
-        draw: currentDraw,
-        draw_time: currentDrawTime,
-        bets: APP_STATE.currentCart.map(b => ({ type: b.game, number: b.number, amount: b.amount, multiplier: b.multiplier })),
-        total: APP_STATE.currentCart.reduce((s,b)=>s+b.amount,0)
-    };
-    const res = await apiCall('/api/tickets', 'POST', { ticket });
-    if (res?.success) {
-        showNotification(`Fiche #${res.ticketNumber} sove!`, "success");
-        await loadMyTickets();
-        printThermalTicket(res.ticket);
-        APP_STATE.currentCart = [];
-        CartManager.renderCart();
-        closeBettingScreen();
+    const drawsToSave = multiDrawMode && selectedMultiDraws.size ? Array.from(selectedMultiDraws) : [currentDraw];
+    for (const drawId of drawsToSave) {
+        const ticket = {
+            draw: drawId,
+            draw_time: currentDrawTime,
+            bets: currentCart.map(b => ({ type: b.type, number: b.number, amount: b.amount, multiplier: b.multiplier })),
+            total: currentCart.reduce((s,b)=>s+b.amount,0)
+        };
+        const res = await apiCall('/api/tickets', 'POST', { ticket });
+        if (res?.success) {
+            showNotification(`Fiche #${res.ticketNumber} sove pou ${drawId}!`, "success");
+            await loadMyTickets();
+            printTicket(res.ticketId, res.ticketNumber);
+        }
     }
+    currentCart = [];
+    renderCart();
+    closeBettingScreen();
 }
-
-function printThermalTicket(ticket) {
-    const win = window.open('', '_blank', 'width=500,height=700');
-    if (!win) { alert("Veuillez autoriser les pop-ups"); return; }
+function printTicket(ticketId, ticketNumber) {
+    const ticket = savedTickets.find(t => t.ticket_number == ticketNumber);
+    if (!ticket) return;
+    const win = window.open('', '_blank');
     const logoHtml = companyInfo.logo ? `<img src="${companyInfo.logo}" style="max-width:80px;">` : '';
-    const drawName = draws[currentDraw]?.name || 'Tiraj';
-    const formattedDate = new Date().toLocaleString('fr-FR');
-    const betsHtml = ticket.bets.map(b => `<div class="bet-row"><span>${CartManager.getGameAbbreviation(b.type)} ${b.number}</span><span>${b.amount} G</span></div>`).join('');
-    const total = ticket.total;
     win.document.write(`
-        <!DOCTYPE html>
-        <html><head><title>Ticket</title>
-        <style>
-            @page { size: 80mm auto; margin: 2mm; }
-            body { font-family: 'Courier New', monospace; width: 76mm; margin: 0 auto; padding: 4mm; background: white; }
-            .header { text-align: center; border-bottom: 2px dashed #000; }
-            .header img { max-height: 60px; }
-            .bet-row { display: flex; justify-content: space-between; margin: 4px 0; font-size: 12pt; }
-            .total-row { display: flex; justify-content: space-between; margin-top: 8px; font-weight: bold; font-size: 14pt; }
-            .footer { text-align: center; margin-top: 12px; font-size: 10pt; }
-        </style>
-        </head><body>
-        <div class="header">
-            ${logoHtml}<strong>${companyInfo.name}</strong><br><small>${companyInfo.slogan}</small>
-        </div>
-        <div class="info">Ticket #${ticket.ticket_number}<br>Tiraj: ${drawName}<br>Date: ${formattedDate}</div>
-        <hr>${betsHtml}<hr>
-        <div class="total-row"><span>TOTAL</span><span>${total} Gdes</span></div>
-        <div class="footer">tickets valable 90j<br>${companyInfo.address}</div>
-        </body></html>
+        <html><head><title>Ticket ${ticketNumber}</title>
+        <style>body{font-family:monospace;padding:20px;text-align:center}.ticket{border:2px solid #000;padding:20px;max-width:400px;margin:auto}</style>
+        </head><body><div class="ticket">
+        ${logoHtml}<h2>${companyInfo.name}</h2><div>${companyInfo.slogan}</div>
+        <p>Ticket #${ticketNumber}</p><p>${new Date(ticket.created_at).toLocaleString()}</p><hr>
+        ${ticket.bets.map(b => `<div>${b.bet_type}: ${b.numbers} - ${b.amount} G</div>`).join('')}<hr>
+        <div class="total">Total: ${ticket.total_amount} G</div>
+        </div></body></html>
     `);
     win.document.close();
     win.print();
 }
 
-// ---------- AFFICHAGE DES JEUX PAR CATÉGORIE ----------
+// ---------- MULTI-TIRAGES ----------
+function initMultiDrawPanel() {
+    const container = document.getElementById('multi-draw-options');
+    if (!container) return;
+    container.innerHTML = '';
+    for (const [id, draw] of Object.entries(draws)) {
+        const div = document.createElement('div');
+        div.className = 'multi-draw-option';
+        div.dataset.draw = id;
+        div.textContent = draw.name;
+        div.onclick = () => {
+            div.classList.toggle('selected');
+            if (div.classList.contains('selected')) selectedMultiDraws.add(id);
+            else selectedMultiDraws.delete(id);
+        };
+        container.appendChild(div);
+    }
+    document.getElementById('clear-multi-draw').onclick = () => {
+        document.querySelectorAll('.multi-draw-option').forEach(opt => opt.classList.remove('selected'));
+        selectedMultiDraws.clear();
+    };
+    document.getElementById('apply-multi-draw').onclick = () => {
+        multiDrawMode = selectedMultiDraws.size > 0;
+        document.getElementById('multi-draw-indicator').style.display = multiDrawMode ? 'flex' : 'none';
+        toggleMultiDrawPanel();
+        showNotification(multiDrawMode ? `Mode multi: ${selectedMultiDraws.size} tiraj` : 'Mode tiraj inik', 'success');
+    };
+}
+function toggleMultiDrawPanel() {
+    const content = document.getElementById('multi-draw-content');
+    const chevron = document.getElementById('multi-draw-chevron');
+    if (content.style.display === 'block') {
+        content.style.display = 'none';
+        chevron.classList.remove('fa-chevron-up');
+        chevron.classList.add('fa-chevron-down');
+    } else {
+        content.style.display = 'block';
+        chevron.classList.remove('fa-chevron-down');
+        chevron.classList.add('fa-chevron-up');
+    }
+}
+
+// ---------- AFFICHAGE JEUX ----------
 function showGamesPanel(category) {
     const panel = document.getElementById('games-panel');
     const gamesList = {
         borlette: [
-            { id: 'borlette', name: 'BORLETTE', desc: '2 chif - 1er ×60, 2e ×20, 3e ×10', multiplier: 'x60' },
+            { id: 'borlette', name: 'BORLETTE', desc: '2 chif - 1er lot ×60, 2e ×20, 3e ×10', multiplier: 'x60' },
             { id: 'boulpe', name: 'BOUL PE', desc: 'Boul pe (00-99)', multiplier: 'x60' },
             { id: 'nx', name: 'NX (Boul N0-N9)', desc: '10 boule Nx', multiplier: 'x60' }
         ],
@@ -248,94 +231,94 @@ function showGamesPanel(category) {
     });
 }
 
-// ---------- FORMULAIRE DE PARI (saisie simple + ajout groupé) ----------
+// ---------- FORMULAIRE DE PARI SIMPLE ----------
 let currentGameType = null;
-
 function showBetForm(gameType) {
     currentGameType = gameType;
     const bet = betTypes[gameType];
     document.getElementById('games-panel').style.display = 'none';
     const formDiv = document.getElementById('bet-form');
     formDiv.style.display = 'block';
-    document.getElementById('bet-form-label').innerText = bet.name + " - Nimewo";
+    document.getElementById('bet-form-label').innerHTML = `${bet.name} - Nimewo`;
     const numberInput = document.getElementById('bet-number');
     const amountInput = document.getElementById('bet-amount');
     numberInput.value = '';
     amountInput.value = '1';
-    const maxLen = bet.digits || 2;
-    numberInput.maxLength = maxLen;
-    numberInput.placeholder = "0".repeat(maxLen);
+    const digits = bet.digits || 2;
+    numberInput.maxLength = digits;
+    numberInput.placeholder = "0".repeat(digits);
     numberInput.focus();
 
-    // Réinitialiser le formulaire pour marriage / lotto4/5
+    // Réinitialiser le formulaire simple
     const inlineDiv = document.querySelector('.inline-form');
-    if (gameType === 'marriage') {
-        inlineDiv.innerHTML = `<input type="text" id="bet-number1" placeholder="00" maxlength="2" style="flex:1">
-                               <input type="text" id="bet-number2" placeholder="00" maxlength="2" style="flex:1">
-                               <input type="number" id="bet-amount" placeholder="Montan" value="1" style="flex:1">
-                               <button id="add-bet-btn" class="add-icon"><i class="fas fa-check"></i></button>`;
-        const n1 = document.getElementById('bet-number1');
-        const n2 = document.getElementById('bet-number2');
-        n1.addEventListener('input', () => { if (n1.value.length === 2) n2.focus(); });
-        n2.addEventListener('input', () => { if (n2.value.length === 2) document.getElementById('bet-amount').focus(); });
-    } else if (gameType === 'lotto4' || gameType === 'lotto5') {
-        const digits = gameType === 'lotto4' ? 2 : 3;
-        inlineDiv.innerHTML = `<input type="text" id="bet-number1" placeholder="${'0'.repeat(digits)}" maxlength="${digits}" style="flex:1">
-                               <input type="text" id="bet-number2" placeholder="00" maxlength="2" style="flex:1">
-                               <input type="number" id="bet-amount" placeholder="Montan pa opsyon" value="1" style="flex:1">
-                               <button id="add-bet-btn" class="add-icon"><i class="fas fa-check"></i></button>`;
-        const n1 = document.getElementById('bet-number1');
-        const n2 = document.getElementById('bet-number2');
-        n1.addEventListener('input', () => { if (n1.value.length === digits) n2.focus(); });
-        n2.addEventListener('input', () => { if (n2.value.length === 2) document.getElementById('bet-amount').focus(); });
-    } else if (gameType === 'nx') {
-        inlineDiv.innerHTML = `<div style="display:grid; grid-template-columns:repeat(5,1fr); gap:6px; width:100%;">
+    inlineDiv.innerHTML = `<input type="text" id="bet-number" placeholder="Nimewo" maxlength="${digits}" style="flex:2">
+                           <input type="number" id="bet-amount" placeholder="Montan" value="1" min="1" style="flex:1">
+                           <button id="add-bet-btn" class="add-icon"><i class="fas fa-check-circle"></i></button>`;
+
+    if (bet.special && gameType === 'nx') {
+        // Affichage des boutons N0 à N9
+        inlineDiv.innerHTML = `<div style="display:grid; grid-template-columns:repeat(5,1fr); gap:8px; width:100%;">
                                 ${[...Array(10)].map((_,i)=>`<button type="button" class="nx-ball" data-n="${i}">N${i}</button>`).join('')}
                                </div>
                                <input type="number" id="bet-amount" placeholder="Montan" value="1" style="flex:1">
-                               <button id="add-bet-btn" class="add-icon"><i class="fas fa-check"></i></button>`;
+                               <button id="add-bet-btn" class="add-icon"><i class="fas fa-check-circle"></i></button>`;
         document.querySelectorAll('.nx-ball').forEach(btn => {
             btn.onclick = () => {
                 const n = btn.dataset.n;
                 const amount = parseInt(document.getElementById('bet-amount').value);
                 if (isNaN(amount)) return;
-                for (let t=0; t<=9; t++) {
-                    const num = t.toString() + n.toString();
-                    CartManager.addBet('borlette', num, amount);
+                for (let tens=0; tens<=9; tens++) {
+                    const num = tens.toString() + n.toString();
+                    addToCart({ id: Date.now()+Math.random(), type: 'borlette', name: `NX N${n}`, number: num, amount, multiplier: 60 });
                 }
                 showNotification(`10 boule N${n} ajoute`, "success");
             };
         });
         document.getElementById('add-bet-btn').onclick = () => showNotification("Chwazi yon bouton Nx", "info");
         return;
+    }
+
+    if (gameType === 'marriage') {
+        inlineDiv.innerHTML = `<input type="text" id="bet-number1" placeholder="00" maxlength="2" style="flex:1">
+                               <input type="text" id="bet-number2" placeholder="00" maxlength="2" style="flex:1">
+                               <input type="number" id="bet-amount" placeholder="Montan" value="1" style="flex:1">
+                               <button id="add-bet-btn" class="add-icon"><i class="fas fa-check-circle"></i></button>`;
+        const n1 = document.getElementById('bet-number1');
+        const n2 = document.getElementById('bet-number2');
+        n1.addEventListener('input', () => { if (n1.value.length === 2) n2.focus(); });
+        n2.addEventListener('input', () => { if (n2.value.length === 2) document.getElementById('bet-amount').focus(); });
+    } else if (gameType === 'lotto4' || gameType === 'lotto5') {
+        const firstLen = gameType === 'lotto4' ? 2 : 3;
+        inlineDiv.innerHTML = `<input type="text" id="bet-number1" placeholder="${'0'.repeat(firstLen)}" maxlength="${firstLen}" style="flex:1">
+                               <input type="text" id="bet-number2" placeholder="00" maxlength="2" style="flex:1">
+                               <input type="number" id="bet-amount" placeholder="Montan pa opsyon" value="1" style="flex:1">
+                               <button id="add-bet-btn" class="add-icon"><i class="fas fa-check-circle"></i></button>`;
+        const n1 = document.getElementById('bet-number1');
+        const n2 = document.getElementById('bet-number2');
+        n1.addEventListener('input', () => { if (n1.value.length === firstLen) n2.focus(); });
+        n2.addEventListener('input', () => { if (n2.value.length === 2) document.getElementById('bet-amount').focus(); });
     } else {
-        inlineDiv.innerHTML = `<input type="text" id="bet-number" placeholder="Nimewo" maxlength="${maxLen}" style="flex:2">
-                               <input type="number" id="bet-amount" placeholder="Montan" value="1" min="1" style="flex:1">
-                               <button id="add-bet-btn" class="add-icon"><i class="fas fa-check"></i></button>`;
-        const numInput = document.getElementById('bet-number');
-        numInput.addEventListener('input', () => {
-            if (numInput.value.length === maxLen) document.getElementById('bet-amount').focus();
+        const newNumInput = document.getElementById('bet-number');
+        newNumInput.addEventListener('input', () => {
+            if (newNumInput.value.length === digits) document.getElementById('bet-amount').focus();
         });
     }
     document.getElementById('add-bet-btn').onclick = () => addBet();
-    // Ajout groupé
-    document.getElementById('toggle-bulk').onclick = () => {
-        const div = document.getElementById('bulk-input-group');
-        div.style.display = div.style.display === 'none' ? 'block' : 'none';
-    };
-    document.getElementById('bulk-add-btn').onclick = () => addMultipleBets();
 }
-
 function addBet() {
     const gameType = currentGameType;
     const bet = betTypes[gameType];
     if (!bet) return;
+    if (bet.auto) {
+        showNotification("Fonksyonalite otomatik ap vini", "info");
+        return;
+    }
     if (gameType === 'marriage') {
         const n1 = document.getElementById('bet-number1').value;
         const n2 = document.getElementById('bet-number2').value;
         const amount = parseInt(document.getElementById('bet-amount').value);
         if (!/^\d{2}$/.test(n1) || !/^\d{2}$/.test(n2)) return showNotification("Chak chif dwe 2 chif", "warning");
-        CartManager.addBet('marriage', `${n1}*${n2}`, amount);
+        addToCart({ id: Date.now()+Math.random(), type: 'marriage', name: 'MARYAJ', number: `${n1}*${n2}`, amount, multiplier: 1000 });
         showNotification("Ajoute!", "success");
         document.getElementById('bet-number1').value = '';
         document.getElementById('bet-number2').value = '';
@@ -347,8 +330,8 @@ function addBet() {
         const n2 = document.getElementById('bet-number2').value;
         const perAmount = parseInt(document.getElementById('bet-amount').value);
         if (!n1 || !n2) return showNotification("Antre tout nimewo", "warning");
-        const totalAmount = perAmount * 3; // 3 options
-        CartManager.addBet(gameType, n1+n2, totalAmount);
+        const totalAmount = perAmount * 3;
+        addToCart({ id: Date.now()+Math.random(), type: gameType, name: bet.name, number: n1+n2, amount: totalAmount, multiplier: bet.multiplier });
         showNotification("Ajoute!", "success");
         document.getElementById('bet-number1').value = '';
         document.getElementById('bet-number2').value = '';
@@ -360,28 +343,15 @@ function addBet() {
     let isValid = false;
     if (gameType === 'borlette' || gameType === 'boulpe') isValid = /^\d{2}$/.test(number);
     else if (gameType === 'lotto3' || gameType === 'grap') isValid = /^\d{3}$/.test(number);
-    else return;
     if (!isValid) return showNotification("Nimewo pa valid", "warning");
     if (isNaN(amount) || amount <= 0) return showNotification("Montan valid", "warning");
-    CartManager.addBet(gameType, number, amount);
+    addToCart({ id: Date.now()+Math.random(), type: gameType, name: bet.name, number, amount, multiplier: bet.multiplier });
     showNotification("Ajoute!", "success");
     document.getElementById('bet-number').value = '';
     document.getElementById('bet-number').focus();
 }
 
-function addMultipleBets() {
-    const raw = document.getElementById('bulk-numbers').value;
-    const numbers = raw.split(/[\s,]+/).filter(n => /^\d{2,3}$/.test(n));
-    if (!numbers.length) return showNotification("Antre omwen yon nimewo valid", "warning");
-    const amount = parseInt(document.getElementById('bet-amount').value);
-    if (isNaN(amount)) return showNotification("Montan invalid", "warning");
-    numbers.forEach(num => CartManager.addBet(currentGameType, num, amount));
-    showNotification(`${numbers.length} parye ajoute`, "success");
-    document.getElementById('bulk-numbers').value = '';
-    document.getElementById('bulk-input-group').style.display = 'none';
-}
-
-// ---------- OUVERTURE / FERMETURE ÉCRAN PARI ----------
+// ---------- ÉCRAN DE PARI ----------
 function openBettingScreen(drawId, time) {
     currentDraw = drawId;
     currentDrawTime = time;
@@ -389,23 +359,115 @@ function openBettingScreen(drawId, time) {
     document.getElementById('betting-title').innerHTML = `${draw.name} (${time === 'morning' ? 'Maten' : 'Swè'})`;
     document.querySelector('.container').style.display = 'none';
     document.getElementById('betting-screen').style.display = 'block';
-    document.querySelectorAll('.game-category-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelector('.game-category-btn[data-category="borlette"]').classList.add('active');
+    // Activer la catégorie Borlette par défaut
+    document.querySelectorAll('.category-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelector('.category-btn[data-category="borlette"]').classList.add('active');
     showGamesPanel('borlette');
     document.getElementById('bet-form').style.display = 'none';
-    CartManager.renderCart();
+    renderCart();
+    // Réinitialiser multi-draw si nécessaire
+    multiDrawMode = false;
+    selectedMultiDraws.clear();
+    document.getElementById('multi-draw-indicator').style.display = 'none';
+    document.querySelectorAll('.multi-draw-option').forEach(opt => opt.classList.remove('selected'));
 }
 function closeBettingScreen() {
     document.getElementById('betting-screen').style.display = 'none';
     document.querySelector('.container').style.display = 'block';
     currentDraw = null;
     currentDrawTime = null;
+    currentCart = [];
+    renderCart();
 }
 document.getElementById('back-button').addEventListener('click', closeBettingScreen);
 document.getElementById('close-form-btn').addEventListener('click', () => {
     document.getElementById('bet-form').style.display = 'none';
     document.getElementById('games-panel').style.display = 'block';
 });
+
+// ---------- HISTORIQUE AVEC ACTIONS (modif/suppr 3min) ----------
+function renderHistory() {
+    const container = document.getElementById('history-list');
+    if (!savedTickets.length) {
+        container.innerHTML = '<p class="empty-state">Pa gen fich ankò</p>';
+        return;
+    }
+    const now = new Date();
+    container.innerHTML = savedTickets.map(ticket => {
+        const createdAt = new Date(ticket.created_at);
+        const diffMinutes = (now - createdAt) / 60000;
+        const canEdit = diffMinutes <= 3;
+        return `
+            <div class="ticket-card" data-id="${ticket.id}">
+                <div class="ticket-header">
+                    <span><strong>#${ticket.ticket_number}</strong></span>
+                    <span class="ticket-date">${createdAt.toLocaleString()}</span>
+                </div>
+                <div class="ticket-bets">
+                    ${ticket.bets.map(b => `${b.bet_type}: ${b.numbers} - ${b.amount} G`).join('<br>')}
+                </div>
+                <div class="ticket-total">Total: ${ticket.total_amount} G</div>
+                <div class="ticket-actions-buttons">
+                    <button class="ticket-action replay" data-id="${ticket.id}" data-ticket='${JSON.stringify(ticket)}'><i class="fas fa-redo-alt"></i> Rejwe</button>
+                    <button class="ticket-action edit" data-id="${ticket.id}" data-ticket='${JSON.stringify(ticket)}' ${!canEdit ? 'disabled' : ''}><i class="fas fa-edit"></i> Modifye</button>
+                    <button class="ticket-action delete" data-id="${ticket.id}" ${!canEdit ? 'disabled' : ''}><i class="fas fa-trash"></i> Efase</button>
+                    <button class="ticket-action print" data-id="${ticket.id}"><i class="fas fa-print"></i> Enprime</button>
+                </div>
+                ${!canEdit ? '<div class="warning-msg" style="font-size:0.6rem; color:red; margin-top:4px;">Modifikasyon/efasman posib sèlman 3 minit apre kreyasyon</div>' : ''}
+            </div>
+        `;
+    }).join('');
+
+    // Événements
+    document.querySelectorAll('.ticket-action.replay').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const ticket = JSON.parse(btn.dataset.ticket);
+            // Recharger les paris dans le panier et ouvrir l'écran de pari avec le même tirage
+            currentDraw = ticket.draw;
+            currentDrawTime = ticket.draw_time;
+            currentCart = ticket.bets.map(b => ({ ...b, id: Date.now()+Math.random(), name: b.bet_type.toUpperCase() }));
+            renderCart();
+            openBettingScreen(ticket.draw, ticket.draw_time);
+            showNotification("Parye rejwe nan panye", "success");
+        });
+    });
+    document.querySelectorAll('.ticket-action.edit').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (btn.disabled) return showNotification("Delà 3 minit, pa kapab modifye", "warning");
+            const id = btn.dataset.id;
+            // Ouvrir formulaire d'édition (on peut simplifier en rechargeant dans panier)
+            const ticket = JSON.parse(btn.dataset.ticket);
+            currentDraw = ticket.draw;
+            currentDrawTime = ticket.draw_time;
+            currentCart = ticket.bets.map(b => ({ ...b, id: Date.now()+Math.random(), name: b.bet_type.toUpperCase() }));
+            renderCart();
+            openBettingScreen(ticket.draw, ticket.draw_time);
+            // Supprimer l'original après modification (optionnel)
+            await apiCall(`/api/tickets/${id}`, 'DELETE');
+            await loadMyTickets();
+            renderHistory();
+            showNotification("Fiche modifye, ou ka modifye epi sove", "success");
+        });
+    });
+    document.querySelectorAll('.ticket-action.delete').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (btn.disabled) return showNotification("Delà 3 minit, pa kapab efase", "warning");
+            if (confirm("Efase fiche sa?")) {
+                await apiCall(`/api/tickets/${btn.dataset.id}`, 'DELETE');
+                await loadMyTickets();
+                renderHistory();
+                showNotification("Fiche efase", "success");
+            }
+        });
+    });
+    document.querySelectorAll('.ticket-action.print').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            const ticket = savedTickets.find(t => t.id == id);
+            if (ticket) printTicket(ticket.id, ticket.ticket_number);
+        });
+    });
+}
 
 // ---------- RAPPORTS ----------
 async function loadReportData(drawId, start, end) {
@@ -453,13 +515,9 @@ function loadReportByPeriod(period) {
 }
 
 // ---------- AUTRES ÉCRANS ----------
-function updateHistoryScreen() {
-    const list = document.getElementById('history-list');
-    list.innerHTML = savedTickets.length ? savedTickets.map(t => `<div class="ticket-item"><strong>#${t.ticket_number}</strong> - ${t.total_amount} G (${new Date(t.created_at).toLocaleString()})</div>`).join('') : '<p>Pa gen fich</p>';
-}
 function updateWinningTicketsScreen() {
     const list = document.getElementById('winning-tickets-list');
-    list.innerHTML = winningTickets.length ? winningTickets.map(w => `<div class="winning-ticket"><strong>#${w.ticket_number}</strong> - ${w.winning_amount} G</div>`).join('') : '<p>Pa gen fiche gagnant</p>';
+    list.innerHTML = winningTickets.length ? winningTickets.map(w => `<div class="ticket-card"><strong>#${w.ticket_number}</strong> - ${w.winning_amount} G</div>`).join('') : '<p>Pa gen fiche gagnant</p>';
 }
 function openResultsCheckScreen() {
     document.querySelector('.container').style.display = 'none';
@@ -469,7 +527,7 @@ function openResultsCheckScreen() {
     for (const [drawId, draw] of Object.entries(draws)) {
         for (const [time, label] of Object.entries(draw.times)) {
             const r = resultsDatabase[drawId]?.[time];
-            if (r) latestDiv.innerHTML += `<div><strong>${draw.name} ${time}</strong> : ${r.lot1} | ${r.lot2} | ${r.lot3}</div>`;
+            if (r) latestDiv.innerHTML += `<div class="result-item"><strong>${draw.name} ${time}</strong> : ${r.lot1} | ${r.lot2} | ${r.lot3}</div>`;
         }
     }
 }
@@ -490,7 +548,7 @@ function showScreen(screenId) {
         if (screen) {
             screen.style.display = 'block';
             if (screenId === 'report') loadReportByPeriod('15days');
-            else if (screenId === 'history') updateHistoryScreen();
+            else if (screenId === 'history') renderHistory();
             else if (screenId === 'winning-tickets') updateWinningTicketsScreen();
         }
     }
@@ -503,8 +561,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const check = await apiCall('/api/auth/check');
     if (!check?.success) { logout(); return; }
     currentUser = check.user;
-    APP_STATE.agentId = currentUser.id;
-    APP_STATE.agentName = currentUser.name;
     await loadSettings();
     await loadResults();
     await loadMyTickets();
@@ -512,30 +568,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateCurrentTime();
     setInterval(updateCurrentTime, 60000);
     setupEventListeners();
-    CartManager.renderCart();
+    renderCart();
+    initMultiDrawPanel();
 });
+
 function updateCurrentTime() {
     const now = new Date();
     document.getElementById('current-time').innerText = now.toLocaleDateString('fr-FR') + ' - ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
 }
 function setupEventListeners() {
     document.querySelectorAll('.draw-card').forEach(card => {
-        card.addEventListener('click', () => openBettingScreen(card.dataset.draw, 'morning'));
+        card.addEventListener('click', (e) => {
+            if (e.target.classList.contains('draw-time')) return;
+            const drawId = card.dataset.draw;
+            const activeTime = card.querySelector('.draw-time.active')?.dataset.time || 'morning';
+            openBettingScreen(drawId, activeTime);
+        });
     });
-    document.querySelectorAll('.draw-btn').forEach(btn => {
-        btn.addEventListener('click', e => {
+    document.querySelectorAll('.draw-time').forEach(btn => {
+        btn.addEventListener('click', (e) => {
             e.stopPropagation();
             const card = btn.closest('.draw-card');
             const drawId = card.dataset.draw;
             const time = btn.dataset.time;
-            card.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+            card.querySelectorAll('.draw-time').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             openBettingScreen(drawId, time);
         });
     });
-    document.querySelectorAll('.game-category-btn').forEach(btn => {
+    document.querySelectorAll('.category-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.game-category-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             showGamesPanel(btn.dataset.category);
             document.getElementById('bet-form').style.display = 'none';
@@ -544,6 +607,7 @@ function setupEventListeners() {
     document.getElementById('save-print-ticket').addEventListener('click', saveAndPrintTicket);
     document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => showScreen(item.dataset.screen)));
     document.querySelectorAll('.back-button[data-screen]').forEach(btn => btn.addEventListener('click', () => showScreen(btn.dataset.screen)));
+    // Rapport
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -577,12 +641,31 @@ function setupEventListeners() {
         document.getElementById('multi-tickets-screen').style.display = 'block';
         const res = await apiCall('/api/tickets/multi-draw');
         const list = document.getElementById('multi-tickets-list');
-        if (res?.success && res.tickets.length) list.innerHTML = res.tickets.map(t => `<div class="multi-ticket-item">Fiche #${t.id} - ${t.total} G</div>`).join('');
-        else list.innerHTML = '<p>Pa gen fiche multi-tirages</p>';
+        if (res?.success && res.tickets.length) {
+            list.innerHTML = res.tickets.map(t => `<div class="ticket-card">Fiche #${t.id} - ${t.total} G</div>`).join('');
+        } else {
+            list.innerHTML = '<p>Pa gen fiche multi-tirages</p>';
+        }
     });
     document.getElementById('back-from-multi-tickets').addEventListener('click', () => {
         document.getElementById('multi-tickets-screen').style.display = 'none';
         document.querySelector('.container').style.display = 'block';
     });
     document.getElementById('logout-btn').addEventListener('click', logout);
+    // Recherches
+    document.getElementById('search-winning-btn').addEventListener('click', () => {
+        const term = document.getElementById('search-winning-tickets').value.toLowerCase();
+        const filtered = winningTickets.filter(w => w.ticket_number.toLowerCase().includes(term));
+        document.getElementById('winning-tickets-list').innerHTML = filtered.length ? filtered.map(w => `<div class="ticket-card">#${w.ticket_number} - ${w.winning_amount} G</div>`).join('') : '<p>Pa gen</p>';
+    });
+    document.getElementById('search-history-btn').addEventListener('click', () => {
+        const term = document.getElementById('search-history').value.toLowerCase();
+        const filtered = savedTickets.filter(t => t.ticket_number.toLowerCase().includes(term));
+        const container = document.getElementById('history-list');
+        if (filtered.length) {
+            container.innerHTML = filtered.map(t => `<div class="ticket-card">#${t.ticket_number} - ${t.total_amount} G</div>`).join('');
+        } else {
+            container.innerHTML = '<p>Pa gen</p>';
+        }
+    });
 }
