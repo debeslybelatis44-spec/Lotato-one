@@ -1,0 +1,1095 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>LOTATO - Agent</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#ad00f1">
+    <style>
+        /* ========== STYLES COMPLETS (intégrés) ========== */
+        :root {
+            --primary-color: #ad00f1;
+            --secondary-color: #3498db;
+            --accent-color: #05790d;
+            --success-color: #f08c00;
+            --warning-color: #1cf100;
+            --light-color: #ecf0f1;
+            --dark-color: #0004ff;
+            --miami-color: #e74c3c;
+            --georgia-color: #031a8e;
+            --newyork-color: #e99700;
+            --texas-color: #5d0b2a;
+            --tunisia-color: #1abc9c;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 8px rgba(0,0,0,0.12);
+            --shadow-lg: 0 8px 16px rgba(0,0,0,0.15);
+            --transition-fast: 0.2s ease;
+            --transition-normal: 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #2c3e50;
+            line-height: 1.6;
+            max-width: 500px;
+            margin: 0 auto;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        .container {
+            padding: 15px;
+            padding-bottom: 80px;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #ad00f1, #1a2530);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-image {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--warning-color);
+        }
+
+        .logo {
+            font-size: 2rem;
+            color: var(--warning-color);
+        }
+
+        .header-text h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .header-text p {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        .logout-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .time-display {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin-top: 10px;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        /* Cartes tirages */
+        .draws-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .draw-card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+        }
+
+        .draw-card.miami { border-top: 5px solid var(--miami-color); }
+        .draw-card.georgia { border-top: 5px solid var(--georgia-color); }
+        .draw-card.newyork { border-top: 5px solid var(--newyork-color); }
+        .draw-card.texas { border-top: 5px solid var(--texas-color); }
+        .draw-card.tunisia { border-top: 5px solid var(--tunisia-color); }
+
+        .draw-icon { font-size: 2rem; margin-bottom: 10px; }
+        .draw-card h3 { font-size: 1rem; margin-bottom: 5px; }
+        .draw-buttons { display: flex; gap: 5px; margin-top: 10px; }
+        .draw-btn { flex:1; padding:6px; border:none; border-radius:6px; font-size:0.7rem; cursor:pointer; }
+        .draw-btn.morning { background-color:#f39c12; color:white; }
+        .draw-btn.evening { background-color:#2c3e50; color:white; }
+        .draw-btn.active { background-color:var(--secondary-color); color:white; }
+        .draw-countdown { font-size:0.7rem; color:#666; margin-top:8px; }
+
+        /* Boutons catégories */
+        .game-category-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .game-category-btn {
+            flex: 1;
+            background: white;
+            border: none;
+            padding: 12px;
+            border-radius: 30px;
+            font-weight: bold;
+            box-shadow: var(--shadow-sm);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        .game-category-btn.active {
+            background: var(--secondary-color);
+            color: white;
+        }
+
+        /* Panneau des jeux */
+        .games-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .game-category-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .game-item {
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            cursor: pointer;
+            border-left: 3px solid var(--secondary-color);
+            transition: all var(--transition-fast);
+        }
+        .game-name { font-weight: bold; font-size: 0.85rem; }
+        .game-multiplier { font-size: 0.7rem; color: var(--success-color); font-weight: bold; }
+        .game-item small { font-size: 0.6rem; display: block; color: #666; }
+
+        /* Formulaire de pari */
+        .bet-form {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 0.85rem; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+        .number-inputs { display: flex; gap: 8px; }
+        .btn-primary { background: var(--secondary-color); color: white; }
+        .btn-secondary { background: var(--light-color); }
+        button { padding: 10px 16px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all var(--transition-fast); }
+        .bet-actions { display: flex; gap: 8px; margin-top: 15px; }
+
+        /* Grille multi-numéros */
+        .multi-number-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin: 10px 0;
+        }
+        .multi-number-grid input {
+            text-align: center;
+            font-size: 1rem;
+            padding: 8px;
+        }
+
+        /* Panier */
+        .active-bets {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .bet-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.85rem;
+        }
+        .bet-remove { color: red; cursor: pointer; margin-left: 10px; }
+        .bet-total { display: flex; justify-content: space-between; margin-top: 12px; padding-top: 12px; border-top: 2px solid #eee; font-weight: bold; }
+        .ticket-actions { display: flex; gap: 10px; margin-bottom: 15px; }
+        .save-print-btn { background: var(--success-color); color: white; flex:1; }
+
+        /* Navigation basse */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            padding: 6px 10px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin: 0 auto;
+            z-index: 1000;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #7f8c8d;
+            font-size: 0.65rem;
+            cursor: pointer;
+            padding: 4px 8px;
+        }
+        .nav-item.active { color: var(--secondary-color); background: rgba(52,152,219,0.1); border-radius: 8px; }
+        .nav-icon { font-size: 1.1rem; margin-bottom: 2px; }
+
+        /* Écrans secondaires */
+        .screen, .results-check-screen, .multi-tickets-screen, .report-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: white;
+            z-index: 100;
+            padding: 20px;
+            overflow-y: auto;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .screen-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .back-button {
+            background: none;
+            border: none;
+            font-size: 1.3rem;
+            margin-right: 15px;
+            cursor: pointer;
+            color: var(--primary-color);
+        }
+        .screen-title { font-size: 1.3rem; color: var(--primary-color); }
+
+        /* Rapport */
+        .report-filters { margin-bottom: 20px; }
+        .filter-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
+        .filter-btn { background: var(--light-color); padding: 6px 12px; border-radius: 20px; cursor: pointer; }
+        .filter-btn.active { background: var(--secondary-color); color: white; }
+        .custom-range { display: flex; gap: 8px; align-items: center; margin-bottom: 15px; }
+        .report-stats { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-bottom: 20px; }
+        .stat-card { background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 12px; padding: 15px; display: flex; align-items: center; gap: 12px; color: white; }
+        .stat-icon { font-size: 1.5rem; }
+        .stat-info { display: flex; flex-direction: column; }
+        .stat-label { font-size: 0.7rem; opacity: 0.9; }
+        .stat-value { font-size: 1.1rem; font-weight: bold; }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary-color);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 8px;
+            z-index: 2000;
+            display: flex;
+            gap: 8px;
+        }
+        .notification.success { background: var(--success-color); }
+    </style>
+</head>
+<body>
+    <div class="container" id="main-container">
+        <header>
+            <div class="header-content">
+                <div class="logo-container">
+                    <img src="logo-borlette.jpg" alt="Logo" class="logo-image" id="company-logo">
+                    <div class="logo"><i class="fas fa-dice"></i></div>
+                </div>
+                <div class="header-text">
+                    <h1 id="company-name">Lotato</h1>
+                    <p id="company-slogan">Chwazi yon Jwet</p>
+                </div>
+                <button class="logout-btn" id="logout-btn"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+            <div class="time-display"><i class="fas fa-clock"></i> <span id="current-time">Chargement...</span></div>
+            <div style="margin-top:10px; display:flex; gap:8px;">
+                <button class="check-results-btn" id="open-results-check" style="flex:1;"><i class="fas fa-search"></i> Tcheke Rezilta</button>
+                <button class="check-results-btn" id="open-multi-tickets" style="flex:1;"><i class="fas fa-ticket-alt"></i> Fich milti-tiraj</button>
+            </div>
+        </header>
+
+        <!-- Cartes des tirages -->
+        <div class="draws-container">
+            <div class="draw-card miami" data-draw="miami"><div class="draw-icon"><i class="fas fa-sun"></i></div><h3>Miami</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">1:30 PM</button><button class="draw-btn evening" data-time="evening">9:50 PM</button></div><div class="draw-countdown">18 h 30 min</div></div>
+            <div class="draw-card georgia" data-draw="georgia"><div class="draw-icon"><i class="fas fa-map-marker-alt"></i></div><h3>Georgia</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">12:30 PM</button><button class="draw-btn evening" data-time="evening">7:00 PM</button></div><div class="draw-countdown">17 h 29 min</div></div>
+            <div class="draw-card newyork" data-draw="newyork"><div class="draw-icon"><i class="fas fa-building"></i></div><h3>New York</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">2:30 PM</button><button class="draw-btn evening" data-time="evening">8:00 PM</button></div><div class="draw-countdown">19 h 30 min</div></div>
+            <div class="draw-card texas" data-draw="texas"><div class="draw-icon"><i class="fas fa-hat-cowboy"></i></div><h3>Texas</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">12:00 PM</button><button class="draw-btn evening" data-time="evening">6:00 PM</button></div><div class="draw-countdown">18 h 27 min</div></div>
+            <div class="draw-card tunisia" data-draw="tunisia"><div class="draw-icon"><i class="fas fa-flag"></i></div><h3>Tunisie</h3><div class="draw-buttons"><button class="draw-btn morning active" data-time="morning">10:30 AM</button><button class="draw-btn evening" data-time="evening">2:00 PM</button></div><div class="draw-countdown">8 h 30 min</div></div>
+        </div>
+
+        <!-- 3 boutons catégories -->
+        <div class="game-category-buttons">
+            <button class="game-category-btn active" data-category="borlette"><i class="fas fa-dice"></i> Borlette</button>
+            <button class="game-category-btn" data-category="lotto"><i class="fas fa-list-ol"></i> Lotto</button>
+            <button class="game-category-btn" data-category="special"><i class="fas fa-star"></i> Espesyal</button>
+        </div>
+
+        <!-- Panneau des jeux -->
+        <div id="games-panel" class="games-panel"></div>
+
+        <!-- Formulaire de pari -->
+        <div id="bet-form" class="bet-form"></div>
+
+        <!-- Panier actif -->
+        <div class="active-bets" id="active-bets">
+            <div class="ticket-actions">
+                <button class="save-print-btn" id="save-print-ticket"><i class="fas fa-save"></i> <i class="fas fa-print"></i> Anrejistre & Enprime</button>
+            </div>
+            <h3>Parye Aktif</h3>
+            <div id="bets-list"></div>
+            <div class="bet-total"><span>Total:</span><span id="bet-total">0 goud</span></div>
+        </div>
+    </div>
+
+    <!-- Navigation basse -->
+    <div class="bottom-nav">
+        <div class="nav-item active" data-screen="home"><div class="nav-icon"><i class="fas fa-home"></i></div><span>Akèy</span></div>
+        <div class="nav-item" data-screen="report"><div class="nav-icon"><i class="fas fa-chart-line"></i></div><span>Rapò</span></div>
+        <div class="nav-item" data-screen="winning-tickets"><div class="nav-icon"><i class="fas fa-trophy"></i></div><span>Fich Genyen</span></div>
+        <div class="nav-item" data-screen="history"><div class="nav-icon"><i class="fas fa-history"></i></div><span>Istorik</span></div>
+    </div>
+
+    <!-- Écran Rapport -->
+    <div class="screen" id="report-screen">
+        <div class="screen-header"><button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Rapò & Komisyon</h2></div>
+        <div class="report-filters">
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-period="15days">15 dènye jou</button>
+                <button class="filter-btn" data-period="7days">7 dènye jou</button>
+                <button class="filter-btn" data-period="month">Mwa sa a</button>
+                <button class="filter-btn" data-period="today">Jodi a</button>
+            </div>
+            <div class="custom-range">
+                <input type="date" id="start-date"> <span>à</span> <input type="date" id="end-date">
+                <button class="filter-btn" id="apply-custom">Aplike</button>
+            </div>
+            <div style="margin: 10px 0;">
+                <label>Chwazi tiraj :</label>
+                <select id="report-draw-select">
+                    <option value="all">Tout tiraj yo</option>
+                    <option value="miami">Miami</option>
+                    <option value="georgia">Georgia</option>
+                    <option value="newyork">New York</option>
+                    <option value="texas">Texas</option>
+                    <option value="tunisia">Tunisie</option>
+                </select>
+            </div>
+            <button id="print-report-btn" class="btn-primary" style="width:100%;"><i class="fas fa-print"></i> Enprime rapò</button>
+        </div>
+        <div class="report-stats" id="report-stats">
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-simple"></i></div><div class="stat-info"><span class="stat-label">Total Vant</span><span class="stat-value" id="total-sales">0 G</span></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-percent"></i></div><div class="stat-info"><span class="stat-label">Komisyon Agent</span><span class="stat-value" id="commission-rate">0%</span></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-coins"></i></div><div class="stat-info"><span class="stat-label">Komisyon Ganyen</span><span class="stat-value" id="commission-earned">0 G</span></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-trophy"></i></div><div class="stat-info"><span class="stat-label">Total Pyman</span><span class="stat-value" id="total-payouts">0 G</span></div></div>
+            <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-info"><span class="stat-label">Bénéfis Net</span><span class="stat-value" id="net-profit">0 G</span></div></div>
+        </div>
+        <div class="report-detail"><h3>Detay pa Tiraj</h3><div id="report-detail-list"></div></div>
+    </div>
+
+    <!-- Écran Fiches gagnantes -->
+    <div class="screen" id="winning-tickets-screen">
+        <div class="screen-header"><button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Fich Genyen</h2></div>
+        <div class="search-history"><input type="text" id="search-winning-tickets" placeholder="Chache fiche..."><button id="search-winning-btn">Chache</button></div>
+        <div id="winning-tickets-list"></div>
+    </div>
+
+    <!-- Écran Historique -->
+    <div class="screen" id="history-screen">
+        <div class="screen-header"><button class="back-button" data-screen="home"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Istorik Parye</h2></div>
+        <div class="search-history"><input type="text" id="search-history" placeholder="Chache fiche..."><button id="search-history-btn">Chache</button></div>
+        <div id="history-list"></div>
+    </div>
+
+    <!-- Écran vérification résultats -->
+    <div class="results-check-screen" id="results-check-screen">
+        <div class="screen-header"><button class="back-button" id="back-from-results"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Verifye fich ki genyen</h2></div>
+        <div id="latest-results"></div>
+        <button class="check-results-btn" id="check-winners-btn"><i class="fas fa-trophy"></i> Fich ki Genyen</button>
+        <div id="winning-tickets-container"></div>
+    </div>
+
+    <!-- Écran multi-tickets -->
+    <div class="multi-tickets-screen" id="multi-tickets-screen">
+        <div class="screen-header"><button class="back-button" id="back-from-multi-tickets"><i class="fas fa-arrow-left"></i></button><h2 class="screen-title">Fiche Multi-Tirages</h2></div>
+        <div id="multi-tickets-list"></div>
+    </div>
+
+    <script>
+        // ==============================
+        // LOTATO - VERSION COMPLETE AVEC TOUTES MODIFICATIONS
+        // ==============================
+
+        // ---------- CONFIGURATION ----------
+        const API_BASE_URL = '';
+        let authToken = localStorage.getItem('lotato_token');
+        let currentUser = null;
+        let companyInfo = { name: "Lotato", phone: "+509 32 53 49 58", address: "Cap Haïtien", slogan: "Chwazi yon Jwet", logo: "", agentCommission: 10 };
+        let savedTickets = [];
+        let winningTickets = [];
+        let resultsDatabase = {};
+        let currentDraw = null, currentDrawTime = null;
+
+        // Panier central (style cartManager)
+        let APP_STATE = {
+            currentCart: [],
+            agentId: null,
+            agentName: '',
+            selectedDraw: null,
+            selectedDrawTime: null,
+            lotteryConfig: { name: "Lotato", slogan: "Chwazi yon Jwet", logo: "" }
+        };
+
+        // Types de jeux
+        const betTypes = {
+            borlette: { name: "BORLETTE", multiplier: 60, multiplier2: 20, multiplier3: 10, category: "borlette" },
+            boulpe: { name: "BOUL PE", multiplier: 60, category: "borlette" },
+            nx: { name: "NX", multiplier: 60, category: "borlette" },
+            lotto3: { name: "LOTO 3", multiplier: 500, category: "lotto" },
+            lotto4: { name: "LOTO 4", multiplier: 5000, category: "lotto" },
+            lotto5: { name: "LOTO 5", multiplier: 25000, category: "lotto" },
+            grap: { name: "GRAP", multiplier: 500, category: "special" },
+            marriage: { name: "MARYAJ", multiplier: 1000, category: "special" },
+            'auto-marriage': { name: "MARYAJ OTOMATIK", multiplier: 1000, category: "special" },
+            'auto-lotto4': { name: "LOTO 4 OTOMATIK", multiplier: 5000, category: "special" }
+        };
+
+        const draws = {
+            miami: { name: "Miami", times: { morning: "1:30 PM", evening: "9:50 PM" } },
+            georgia: { name: "Georgia", times: { morning: "12:30 PM", evening: "7:00 PM" } },
+            newyork: { name: "New York", times: { morning: "2:30 PM", evening: "8:00 PM" } },
+            texas: { name: "Texas", times: { morning: "12:00 PM", evening: "6:00 PM" } },
+            tunisia: { name: "Tunisie", times: { morning: "10:30 AM", evening: "2:00 PM" } }
+        };
+
+        // ---------- FONCTIONS API ----------
+        async function apiCall(url, method = 'GET', body = null) {
+            const token = localStorage.getItem('lotato_token');
+            const headers = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
+            const options = { method, headers };
+            if (body) options.body = JSON.stringify(body);
+            try {
+                const response = await fetch(url, options);
+                if (response.status === 401) { logout(); return null; }
+                return await response.json();
+            } catch(e) { showNotification('Erreur connexion', 'error'); return null; }
+        }
+
+        function logout() {
+            localStorage.removeItem('lotato_token');
+            window.location.href = '/index.html';
+        }
+
+        function showNotification(msg, type = 'info') {
+            const notif = document.createElement('div');
+            notif.className = `notification ${type}`;
+            notif.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'info'}-circle"></i> ${msg}`;
+            document.body.appendChild(notif);
+            setTimeout(() => notif.remove(), 3000);
+        }
+
+        async function loadMyTickets() {
+            const res = await apiCall('/api/tickets');
+            if (res?.success) savedTickets = res.tickets;
+        }
+        async function loadWinningTickets() {
+            const res = await apiCall('/api/tickets/winning');
+            if (res?.success) winningTickets = res.tickets;
+        }
+        async function loadResults() {
+            const res = await apiCall('/api/results');
+            if (res?.success) resultsDatabase = res.results;
+        }
+        async function loadSettings() {
+            const res = await apiCall('/api/settings');
+            if (res?.success) {
+                const s = res.settings;
+                if (s.company_name) companyInfo.name = s.company_name;
+                if (s.company_slogan) companyInfo.slogan = s.company_slogan;
+                if (s.company_logo) companyInfo.logo = s.company_logo;
+                if (s.agent_commission) companyInfo.agentCommission = parseFloat(s.agent_commission);
+                updateCompanyDisplay();
+            }
+        }
+
+        function updateCompanyDisplay() {
+            document.getElementById('company-name').innerText = companyInfo.name;
+            document.getElementById('company-slogan').innerText = companyInfo.slogan;
+            if (companyInfo.logo) document.getElementById('company-logo').src = companyInfo.logo;
+            APP_STATE.lotteryConfig = { name: companyInfo.name, slogan: companyInfo.slogan, logo: companyInfo.logo };
+        }
+
+        // ---------- GESTION PANIER ----------
+        function renderCart() {
+            const container = document.getElementById('bets-list');
+            const totalEl = document.getElementById('bet-total');
+            let total = 0;
+            if (!APP_STATE.currentCart.length) {
+                container.innerHTML = '<p>Pa gen parye aktif.</p>';
+                totalEl.innerText = '0 goud';
+                return;
+            }
+            container.innerHTML = APP_STATE.currentCart.map(bet => {
+                total += bet.amount;
+                return `<div class="bet-item">
+                            <div><strong>${bet.name}</strong><br>${bet.number}</div>
+                            <div>${bet.amount} goud <span class="bet-remove" data-id="${bet.id}"><i class="fas fa-times"></i></span></div>
+                        </div>`;
+            }).join('');
+            totalEl.innerText = total + ' goud';
+            document.querySelectorAll('.bet-remove').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseFloat(btn.dataset.id);
+                    APP_STATE.currentCart = APP_STATE.currentCart.filter(b => b.id !== id);
+                    renderCart();
+                });
+            });
+        }
+
+        function addToCart(bet) {
+            APP_STATE.currentCart.push(bet);
+            renderCart();
+        }
+
+        // ---------- SAUVEGARDE ET IMPRESSION TICKET ----------
+        async function saveAndPrintTicket() {
+            if (!APP_STATE.currentCart.length) { showNotification("Pa gen parye", "warning"); return; }
+            if (!currentDraw || !currentDrawTime) { showNotification("Chwazi yon tiraj anvan", "warning"); return; }
+            const ticket = {
+                draw: currentDraw,
+                draw_time: currentDrawTime,
+                bets: APP_STATE.currentCart.map(b => ({ type: b.type, number: b.number, amount: b.amount, multiplier: b.multiplier })),
+                total: APP_STATE.currentCart.reduce((s,b)=>s+b.amount,0)
+            };
+            const res = await apiCall('/api/tickets', 'POST', { ticket });
+            if (res?.success) {
+                showNotification(`Fiche #${res.ticketNumber} sove!`, "success");
+                await loadMyTickets();
+                printTicket(res.ticketId, res.ticketNumber);
+                APP_STATE.currentCart = [];
+                renderCart();
+                closeBettingScreen();
+            }
+        }
+
+        function printTicket(ticketId, ticketNumber) {
+            const ticket = savedTickets.find(t => t.ticket_number == ticketNumber);
+            if (!ticket) return;
+            const win = window.open('', '_blank');
+            const logoHtml = companyInfo.logo ? `<img src="${companyInfo.logo}" style="max-width:80px; margin-bottom:10px;">` : '';
+            win.document.write(`
+                <html><head><title>Ticket ${ticketNumber}</title>
+                <style>body{font-family:monospace;padding:20px;text-align:center}.ticket{border:2px solid #000;padding:20px;max-width:400px;margin:auto}.total{font-weight:bold;margin-top:15px}</style>
+                </head><body><div class="ticket">
+                ${logoHtml}<h2>${companyInfo.name}</h2><div>${companyInfo.slogan}</div>
+                <p>Ticket #${ticketNumber}</p><p>${new Date(ticket.created_at).toLocaleString()}</p><hr>
+                ${ticket.bets.map(b => `<div>${b.bet_type}: ${b.numbers} - ${b.amount} G</div>`).join('')}<hr>
+                <div class="total">Total: ${ticket.total_amount} G</div><div>${companyInfo.address}</div>
+                </div></body></html>
+            `);
+            win.document.close();
+            win.print();
+        }
+
+        // ---------- AFFICHAGE DES JEUX PAR CATÉGORIE ----------
+        function showGamesPanel(category) {
+            const panel = document.getElementById('games-panel');
+            const gamesList = {
+                borlette: [
+                    { id: 'borlette', name: 'BORLETTE', desc: '2 chif - 1er lot ×60, 2e ×20, 3e ×10', multiplier: 'x60' },
+                    { id: 'boulpe', name: 'BOUL PE', desc: 'Boul pe (00-99)', multiplier: 'x60' },
+                    { id: 'nx', name: 'NX (Boul N0-N9)', desc: '10 boule Nx', multiplier: 'x60' }
+                ],
+                lotto: [
+                    { id: 'lotto3', name: 'LOTO 3', desc: '3 chif (lot 1 + 1 chif devan)', multiplier: 'x500' },
+                    { id: 'lotto4', name: 'LOTO 4', desc: '4 chif (lot 1+2 accumulate) - 3 opsyon', multiplier: 'x5000' },
+                    { id: 'lotto5', name: 'LOTO 5', desc: '5 chif (lot 1+2+3 accumulate) - 3 opsyon', multiplier: 'x25000' }
+                ],
+                special: [
+                    { id: 'grap', name: 'GRAP', desc: 'Boule paire (111, 222...)', multiplier: 'x500' },
+                    { id: 'marriage', name: 'MARYAJ', desc: 'Maryaj 2 chif', multiplier: 'x1000' },
+                    { id: 'auto-marriage', name: 'MARYAJ OTOMATIK', desc: 'Marie boules otomatik', multiplier: 'x1000' },
+                    { id: 'auto-lotto4', name: 'LOTO 4 OTOMATIK', desc: 'Lotto 4 otomatik', multiplier: 'x5000' }
+                ]
+            };
+            const games = gamesList[category];
+            if (!games) return;
+            panel.innerHTML = `<div class="game-category-grid">${games.map(g => `
+                <div class="game-item" data-game="${g.id}">
+                    <div class="game-name">${g.name}</div>
+                    <div class="game-multiplier">${g.multiplier}</div>
+                    <small>${g.desc}</small>
+                </div>`).join('')}</div>`;
+            panel.style.display = 'block';
+            document.querySelectorAll('#games-panel .game-item').forEach(el => {
+                el.addEventListener('click', () => showBetForm(el.dataset.game));
+            });
+        }
+
+        // ---------- FORMULAIRES DE PARI ----------
+        function showBetForm(gameType) {
+            const bet = betTypes[gameType];
+            const formDiv = document.getElementById('bet-form');
+            document.getElementById('games-panel').style.display = 'none';
+            formDiv.style.display = 'block';
+            let html = `<h3>${bet.name} - ${bet.description || ''}</h3>`;
+
+            if (gameType === 'borlette' || gameType === 'boulpe') {
+                // Interface multi-numéros (petits carrés)
+                html += `<div class="form-group">
+                            <label>Antre plizyè boule (2 chif chak)</label>
+                            <div id="multi-number-grid" class="multi-number-grid"></div>
+                            <button type="button" id="add-multi-numbers" class="btn-primary" style="margin-top:8px;">+ Ajoute tout</button>
+                         </div>
+                         <div id="multi-amount-section" style="display:none; margin-top:10px;">
+                            <label>Montan chak boule</label>
+                            <input type="number" id="multi-amount" value="1" min="1">
+                            <button id="confirm-multi" class="btn-primary">Konfime & Ajoute</button>
+                         </div>
+                         <hr><div class="form-group">
+                            <label>Antre yon sèl boule</label>
+                            <input type="text" id="single-number" placeholder="Eg: 12" maxlength="2">
+                            <label>Montan</label>
+                            <input type="number" id="single-amount" value="1">
+                            <button id="add-single" class="btn-primary" style="margin-top:8px;">Ajoute</button>
+                         </div>`;
+            } else if (gameType === 'nx') {
+                html += `<div class="form-group"><label>Chwazi N0 a N9</label><div class="multi-number-grid" id="nx-buttons">${[...Array(10)].map((_,i)=>`<button type="button" class="nx-ball" data-n="${i}">N${i}</button>`).join('')}</div><label>Montan chak boule</label><input type="number" id="nx-amount" value="1"><button id="add-nx" class="btn-primary">Ajoute seleksyon</button></div>`;
+            } else if (gameType === 'marriage') {
+                html += `<div class="number-inputs"><input type="text" id="marriage-n1" placeholder="00" maxlength="2"><input type="text" id="marriage-n2" placeholder="00" maxlength="2"></div><label>Montan</label><input type="number" id="marriage-amount" value="1"><button id="add-marriage" class="btn-primary">Ajoute</button>`;
+            } else if (gameType === 'lotto4' || gameType === 'lotto5') {
+                const digits = gameType === 'lotto4' ? 2 : 3;
+                html += `<div class="number-inputs"><input type="text" id="lotto-n1" placeholder="${'0'.repeat(digits)}" maxlength="${digits}"><input type="text" id="lotto-n2" placeholder="00" maxlength="2"></div>
+                         <div class="options-container"><label><input type="checkbox" id="opt1" checked> Opsyon 1</label> <label><input type="checkbox" id="opt2" checked> Opsyon 2</label> <label><input type="checkbox" id="opt3" checked> Opsyon 3</label></div>
+                         <label>Montan pa opsyon</label><input type="number" id="lotto-amount" value="1"><button id="add-lotto" class="btn-primary">Ajoute</button>`;
+            } else if (gameType === 'grap') {
+                html += `<div class="form-group"><label>Chwazi boule paire</label><div class="multi-number-grid">${['111','222','333','444','555','666','777','888','999','000'].map(p=>`<button class="pair-ball" data-pair="${p}">${p}</button>`).join('')}</div><label>Montan</label><input type="number" id="grap-amount" value="1"><button id="add-grap" class="btn-primary">Ajoute</button></div>`;
+            } else if (gameType === 'auto-marriage' || gameType === 'auto-lotto4') {
+                html += `<div><button id="use-basket-balls">Itilize Boul nan Panye</button> <button id="enter-manual-balls">Antre Manyèlman</button></div>
+                         <div id="manual-balls-input" style="display:none;"><input type="text" id="manual-balls" placeholder="12 34 56"><button id="process-manual">Proses</button></div>
+                         <div><strong>Boules chwazi:</strong> <span id="selected-balls-list">Pa gen</span></div>
+                         ${gameType === 'auto-lotto4' ? '<label><input type="checkbox" id="include-reverse" checked> Enkli renverse</label>' : ''}
+                         <label>Montan chak parye</label><input type="number" id="auto-amount" value="1"><button id="add-auto" class="btn-primary">Ajoute otomatik</button>`;
+            }
+
+            html += `<div class="bet-actions"><button id="close-form" class="btn-secondary">Fèmen</button></div>`;
+            formDiv.innerHTML = html;
+
+            // Gestion des événements selon gameType
+            if (gameType === 'borlette' || gameType === 'boulpe') {
+                initMultiNumberGrid(2);
+                document.getElementById('add-multi-numbers').onclick = () => showMultiAmountInput();
+                document.getElementById('confirm-multi').onclick = () => addMultiNumbers(gameType);
+                document.getElementById('add-single').onclick = () => addSingleBet(gameType);
+            }
+            else if (gameType === 'nx') {
+                document.querySelectorAll('.nx-ball').forEach(btn => {
+                    btn.onclick = () => addNxBet(btn.dataset.n);
+                });
+            }
+            else if (gameType === 'marriage') {
+                document.getElementById('add-marriage').onclick = () => addMarriageBet();
+            }
+            else if (gameType === 'lotto4' || gameType === 'lotto5') {
+                document.getElementById('add-lotto').onclick = () => addLottoBet(gameType);
+            }
+            else if (gameType === 'grap') {
+                document.querySelectorAll('.pair-ball').forEach(btn => {
+                    btn.onclick = () => {
+                        const amount = parseInt(document.getElementById('grap-amount').value);
+                        addToCart({ id: Date.now()+Math.random(), type: gameType, name: bet.name, number: btn.dataset.pair, amount, multiplier: bet.multiplier });
+                        showNotification("Ajoute!", "success");
+                    };
+                });
+            }
+            else if (gameType === 'auto-marriage' || gameType === 'auto-lotto4') {
+                let selectedBalls = [];
+                document.getElementById('use-basket-balls').onclick = () => {
+                    selectedBalls = [...new Set(APP_STATE.currentCart.filter(b=>b.type==='borlette').map(b=>b.number))];
+                    document.getElementById('selected-balls-list').innerText = selectedBalls.join(', ') || 'Pa gen';
+                };
+                document.getElementById('enter-manual-balls').onclick = () => document.getElementById('manual-balls-input').style.display = 'block';
+                document.getElementById('process-manual').onclick = () => {
+                    const input = document.getElementById('manual-balls').value.trim();
+                    selectedBalls = [...new Set(input.split(/\s+/).filter(b=>/^\d{2}$/.test(b)))];
+                    document.getElementById('selected-balls-list').innerText = selectedBalls.join(', ') || 'Pa gen';
+                    document.getElementById('manual-balls-input').style.display = 'none';
+                };
+                document.getElementById('add-auto').onclick = () => {
+                    const amount = parseInt(document.getElementById('auto-amount').value);
+                    if (selectedBalls.length < 2) return showNotification("Fò gen omwen 2 boul", "warning");
+                    if (gameType === 'auto-marriage') {
+                        for (let i=0; i<selectedBalls.length; i++)
+                            for (let j=i+1; j<selectedBalls.length; j++)
+                                addToCart({ id: Date.now()+Math.random(), type: 'marriage', name: bet.name, number: `${selectedBalls[i]}*${selectedBalls[j]}`, amount, multiplier: bet.multiplier });
+                    } else {
+                        const incReverse = document.getElementById('include-reverse')?.checked;
+                        for (let i=0; i<selectedBalls.length; i++)
+                            for (let j=i+1; j<selectedBalls.length; j++) {
+                                addToCart({ id: Date.now()+Math.random(), type: 'lotto4', name: bet.name, number: selectedBalls[i]+selectedBalls[j], amount, multiplier: bet.multiplier });
+                                if (incReverse) addToCart({ id: Date.now()+Math.random(), type: 'lotto4', name: bet.name+' (R)', number: selectedBalls[j]+selectedBalls[i], amount, multiplier: bet.multiplier });
+                            }
+                    }
+                    showNotification("Ajoute!", "success");
+                    document.getElementById('bet-form').style.display = 'none';
+                    document.getElementById('games-panel').style.display = 'block';
+                };
+            }
+
+            document.getElementById('close-form').onclick = () => {
+                formDiv.style.display = 'none';
+                document.getElementById('games-panel').style.display = 'block';
+            };
+        }
+
+        function initMultiNumberGrid(digits=2) {
+            const grid = document.getElementById('multi-number-grid');
+            grid.innerHTML = '';
+            for (let i=0; i<12; i++) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.maxLength = digits;
+                input.placeholder = '00';
+                input.addEventListener('input', function(e) {
+                    if (this.value.length === digits) {
+                        const next = this.parentElement.querySelector(`input:nth-child(${Array.from(this.parentElement.children).indexOf(this)+2})`);
+                        if (next) next.focus();
+                    }
+                });
+                grid.appendChild(input);
+            }
+        }
+
+        function showMultiAmountInput() {
+            document.getElementById('multi-amount-section').style.display = 'block';
+        }
+
+        function addMultiNumbers(gameType) {
+            const inputs = document.querySelectorAll('#multi-number-grid input');
+            const numbers = Array.from(inputs).map(i => i.value.trim()).filter(v => /^\d{2}$/.test(v));
+            if (numbers.length === 0) return showNotification("Antre omwen yon boule", "warning");
+            const amount = parseInt(document.getElementById('multi-amount').value);
+            if (isNaN(amount) || amount <= 0) return showNotification("Montan valid", "warning");
+            numbers.forEach(num => {
+                addToCart({ id: Date.now()+Math.random(), type: gameType, name: betTypes[gameType].name, number: num, amount, multiplier: betTypes[gameType].multiplier });
+            });
+            showNotification(`${numbers.length} parye ajoute`, "success");
+            document.getElementById('multi-amount-section').style.display = 'none';
+            inputs.forEach(i => i.value = '');
+        }
+
+        function addSingleBet(gameType) {
+            const number = document.getElementById('single-number').value.trim();
+            const amount = parseInt(document.getElementById('single-amount').value);
+            if (!/^\d{2}$/.test(number)) return showNotification("Boule dwe 2 chif", "warning");
+            if (isNaN(amount) || amount <= 0) return showNotification("Montan valid", "warning");
+            addToCart({ id: Date.now()+Math.random(), type: gameType, name: betTypes[gameType].name, number, amount, multiplier: betTypes[gameType].multiplier });
+            showNotification("Ajoute!", "success");
+            document.getElementById('single-number').value = '';
+        }
+
+        function addNxBet(n) {
+            const amount = parseInt(document.getElementById('nx-amount').value);
+            if (isNaN(amount)) return;
+            for (let tens=0; tens<=9; tens++) {
+                const num = tens.toString() + n.toString();
+                addToCart({ id: Date.now()+Math.random(), type: 'borlette', name: `NX N${n}`, number: num, amount, multiplier: 60 });
+            }
+            showNotification(`10 boule N${n} ajoute`, "success");
+        }
+
+        function addMarriageBet() {
+            const n1 = document.getElementById('marriage-n1').value;
+            const n2 = document.getElementById('marriage-n2').value;
+            const amount = parseInt(document.getElementById('marriage-amount').value);
+            if (!/^\d{2}$/.test(n1) || !/^\d{2}$/.test(n2)) return showNotification("Chak chif dwe 2 chif", "warning");
+            addToCart({ id: Date.now()+Math.random(), type: 'marriage', name: 'MARYAJ', number: `${n1}*${n2}`, amount, multiplier: 1000 });
+            showNotification("Ajoute!", "success");
+        }
+
+        function addLottoBet(gameType) {
+            const n1 = document.getElementById('lotto-n1').value;
+            const n2 = document.getElementById('lotto-n2').value;
+            const opt1 = document.getElementById('opt1').checked;
+            const opt2 = document.getElementById('opt2').checked;
+            const opt3 = document.getElementById('opt3').checked;
+            const optCount = [opt1, opt2, opt3].filter(Boolean).length;
+            if (optCount === 0) return showNotification("Chwazi omwen yon opsyon", "warning");
+            const perAmount = parseInt(document.getElementById('lotto-amount').value);
+            const totalAmount = perAmount * optCount;
+            addToCart({ id: Date.now()+Math.random(), type: gameType, name: betTypes[gameType].name, number: n1+n2, amount: totalAmount, multiplier: betTypes[gameType].multiplier, options: {opt1,opt2,opt3}, perOptionAmount: perAmount });
+            showNotification("Ajoute!", "success");
+        }
+
+        // ---------- ÉCRAN DE PARI (ouverture depuis carte tirage) ----------
+        function openBettingScreen(drawId, time) {
+            currentDraw = drawId;
+            currentDrawTime = time;
+            const draw = draws[drawId];
+            document.getElementById('betting-title').textContent = `${draw.name} (${time === 'morning' ? 'Maten' : 'Swè'})`;
+            document.querySelector('.container').style.display = 'block';
+            document.getElementById('betting-screen')?.style.display = 'block'; // pas utilisé mais on garde
+            // On affiche le panneau des jeux par défaut
+            document.getElementById('games-panel').style.display = 'block';
+            document.getElementById('bet-form').style.display = 'none';
+            // Forcer l'affichage de la catégorie Borlette
+            document.querySelectorAll('.game-category-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector('.game-category-btn[data-category="borlette"]').classList.add('active');
+            showGamesPanel('borlette');
+        }
+
+        function closeBettingScreen() {
+            document.querySelector('.container').style.display = 'block';
+            document.getElementById('betting-screen')?.style.display = 'none';
+        }
+
+        // ---------- RAPPORTS ----------
+        async function loadReportData(drawId, start, end) {
+            let filtered = savedTickets.filter(t => new Date(t.created_at) >= start && new Date(t.created_at) <= end);
+            if (drawId !== 'all') filtered = filtered.filter(t => t.draw === drawId);
+            const totalSales = filtered.reduce((s,t)=>s+t.total_amount,0);
+            const commission = totalSales * (companyInfo.agentCommission/100);
+            const payouts = filtered.filter(t=>t.winning_amount).reduce((s,t)=>s+(t.winning_amount||0),0);
+            document.getElementById('total-sales').innerText = totalSales + ' G';
+            document.getElementById('commission-rate').innerText = companyInfo.agentCommission + '%';
+            document.getElementById('commission-earned').innerText = commission.toFixed(2) + ' G';
+            document.getElementById('total-payouts').innerText = payouts + ' G';
+            document.getElementById('net-profit').innerText = (totalSales - payouts) + ' G';
+            const detailDiv = document.getElementById('report-detail-list');
+            if (drawId === 'all') {
+                const drawStats = {};
+                filtered.forEach(t => { drawStats[t.draw] = (drawStats[t.draw]||0) + t.total_amount; });
+                detailDiv.innerHTML = Object.entries(drawStats).map(([d,a]) => `<div class="report-detail-item"><span>${d}</span><span>${a} G</span></div>`).join('');
+            } else {
+                detailDiv.innerHTML = `<div class="report-detail-item"><span>Total ${drawId}</span><span>${totalSales} G</span></div>`;
+            }
+        }
+
+        function printReport() {
+            const stats = document.getElementById('report-stats').cloneNode(true);
+            const detail = document.getElementById('report-detail-list').cloneNode(true);
+            const win = window.open('', '_blank');
+            win.document.write(`<html><head><title>Rapò</title><style>body{font-family:sans-serif;padding:20px}.stat-card{background:#f0f0f0;margin:10px;padding:10px;border-radius:8px}</style></head><body>${stats.outerHTML}${detail.outerHTML}</body></html>`);
+            win.document.close();
+            win.print();
+        }
+
+        // ---------- AUTRES ÉCRANS ----------
+        function updateHistoryScreen() {
+            const list = document.getElementById('history-list');
+            if (!savedTickets.length) { list.innerHTML = '<p>Pa gen fich</p>'; return; }
+            list.innerHTML = savedTickets.map(t => `<div class="ticket-item"><strong>#${t.ticket_number}</strong> - ${t.total_amount} G (${new Date(t.created_at).toLocaleString()})</div>`).join('');
+        }
+        function updateWinningTicketsScreen() {
+            const list = document.getElementById('winning-tickets-list');
+            list.innerHTML = winningTickets.length ? winningTickets.map(w => `<div class="winning-ticket"><strong>#${w.ticket_number}</strong> - ${w.winning_amount} G</div>`).join('') : '<p>Pa gen fiche gagnant</p>';
+        }
+        function openResultsCheckScreen() {
+            document.querySelector('.container').style.display = 'none';
+            document.getElementById('results-check-screen').style.display = 'block';
+            const latestDiv = document.getElementById('latest-results');
+            latestDiv.innerHTML = '';
+            for (const [drawId, draw] of Object.entries(draws)) {
+                for (const [time, label] of Object.entries(draw.times)) {
+                    const r = resultsDatabase[drawId]?.[time];
+                    if (r) latestDiv.innerHTML += `<div><strong>${draw.name} ${time}</strong> : ${r.lot1} | ${r.lot2} | ${r.lot3}</div>`;
+                }
+            }
+        }
+        async function checkWinningTickets() {
+            const res = await apiCall('/api/tickets/winning');
+            const container = document.getElementById('winning-tickets-container');
+            if (res?.success && res.tickets.length) {
+                container.innerHTML = res.tickets.map(w => `<div class="winning-ticket"><strong>#${w.ticket_number}</strong> - ${w.winning_amount} HTG</div>`).join('');
+            } else container.innerHTML = '<p>Pa gen fiche gagnant</p>';
+        }
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen, .results-check-screen, .multi-tickets-screen, .report-screen, .container').forEach(s => s.style.display = 'none');
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            const activeNav = document.querySelector(`.nav-item[data-screen="${screenId}"]`);
+            if (activeNav) activeNav.classList.add('active');
+            if (screenId === 'home') document.querySelector('.container').style.display = 'block';
+            else {
+                const screen = document.getElementById(screenId + '-screen');
+                if (screen) {
+                    screen.style.display = 'block';
+                    if (screenId === 'report') loadReportByPeriod('15days');
+                    else if (screenId === 'history') updateHistoryScreen();
+                    else if (screenId === 'winning-tickets') updateWinningTicketsScreen();
+                }
+            }
+        }
+        function loadReportByPeriod(period) {
+            const end = new Date();
+            let start = new Date();
+            switch(period) {
+                case 'today': start.setHours(0,0,0,0); break;
+                case '7days': start.setDate(end.getDate()-7); break;
+                case '15days': start.setDate(end.getDate()-15); break;
+                case 'month': start = new Date(end.getFullYear(), end.getMonth(), 1); break;
+                default: start.setDate(end.getDate()-15);
+            }
+            document.getElementById('start-date').value = start.toISOString().split('T')[0];
+            document.getElementById('end-date').value = end.toISOString().split('T')[0];
+            const drawId = document.getElementById('report-draw-select').value;
+            loadReportData(drawId, start, end);
+        }
+
+        // ---------- INITIALISATION ----------
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('lotato_token');
+            if (!token) { window.location.href = '/index.html'; return; }
+            const check = await apiCall('/api/auth/check');
+            if (!check?.success) { logout(); return; }
+            currentUser = check.user;
+            await loadSettings();
+            await loadResults();
+            await loadMyTickets();
+            await loadWinningTickets();
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 60000);
+            setupEventListeners();
+            // Afficher les jeux par défaut
+            showGamesPanel('borlette');
+            renderCart();
+        });
+
+        function updateCurrentTime() {
+            const now = new Date();
+            document.getElementById('current-time').innerText = now.toLocaleDateString('fr-FR') + ' - ' + now.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+        }
+
+        function setupEventListeners() {
+            // Cartes tirages
+            document.querySelectorAll('.draw-card').forEach(card => {
+                card.addEventListener('click', () => openBettingScreen(card.dataset.draw, 'morning'));
+            });
+            document.querySelectorAll('.draw-btn').forEach(btn => {
+                btn.addEventListener('click', e => {
+                    e.stopPropagation();
+                    const card = btn.closest('.draw-card');
+                    const drawId = card.dataset.draw;
+                    const time = btn.dataset.time;
+                    card.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    openBettingScreen(drawId, time);
+                });
+            });
+            // Boutons catégories
+            document.querySelectorAll('.game-category-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.game-category-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    showGamesPanel(btn.dataset.category);
+                    document.getElementById('bet-form').style.display = 'none';
+                });
+            });
+            // Sauvegarde ticket
+            document.getElementById('save-print-ticket').addEventListener('click', saveAndPrintTicket);
+            // Navigation
+            document.querySelectorAll('.nav-item').forEach(item => item.addEventListener('click', () => showScreen(item.dataset.screen)));
+            document.querySelectorAll('.back-button[data-screen]').forEach(btn => btn.addEventListener('click', () => showScreen(btn.dataset.screen)));
+            // Rapport
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    loadReportByPeriod(btn.dataset.period);
+                });
+            });
+            document.getElementById('apply-custom').addEventListener('click', () => {
+                const start = new Date(document.getElementById('start-date').value);
+                const end = new Date(document.getElementById('end-date').value);
+                end.setHours(23,59,59);
+                const drawId = document.getElementById('report-draw-select').value;
+                loadReportData(drawId, start, end);
+            });
+            document.getElementById('print-report-btn').addEventListener('click', printReport);
+            document.getElementById('report-draw-select').addEventListener('change', () => {
+                const start = new Date(document.getElementById('start-date').value);
+                const end = new Date(document.getElementById('end-date').value);
+                end.setHours(23,59,59);
+                const drawId = document.getElementById('report-draw-select').value;
+                loadReportData(drawId, start, end);
+            });
+            // Résultats
+            document.getElementById('open-results-check').addEventListener('click', openResultsCheckScreen);
+            document.getElementById('check-winners-btn').addEventListener('click', checkWinningTickets);
+            document.getElementById('back-from-results').addEventListener('click', () => {
+                document.getElementById('results-check-screen').style.display = 'none';
+                document.querySelector('.container').style.display = 'block';
+            });
+            // Multi tickets (simple)
+            document.getElementById('open-multi-tickets').addEventListener('click', () => {
+                document.querySelector('.container').style.display = 'none';
+                document.getElementById('multi-tickets-screen').style.display = 'block';
+                document.getElementById('multi-tickets-list').innerHTML = '<p>Fonctionnalité multi-tirages à implémenter côté serveur</p>';
+            });
+            document.getElementById('back-from-multi-tickets').addEventListener('click', () => {
+                document.getElementById('multi-tickets-screen').style.display = 'none';
+                document.querySelector('.container').style.display = 'block';
+            });
+            // Recherches
+            document.getElementById('search-winning-btn').addEventListener('click', () => {
+                const term = document.getElementById('search-winning-tickets').value.toLowerCase();
+                const filtered = winningTickets.filter(w => w.ticket_number.toLowerCase().includes(term));
+                document.getElementById('winning-tickets-list').innerHTML = filtered.length ? filtered.map(w => `<div>${w.ticket_number}</div>`).join('') : '<p>Pa gen</p>';
+            });
+            document.getElementById('search-history-btn').addEventListener('click', () => {
+                const term = document.getElementById('search-history').value.toLowerCase();
+                const filtered = savedTickets.filter(t => t.ticket_number.toLowerCase().includes(term));
+                document.getElementById('history-list').innerHTML = filtered.length ? filtered.map(t => `<div>${t.ticket_number}</div>`).join('') : '<p>Pa gen</p>';
+            });
+            document.getElementById('logout-btn').addEventListener('click', logout);
+        }
+    </script>
+</body>
+</html>
