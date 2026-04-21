@@ -4,11 +4,14 @@
 
 // Configuration de base avec APP_CONFIG
 const API_BASE_URL = 'https://lotatonova-fv0b.onrender.com';
+// Configuration API Backend
 const APP_CONFIG = {
     health: `${API_BASE_URL}/api/health`,
     login: `${API_BASE_URL}/api/auth/login`,
+    // Endpoints pour les résultats
     results: `${API_BASE_URL}/api/results`,
     checkWinners: `${API_BASE_URL}/api/check-winners`,
+    // Endpoints pour les tickets
     tickets: `${API_BASE_URL}/api/tickets`,
     ticketsPending: `${API_BASE_URL}/api/tickets/pending`,
     winningTickets: `${API_BASE_URL}/api/tickets/winning`,
@@ -18,52 +21,204 @@ const APP_CONFIG = {
     logo: `${API_BASE_URL}/api/logo`
 };
 
-const FIVE_MINUTES = 5 * 60 * 1000;
+const FIVE_MINUTES = 5 * 60 * 1000; // 5 minutes en millisecondes
 
-// Base de données simulée pour les résultats
+// Base de données simulée pour les résultats (sera remplacée par l'API)
 let resultsDatabase = {
     'miami': {
-        'morning': { date: new Date().toISOString(), lot1: '123', lot2: '45', lot3: '34' },
-        'evening': { date: new Date().toISOString(), lot1: '892', lot2: '34', lot3: '56' }
+        'morning': {
+            date: new Date().toISOString(),
+            lot1: '123', // 3 chiffres
+            lot2: '45',  // 2 chiffres
+            lot3: '34'   // 2 chiffres
+        },
+        'evening': {
+            date: new Date().toISOString(),
+            lot1: '892',
+            lot2: '34',
+            lot3: '56'
+        }
     },
     'georgia': {
-        'morning': { date: new Date().toISOString(), lot1: '327', lot2: '45', lot3: '89' },
-        'evening': { date: new Date().toISOString(), lot1: '567', lot2: '12', lot3: '34' }
+        'morning': {
+            date: new Date().toISOString(),
+            lot1: '327',
+            lot2: '45',
+            lot3: '89'
+        },
+        'evening': {
+            date: new Date().toISOString(),
+            lot1: '567',
+            lot2: '12',
+            lot3: '34'
+        }
     },
     'newyork': {
-        'morning': { date: new Date().toISOString(), lot1: '892', lot2: '34', lot3: '56' },
-        'evening': { date: new Date().toISOString(), lot1: '123', lot2: '45', lot3: '67' }
+        'morning': {
+            date: new Date().toISOString(),
+            lot1: '892',
+            lot2: '34',
+            lot3: '56'
+        },
+        'evening': {
+            date: new Date().toISOString(),
+            lot1: '123',
+            lot2: '45',
+            lot3: '67'
+        }
     },
     'texas': {
-        'morning': { date: new Date().toISOString(), lot1: '567', lot2: '89', lot3: '01' },
-        'evening': { date: new Date().toISOString(), lot1: '234', lot2: '56', lot3: '78' }
+        'morning': {
+            date: new Date().toISOString(),
+            lot1: '567',
+            lot2: '89',
+            lot3: '01'
+        },
+        'evening': {
+            date: new Date().toISOString(),
+            lot1: '234',
+            lot2: '56',
+            lot3: '78'
+        }
     },
     'tunisia': {
-        'morning': { date: new Date().toISOString(), lot1: '234', lot2: '56', lot3: '78' },
-        'evening': { date: new Date().toISOString(), lot1: '345', lot2: '67', lot3: '89' }
+        'morning': {
+            date: new Date().toISOString(),
+            lot1: '234',
+            lot2: '56',
+            lot3: '78'
+        },
+        'evening': {
+            date: new Date().toISOString(),
+            lot1: '345',
+            lot2: '67',
+            lot3: '89'
+        }
     }
 };
 
+// Données des tirages
 const draws = {
-    miami: { name: "Miami (Florida)", times: { morning: "1:30 PM", evening: "9:50 PM" }, date: "Sam, 29 Nov", countdown: "18 h 30 min" },
-    georgia: { name: "Georgia", times: { morning: "12:30 PM", evening: "7:00 PM" }, date: "Sam, 29 Nov", countdown: "17 h 29 min" },
-    newyork: { name: "New York", times: { morning: "2:30 PM", evening: "8:00 PM" }, date: "Sam, 29 Nov", countdown: "19 h 30 min" },
-    texas: { name: "Texas", times: { morning: "12:00 PM", evening: "6:00 PM" }, date: "Sam, 29 Nov", countdown: "18 h 27 min" },
-    tunisia: { name: "Tunisie", times: { morning: "10:30 AM", evening: "2:00 PM" }, date: "Sam, 29 Nov", countdown: "8 h 30 min" }
+    miami: {
+        name: "Miami (Florida)",
+        times: {
+            morning: "1:30 PM",
+            evening: "9:50 PM"
+        },
+        date: "Sam, 29 Nov",
+        countdown: "18 h 30 min"
+    },
+    georgia: {
+        name: "Georgia",
+        times: {
+            morning: "12:30 PM",
+            evening: "7:00 PM"
+        },
+        date: "Sam, 29 Nov",
+        countdown: "17 h 29 min"
+    },
+    newyork: {
+        name: "New York",
+        times: {
+            morning: "2:30 PM",
+            evening: "8:00 PM"
+        },
+        date: "Sam, 29 Nov",
+        countdown: "19 h 30 min"
+    },
+    texas: {
+        name: "Texas",
+        times: {
+            morning: "12:00 PM",
+            evening: "6:00 PM"
+        },
+        date: "Sam, 29 Nov",
+        countdown: "18 h 27 min"
+    },
+    tunisia: {
+        name: "Tunisie",
+        times: {
+            morning: "10:30 AM",
+            evening: "2:00 PM"
+        },
+        date: "Sam, 29 Nov",
+        countdown: "8 h 30 min"
+    }
 };
 
+// Types de paris disponibles avec multiplicateurs
 const betTypes = {
-    lotto3: { name: "LOTO 3", multiplier: 500, icon: "fas fa-list-ol", description: "3 chif (lot 1 + 1 chif devan)", category: "lotto" },
-    grap: { name: "GRAP", multiplier: 500, icon: "fas fa-chart-line", description: "Grap boule paire (111, 222, ..., 000)", category: "special" },
-    marriage: { name: "MARYAJ", multiplier: 1000, icon: "fas fa-link", description: "Maryaj 2 chif (ex: 12*34)", category: "special" },
-    borlette: { name: "BORLETTE", multiplier: 60, multiplier2: 20, multiplier3: 10, icon: "fas fa-dice", description: "2 chif (1er lot ×60, 2e ×20, 3e ×10)", category: "borlette" },
-    boulpe: { name: "BOUL PE", multiplier: 60, multiplier2: 20, multiplier3: 10, icon: "fas fa-circle", description: "Boul pe (00-99)", category: "borlette" },
-    lotto4: { name: "LOTO 4", multiplier: 5000, icon: "fas fa-list-ol", description: "4 chif (lot 1+2 accumulate) - 3 opsyon", category: "lotto" },
-    lotto5: { name: "LOTO 5", multiplier: 25000, icon: "fas fa-list-ol", description: "5 chif (lot 1+2+3 accumulate) - 3 opsyon", category: "lotto" },
-    'auto-marriage': { name: "MARYAJ OTOMATIK", multiplier: 1000, icon: "fas fa-robot", description: "Marie boules otomatik", category: "special" },
-    'auto-lotto4': { name: "LOTO 4 OTOMATIK", multiplier: 5000, icon: "fas fa-robot", description: "Lotto 4 otomatik", category: "special" }
+    lotto3: {
+        name: "LOTO 3",
+        multiplier: 500,
+        icon: "fas fa-list-ol",
+        description: "3 chif (lot 1 + 1 chif devan)",
+        category: "lotto"
+    },
+    grap: {
+        name: "GRAP",
+        multiplier: 500,
+        icon: "fas fa-chart-line",
+        description: "Grap boule paire (111, 222, ..., 000)",
+        category: "special"
+    },
+    marriage: {
+        name: "MARYAJ",
+        multiplier: 1000,
+        icon: "fas fa-link",
+        description: "Maryaj 2 chif (ex: 12*34)",
+        category: "special"
+    },
+    borlette: {
+        name: "BORLETTE",
+        multiplier: 60, // 1er lot ×60
+        multiplier2: 20, // 2e lot ×20
+        multiplier3: 10, // 3e lot ×10
+        icon: "fas fa-dice",
+        description: "2 chif (1er lot ×60, 2e ×20, 3e ×10)",
+        category: "borlette"
+    },
+    boulpe: {
+        name: "BOUL PE",
+        multiplier: 60, // 1er lot ×60
+        multiplier2: 20, // 2e lot ×20
+        multiplier3: 10, // 3e lot ×10
+        icon: "fas fa-circle",
+        description: "Boul pe (00-99)",
+        category: "borlette"
+    },
+    lotto4: {
+        name: "LOTO 4",
+        multiplier: 5000,
+        icon: "fas fa-list-ol",
+        description: "4 chif (lot 1+2 accumulate) - 3 opsyon",
+        category: "lotto"
+    },
+    lotto5: {
+        name: "LOTO 5",
+        multiplier: 25000,
+        icon: "fas fa-list-ol",
+        description: "5 chif (lot 1+2+3 accumulate) - 3 opsyon",
+        category: "lotto"
+    },
+    // Types de paris automatiques
+    'auto-marriage': {
+        name: "MARYAJ OTOMATIK",
+        multiplier: 1000,
+        icon: "fas fa-robot",
+        description: "Marie boules otomatik",
+        category: "special"
+    },
+    'auto-lotto4': {
+        name: "LOTO 4 OTOMATIK",
+        multiplier: 5000,
+        icon: "fas fa-robot",
+        description: "Lotto 4 otomatik",
+        category: "special"
+    }
 };
 
+// Variables globales
 let currentDraw = null;
 let currentDrawTime = null;
 let activeBets = [];
@@ -78,17 +233,20 @@ let restrictedBalls = [];
 let gameRestrictions = {};
 let selectedMultiDraws = new Set();
 let selectedMultiGame = 'borlette';
-let selectedBalls = [];
+let selectedBalls = []; // Stocke les boules sélectionnées pour les jeux automatiques
 
+// Variables pour les fiches multi-tirages
 let currentMultiDrawTicket = {
     id: Date.now().toString(),
-    bets: [],
+    bets: [], // Liste des paris multi-tirages
     totalAmount: 0,
-    draws: new Set(),
+    draws: new Set(), // Tirages sélectionnés
     createdAt: new Date().toISOString()
 };
-let multiDrawTickets = [];
 
+let multiDrawTickets = []; // Liste des fiches multi-tirages sauvegardées
+
+// Informations de l'entreprise
 let companyInfo = {
     name: "Nova Lotto",
     phone: "+509 32 53 49 58",
@@ -99,25 +257,42 @@ let companyInfo = {
     agentCommission: 10
 };
 
+// Tickets gagnants
 let winningTickets = [];
+
+// Gestion du token
 let authToken = null;
 
 // ==========================================
-// 1. API
+// 1. Fonction de communication API (Corrigée)
 // ==========================================
 async function apiCall(url, method = 'GET', body = null) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (authToken) headers['x-auth-token'] = authToken;
-    const options = { method, headers };
-    if (body) options.body = JSON.stringify(body);
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+
+    if (authToken) {
+        headers['x-auth-token'] = authToken;
+    }
+
+    const options = {
+        method,
+        headers
+    };
+
+    if (body) {
+        options.body = JSON.stringify(body);
+    }
+
     try {
         const response = await fetch(url, options);
+
         if (response.status === 401) {
-            localStorage.removeItem('nova_token');
-            authToken = null;
-            checkAuth();
+            // Token invalide ou expiré
+            handleLogout();
             return null;
         }
+
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.indexOf("application/json") !== -1) {
             return await response.json();
@@ -131,11 +306,12 @@ async function apiCall(url, method = 'GET', body = null) {
 }
 
 // ==========================================
-// 2. Authentification
+// 2. Gestion de l'authentification
 // ==========================================
 function checkAuth() {
     const token = localStorage.getItem('nova_token');
     if (!token) {
+        // Afficher l'écran de connexion
         document.getElementById('login-screen').style.display = 'flex';
         document.getElementById('main-container').style.display = 'none';
         document.getElementById('bottom-nav').style.display = 'none';
@@ -144,7 +320,12 @@ function checkAuth() {
         return false;
     }
     authToken = token;
-    showMainApp();
+    // Afficher l'application
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-container').style.display = 'block';
+    document.getElementById('bottom-nav').style.display = 'flex';
+    document.getElementById('sync-status').style.display = 'flex';
+    document.getElementById('admin-panel').style.display = 'block';
     return true;
 }
 
@@ -152,11 +333,13 @@ async function handleLogin() {
     const username = document.getElementById('admin-username').value;
     const password = document.getElementById('admin-password').value;
     const errorDiv = document.getElementById('login-error');
+    
     if (!username || !password) {
         errorDiv.style.display = 'block';
         errorDiv.textContent = "Antre non itilizatè ak modpas";
         return;
     }
+    
     try {
         const response = await fetch(APP_CONFIG.login, {
             method: 'POST',
@@ -164,16 +347,19 @@ async function handleLogin() {
             body: JSON.stringify({ username, password })
         });
         const data = await response.json();
+        
         if (data.success && data.token) {
             localStorage.setItem('nova_token', data.token);
             authToken = data.token;
-            showMainApp();
+            checkAuth(); // met à jour l'affichage
             errorDiv.style.display = 'none';
+            // Recharger les données
             loadDataFromAPI();
             loadResultsFromDatabase();
             updateCurrentTime();
             updateLogoDisplay();
-            showScreen('home'); // Forcer l'affichage de l'accueil
+            // Forcer l'affichage de l'accueil
+            showScreen('home');
         } else {
             errorDiv.style.display = 'block';
             errorDiv.textContent = data.message || "Idantifyan ou modpas pa bon";
@@ -187,72 +373,46 @@ async function handleLogin() {
 function handleLogout() {
     localStorage.removeItem('nova_token');
     authToken = null;
-    checkAuth();
+    checkAuth(); // affiche l'écran de connexion
 }
 
 // ==========================================
-// 3. Affichage principal
-// ==========================================
-function showMainApp() {
-    console.log("Affichage application principale");
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('main-container').style.display = 'block';
-    document.getElementById('bottom-nav').style.display = 'flex';
-    document.getElementById('sync-status').style.display = 'flex';
-    document.getElementById('admin-panel').style.display = 'block';
-    // Cacher tous les écrans superflus
-    const screensToHide = ['report-screen', 'report-stats-screen', 'results-check-screen', 'multi-tickets-screen', 'end-draw-report-screen', 'ticket-management-screen', 'winning-tickets-screen', 'history-screen'];
-    screensToHide.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.display = 'none';
-    });
-    // S'assurer que l'accueil est visible
-    document.querySelector('.container').style.display = 'block';
-}
-
-function showScreen(screenId) {
-    document.querySelectorAll('.screen, .betting-screen, .container, .report-screen, .results-check-screen, .multi-tickets-screen').forEach(screen => {
-        screen.style.display = 'none';
-    });
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-        if (item.getAttribute('data-screen') === screenId) item.classList.add('active');
-    });
-    if (screenId === 'home') {
-        document.querySelector('.container').style.display = 'block';
-    } else if (screenId === 'report-stats') {
-        document.getElementById('report-stats-screen').style.display = 'block';
-        updateReportScreen();
-    } else {
-        const screen = document.getElementById(screenId + '-screen');
-        if (screen) {
-            screen.style.display = 'block';
-            if (screenId === 'ticket-management') updateTicketManagementScreen();
-            else if (screenId === 'history') updateHistoryScreen();
-            else if (screenId === 'winning-tickets') updateWinningTicketsScreen();
-        }
-    }
-}
-
-// ==========================================
-// 4. Chargement des données
+// 3. Chargement des données
 // ==========================================
 async function loadDataFromAPI() {
     try {
         const ticketsData = await apiCall(APP_CONFIG.tickets);
         savedTickets = ticketsData.tickets || [];
         ticketNumber = ticketsData.nextTicketNumber || 1;
+        
         const pendingData = await apiCall(APP_CONFIG.ticketsPending);
         pendingSyncTickets = pendingData.tickets || [];
+        
         const winningData = await apiCall(APP_CONFIG.winningTickets);
         winningTickets = winningData.tickets || [];
+        
         const multiDrawData = await apiCall(APP_CONFIG.multiDrawTickets);
         multiDrawTickets = multiDrawData.tickets || [];
+        
         const companyData = await apiCall(APP_CONFIG.companyInfo);
-        if (companyData) companyInfo = { ...companyInfo, ...companyData };
+        if (companyData) {
+            companyInfo = { ...companyInfo, ...companyData };
+        }
+        
         const logoData = await apiCall(APP_CONFIG.logo);
-        if (logoData && logoData.logoUrl) companyLogo = logoData.logoUrl;
+        if (logoData && logoData.logoUrl) {
+            companyLogo = logoData.logoUrl;
+        }
+        
         updateCompanyDisplay();
+        
+        console.log('Données chargées:', { 
+            tickets: savedTickets.length, 
+            ticketNumber, 
+            pending: pendingSyncTickets.length,
+            winning: winningTickets.length,
+            multiDraw: multiDrawTickets.length
+        });
     } catch (error) {
         console.error('Erreur chargement données:', error);
         showNotification("Erreur de chargement des données", "error");
@@ -266,6 +426,40 @@ function updateCompanyDisplay() {
     if (nameEl && companyInfo.name) nameEl.textContent = companyInfo.name;
     if (sloganEl && companyInfo.slogan) sloganEl.textContent = companyInfo.slogan;
     if (logoEl && companyInfo.logo) logoEl.src = companyInfo.logo;
+}
+
+// ==========================================
+// 4. Sauvegarde des tickets (pending, etc.)
+// ==========================================
+async function savePendingTicketAPI(ticket) {
+    if (!navigator.onLine) return null;
+    try {
+        const response = await apiCall(APP_CONFIG.ticketsPending, 'POST', { ticket: ticket });
+        return response;
+    } catch (e) {
+        console.error("Erreur savePendingTicketAPI:", e);
+        return null;
+    }
+}
+
+async function saveMultiDrawTicketAPI(ticket) {
+    try {
+        const response = await apiCall(APP_CONFIG.multiDrawTickets, 'POST', ticket);
+        return response;
+    } catch (error) {
+        console.error('Erreur saveMultiDrawTicketAPI:', error);
+        throw error;
+    }
+}
+
+async function saveHistoryAPI(historyRecord) {
+    try {
+        const response = await apiCall(APP_CONFIG.history, 'POST', historyRecord);
+        return response;
+    } catch (error) {
+        console.error('Erreur saveHistoryAPI:', error);
+        throw error;
+    }
 }
 
 // ==========================================
@@ -298,6 +492,10 @@ function updateCurrentTime() {
     if (ticketDateEl) ticketDateEl.textContent = `${dateString} - ${timeString}`;
 }
 
+function updatePendingBadge() {
+    // fonction gardée pour compatibilité
+}
+
 function updateLogoDisplay() {
     const logoElements = document.querySelectorAll('#company-logo, #ticket-logo');
     logoElements.forEach(logo => {
@@ -325,8 +523,6 @@ function setupConnectionDetection() {
     });
 }
 
-function updatePendingBadge() { /* fonction vide, gardée pour compatibilité */ }
-
 // ==========================================
 // 6. Résultats
 // ==========================================
@@ -337,6 +533,7 @@ async function loadResultsFromDatabase() {
         updateResultsDisplay();
     } catch (error) {
         console.error("Erreur chargement résultats:", error);
+        showNotification("Erreur chargement résultats", "error");
     }
 }
 
@@ -348,7 +545,9 @@ async function checkForNewResults() {
             resultsDatabase = resultsData.results;
             updateResultsDisplay();
         }
-    } catch (error) {}
+    } catch (error) {
+        console.error("Erreur vérification résultats:", error);
+    }
 }
 
 function updateResultsDisplay() {
@@ -373,9 +572,10 @@ function updateResultsDisplay() {
 }
 
 // ==========================================
-// 7. Écran de pari (version complète)
+// 7. Écran de pari (fonctions existantes conservées)
 // ==========================================
 function openBettingScreen(drawId, time = null) {
+    console.log("Ouvrir écran pari:", drawId, time);
     currentDraw = drawId;
     currentDrawTime = time;
     const draw = draws[drawId];
@@ -418,6 +618,9 @@ function setupGameSelection() {
     });
 }
 
+// ==========================================
+// 8. Formulaire de pari avec bouton Nx
+// ==========================================
 function showBetForm(gameType) {
     const bet = betTypes[gameType];
     document.getElementById('games-interface').style.display = 'none';
@@ -558,6 +761,9 @@ function showBetForm(gameType) {
     document.getElementById('active-bets').style.display = 'block';
 }
 
+// ==========================================
+// 9. Ajout de paris et gestion du panier
+// ==========================================
 function addBet(gameType) {
     const bet = betTypes[gameType];
     let number, amount;
@@ -692,7 +898,7 @@ function showTotalNotification(totalAmount, type = 'normal') {
 }
 
 // ==========================================
-// 8. Jeux automatiques
+// 10. Jeux automatiques
 // ==========================================
 function showAutoGameForm(gameType) {
     const bet = betTypes[gameType];
@@ -800,7 +1006,7 @@ function updateSelectedBallsDisplay() {
 }
 
 // ==========================================
-// 9. Sauvegarde et impression
+// 11. Sauvegarde et impression des tickets
 // ==========================================
 async function saveTicket() {
     if (activeBets.length === 0) { showNotification("Pa gen okenn parye pou sove", "warning"); return; }
@@ -890,7 +1096,7 @@ function retryConnectionCheck() {}
 function cancelPrint() { document.getElementById('connection-check').style.display = 'none'; }
 
 // ==========================================
-// 10. Multi-tirages
+// 12. Multi-tirages
 // ==========================================
 function initMultiDrawPanel() {
     const multiDrawOptions = document.getElementById('multi-draw-options');
@@ -1025,17 +1231,8 @@ function updateMultiTicketsScreen() {
     container.innerHTML = multiDrawTickets.map(t => `<div class="multi-ticket-item"><strong>Fiche #${t.number}</strong> - ${t.total} G<br>${new Date(t.date).toLocaleString()}</div>`).join('');
 }
 
-async function saveMultiDrawTicketAPI(ticket) {
-    return await apiCall(APP_CONFIG.multiDrawTickets, 'POST', ticket);
-}
-
-async function loadMultiDrawTickets() {
-    const res = await apiCall(APP_CONFIG.multiDrawTickets);
-    multiDrawTickets = res.tickets || [];
-}
-
 // ==========================================
-// 11. Vérification des résultats et tickets gagnants
+// 13. Vérification des résultats et tickets gagnants
 // ==========================================
 function openResultsCheckScreen() {
     document.querySelector('.container').style.display = 'none';
@@ -1123,7 +1320,7 @@ function displayWinningTickets() {
 }
 
 // ==========================================
-// 12. Historique et gestion des tickets
+// 14. Historique et gestion des tickets
 // ==========================================
 function updateHistoryScreen() {
     const list = document.getElementById('history-list');
@@ -1181,6 +1378,9 @@ function generateEndOfDrawReport() {
     document.getElementById('report-content').innerHTML = `<h3>Rapò Fin Tiraj</h3><p>Total tickets: ${savedTickets.length}</p><p>Total montant: ${total} G</p>`;
 }
 
+// ==========================================
+// 15. Rapport et commission
+// ==========================================
 function updateReportScreen() {
     loadReportByPeriod('15days');
 }
@@ -1221,17 +1421,21 @@ function loadReportData(start, end) {
 }
 
 // ==========================================
-// 13. Initialisation
+// 16. Initialisation principale
 // ==========================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Document chargé, initialisation...");
     
     // Connexion
-    document.getElementById('login-btn').addEventListener('click', handleLogin);
-    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+    const loginBtn = document.getElementById('login-btn');
+    if (loginBtn) loginBtn.addEventListener('click', handleLogin);
+    
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
     
     if (!checkAuth()) return;
     
+    // Afficher l'application
     showMainApp();
     updateCurrentTime();
     loadDataFromAPI();
@@ -1239,7 +1443,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateLogoDisplay();
     loadResultsFromDatabase();
     
-    // Tirages
+    // Écouteurs des tirages
     document.querySelectorAll('.draw-card').forEach(card => {
         card.addEventListener('click', function() {
             const drawId = this.getAttribute('data-draw');
@@ -1259,41 +1463,83 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Boutons généraux
-    document.getElementById('back-button').addEventListener('click', closeBettingScreen);
-    document.getElementById('save-print-ticket').addEventListener('click', () => checkConnectionBeforeSavePrint());
-    document.getElementById('save-ticket-only').addEventListener('click', () => saveTicket());
-    document.getElementById('print-ticket-only').addEventListener('click', () => checkConnectionBeforePrint());
-    document.getElementById('save-print-multi-ticket').addEventListener('click', () => saveAndPrintMultiDrawTicket());
-    document.getElementById('view-current-multi-ticket').addEventListener('click', () => viewCurrentMultiDrawTicket());
-    document.getElementById('open-multi-tickets').addEventListener('click', () => openMultiTicketsScreen());
-    document.getElementById('back-from-multi-tickets').addEventListener('click', () => {
+    const backBtn = document.getElementById('back-button');
+    if (backBtn) backBtn.addEventListener('click', closeBettingScreen);
+    
+    const savePrintTicket = document.getElementById('save-print-ticket');
+    if (savePrintTicket) savePrintTicket.addEventListener('click', () => checkConnectionBeforeSavePrint());
+    
+    const saveTicketOnly = document.getElementById('save-ticket-only');
+    if (saveTicketOnly) saveTicketOnly.addEventListener('click', () => saveTicket());
+    
+    const printTicketOnly = document.getElementById('print-ticket-only');
+    if (printTicketOnly) printTicketOnly.addEventListener('click', () => checkConnectionBeforePrint());
+    
+    const savePrintMulti = document.getElementById('save-print-multi-ticket');
+    if (savePrintMulti) savePrintMulti.addEventListener('click', () => saveAndPrintMultiDrawTicket());
+    
+    const viewCurrentMulti = document.getElementById('view-current-multi-ticket');
+    if (viewCurrentMulti) viewCurrentMulti.addEventListener('click', () => viewCurrentMultiDrawTicket());
+    
+    const openMultiTickets = document.getElementById('open-multi-tickets');
+    if (openMultiTickets) openMultiTickets.addEventListener('click', () => openMultiTicketsScreen());
+    
+    const backFromMulti = document.getElementById('back-from-multi-tickets');
+    if (backFromMulti) backFromMulti.addEventListener('click', () => {
         document.getElementById('multi-tickets-screen').style.display = 'none';
         document.querySelector('.container').style.display = 'block';
     });
-    document.getElementById('back-from-report').addEventListener('click', () => {
+    
+    const backFromReport = document.getElementById('back-from-report');
+    if (backFromReport) backFromReport.addEventListener('click', () => {
         document.getElementById('report-screen').style.display = 'none';
         document.querySelector('.container').style.display = 'block';
     });
-    document.getElementById('back-from-results').addEventListener('click', () => {
+    
+    const backFromResults = document.getElementById('back-from-results');
+    if (backFromResults) backFromResults.addEventListener('click', () => {
         document.getElementById('results-check-screen').style.display = 'none';
         document.querySelector('.container').style.display = 'block';
     });
-    document.getElementById('retry-connection').addEventListener('click', () => retryConnectionCheck());
-    document.getElementById('cancel-print').addEventListener('click', () => cancelPrint());
-    document.getElementById('generate-report-btn').addEventListener('click', () => generateEndOfDrawReport());
-    document.getElementById('open-results-check').addEventListener('click', () => openResultsCheckScreen());
-    document.getElementById('check-winners-btn').addEventListener('click', () => checkWinningTickets());
-    document.getElementById('multi-draw-toggle').addEventListener('click', () => toggleMultiDrawPanel());
-    document.getElementById('add-to-multi-draw').addEventListener('click', () => addToMultiDrawTicket());
+    
+    const retryConn = document.getElementById('retry-connection');
+    if (retryConn) retryConn.addEventListener('click', () => retryConnectionCheck());
+    
+    const cancelPrintBtn = document.getElementById('cancel-print');
+    if (cancelPrintBtn) cancelPrintBtn.addEventListener('click', () => cancelPrint());
+    
+    const generateReport = document.getElementById('generate-report-btn');
+    if (generateReport) generateReport.addEventListener('click', () => generateEndOfDrawReport());
+    
+    const openResultsCheck = document.getElementById('open-results-check');
+    if (openResultsCheck) openResultsCheck.addEventListener('click', () => openResultsCheckScreen());
+    
+    const checkWinnersBtn = document.getElementById('check-winners-btn');
+    if (checkWinnersBtn) checkWinnersBtn.addEventListener('click', () => checkWinningTickets());
+    
+    const multiToggle = document.getElementById('multi-draw-toggle');
+    if (multiToggle) multiToggle.addEventListener('click', () => toggleMultiDrawPanel());
+    
+    const addToMulti = document.getElementById('add-to-multi-draw');
+    if (addToMulti) addToMulti.addEventListener('click', () => addToMultiDrawTicket());
     
     initMultiDrawPanel();
     
     // Gestion des fiches
-    document.getElementById('search-ticket-btn').addEventListener('click', () => searchTicket());
-    document.getElementById('show-all-tickets').addEventListener('click', () => showAllTickets());
-    document.getElementById('show-pending-tickets').addEventListener('click', () => showPendingTickets());
-    document.getElementById('search-history-btn').addEventListener('click', () => searchHistory());
-    document.getElementById('search-winning-btn').addEventListener('click', () => searchWinningTickets());
+    const searchTicketBtn = document.getElementById('search-ticket-btn');
+    if (searchTicketBtn) searchTicketBtn.addEventListener('click', () => searchTicket());
+    
+    const showAllTicketsBtn = document.getElementById('show-all-tickets');
+    if (showAllTicketsBtn) showAllTicketsBtn.addEventListener('click', () => showAllTickets());
+    
+    const showPendingTicketsBtn = document.getElementById('show-pending-tickets');
+    if (showPendingTicketsBtn) showPendingTicketsBtn.addEventListener('click', () => showPendingTickets());
+    
+    const searchHistoryBtn = document.getElementById('search-history-btn');
+    if (searchHistoryBtn) searchHistoryBtn.addEventListener('click', () => searchHistory());
+    
+    const searchWinningBtn = document.getElementById('search-winning-btn');
+    if (searchWinningBtn) searchWinningBtn.addEventListener('click', () => searchWinningTickets());
     
     // Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -1302,6 +1548,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showScreen(screen);
         });
     });
+    
     document.querySelectorAll('.back-button[data-screen]').forEach(btn => {
         btn.addEventListener('click', function() {
             const screen = this.getAttribute('data-screen') || 'home';
@@ -1317,7 +1564,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if(btn.dataset.period) loadReportByPeriod(btn.dataset.period);
         });
     });
-    document.getElementById('apply-custom').addEventListener('click', () => {
+    
+    const applyCustom = document.getElementById('apply-custom');
+    if (applyCustom) applyCustom.addEventListener('click', () => {
         const start = document.getElementById('start-date').value;
         const end = document.getElementById('end-date').value;
         if(start && end) loadReportData(new Date(start), new Date(end));
@@ -1331,25 +1580,11 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log("Initialisation terminée");
 });
 
-// Fonctions résiduelles pour compatibilité
-async function savePendingTicketAPI(ticket) {
-    if (!navigator.onLine) return null;
-    return await apiCall(APP_CONFIG.ticketsPending, 'POST', { ticket });
-}
-
-async function saveHistoryAPI(record) {
-    return await apiCall(APP_CONFIG.history, 'POST', record);
-}
-
-function setupAutoFocusInputs() {
-    document.querySelectorAll('input[type="text"]').forEach(input => {
-        input.addEventListener('input', function() {
-            const max = parseInt(this.maxLength);
-            if (max && this.value.length >= max) {
-                const inputs = Array.from(document.querySelectorAll('input[type="text"], input[type="number"]'));
-                const idx = inputs.indexOf(this);
-                if (idx < inputs.length-1) inputs[idx+1].focus();
-            }
-        });
-    });
+function showMainApp() {
+    console.log("Affichage application principale");
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-container').style.display = 'block';
+    document.getElementById('bottom-nav').style.display = 'flex';
+    document.getElementById('sync-status').style.display = 'flex';
+    document.getElementById('admin-panel').style.display = 'block';
 }
