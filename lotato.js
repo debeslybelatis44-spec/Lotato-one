@@ -4,14 +4,11 @@
 
 // Configuration de base avec APP_CONFIG
 const API_BASE_URL = 'https://lotatonova-fv0b.onrender.com';
-// Configuration API Backend
 const APP_CONFIG = {
     health: `${API_BASE_URL}/api/health`,
     login: `${API_BASE_URL}/api/auth/login`,
-    // Endpoints pour les résultats
     results: `${API_BASE_URL}/api/results`,
     checkWinners: `${API_BASE_URL}/api/check-winners`,
-    // Endpoints pour les tickets
     tickets: `${API_BASE_URL}/api/tickets`,
     ticketsPending: `${API_BASE_URL}/api/tickets/pending`,
     winningTickets: `${API_BASE_URL}/api/tickets/winning`,
@@ -21,204 +18,52 @@ const APP_CONFIG = {
     logo: `${API_BASE_URL}/api/logo`
 };
 
-const FIVE_MINUTES = 5 * 60 * 1000; // 5 minutes en millisecondes
+const FIVE_MINUTES = 5 * 60 * 1000;
 
-// Base de données simulée pour les résultats (sera remplacée par l'API)
+// Base de données simulée pour les résultats
 let resultsDatabase = {
     'miami': {
-        'morning': {
-            date: new Date().toISOString(),
-            lot1: '123', // 3 chiffres
-            lot2: '45',  // 2 chiffres
-            lot3: '34'   // 2 chiffres
-        },
-        'evening': {
-            date: new Date().toISOString(),
-            lot1: '892',
-            lot2: '34',
-            lot3: '56'
-        }
+        'morning': { date: new Date().toISOString(), lot1: '123', lot2: '45', lot3: '34' },
+        'evening': { date: new Date().toISOString(), lot1: '892', lot2: '34', lot3: '56' }
     },
     'georgia': {
-        'morning': {
-            date: new Date().toISOString(),
-            lot1: '327',
-            lot2: '45',
-            lot3: '89'
-        },
-        'evening': {
-            date: new Date().toISOString(),
-            lot1: '567',
-            lot2: '12',
-            lot3: '34'
-        }
+        'morning': { date: new Date().toISOString(), lot1: '327', lot2: '45', lot3: '89' },
+        'evening': { date: new Date().toISOString(), lot1: '567', lot2: '12', lot3: '34' }
     },
     'newyork': {
-        'morning': {
-            date: new Date().toISOString(),
-            lot1: '892',
-            lot2: '34',
-            lot3: '56'
-        },
-        'evening': {
-            date: new Date().toISOString(),
-            lot1: '123',
-            lot2: '45',
-            lot3: '67'
-        }
+        'morning': { date: new Date().toISOString(), lot1: '892', lot2: '34', lot3: '56' },
+        'evening': { date: new Date().toISOString(), lot1: '123', lot2: '45', lot3: '67' }
     },
     'texas': {
-        'morning': {
-            date: new Date().toISOString(),
-            lot1: '567',
-            lot2: '89',
-            lot3: '01'
-        },
-        'evening': {
-            date: new Date().toISOString(),
-            lot1: '234',
-            lot2: '56',
-            lot3: '78'
-        }
+        'morning': { date: new Date().toISOString(), lot1: '567', lot2: '89', lot3: '01' },
+        'evening': { date: new Date().toISOString(), lot1: '234', lot2: '56', lot3: '78' }
     },
     'tunisia': {
-        'morning': {
-            date: new Date().toISOString(),
-            lot1: '234',
-            lot2: '56',
-            lot3: '78'
-        },
-        'evening': {
-            date: new Date().toISOString(),
-            lot1: '345',
-            lot2: '67',
-            lot3: '89'
-        }
+        'morning': { date: new Date().toISOString(), lot1: '234', lot2: '56', lot3: '78' },
+        'evening': { date: new Date().toISOString(), lot1: '345', lot2: '67', lot3: '89' }
     }
 };
 
-// Données des tirages
 const draws = {
-    miami: {
-        name: "Miami (Florida)",
-        times: {
-            morning: "1:30 PM",
-            evening: "9:50 PM"
-        },
-        date: "Sam, 29 Nov",
-        countdown: "18 h 30 min"
-    },
-    georgia: {
-        name: "Georgia",
-        times: {
-            morning: "12:30 PM",
-            evening: "7:00 PM"
-        },
-        date: "Sam, 29 Nov",
-        countdown: "17 h 29 min"
-    },
-    newyork: {
-        name: "New York",
-        times: {
-            morning: "2:30 PM",
-            evening: "8:00 PM"
-        },
-        date: "Sam, 29 Nov",
-        countdown: "19 h 30 min"
-    },
-    texas: {
-        name: "Texas",
-        times: {
-            morning: "12:00 PM",
-            evening: "6:00 PM"
-        },
-        date: "Sam, 29 Nov",
-        countdown: "18 h 27 min"
-    },
-    tunisia: {
-        name: "Tunisie",
-        times: {
-            morning: "10:30 AM",
-            evening: "2:00 PM"
-        },
-        date: "Sam, 29 Nov",
-        countdown: "8 h 30 min"
-    }
+    miami: { name: "Miami (Florida)", times: { morning: "1:30 PM", evening: "9:50 PM" }, date: "Sam, 29 Nov", countdown: "18 h 30 min" },
+    georgia: { name: "Georgia", times: { morning: "12:30 PM", evening: "7:00 PM" }, date: "Sam, 29 Nov", countdown: "17 h 29 min" },
+    newyork: { name: "New York", times: { morning: "2:30 PM", evening: "8:00 PM" }, date: "Sam, 29 Nov", countdown: "19 h 30 min" },
+    texas: { name: "Texas", times: { morning: "12:00 PM", evening: "6:00 PM" }, date: "Sam, 29 Nov", countdown: "18 h 27 min" },
+    tunisia: { name: "Tunisie", times: { morning: "10:30 AM", evening: "2:00 PM" }, date: "Sam, 29 Nov", countdown: "8 h 30 min" }
 };
 
-// Types de paris disponibles avec multiplicateurs
 const betTypes = {
-    lotto3: {
-        name: "LOTO 3",
-        multiplier: 500,
-        icon: "fas fa-list-ol",
-        description: "3 chif (lot 1 + 1 chif devan)",
-        category: "lotto"
-    },
-    grap: {
-        name: "GRAP",
-        multiplier: 500,
-        icon: "fas fa-chart-line",
-        description: "Grap boule paire (111, 222, ..., 000)",
-        category: "special"
-    },
-    marriage: {
-        name: "MARYAJ",
-        multiplier: 1000,
-        icon: "fas fa-link",
-        description: "Maryaj 2 chif (ex: 12*34)",
-        category: "special"
-    },
-    borlette: {
-        name: "BORLETTE",
-        multiplier: 60, // 1er lot ×60
-        multiplier2: 20, // 2e lot ×20
-        multiplier3: 10, // 3e lot ×10
-        icon: "fas fa-dice",
-        description: "2 chif (1er lot ×60, 2e ×20, 3e ×10)",
-        category: "borlette"
-    },
-    boulpe: {
-        name: "BOUL PE",
-        multiplier: 60, // 1er lot ×60
-        multiplier2: 20, // 2e lot ×20
-        multiplier3: 10, // 3e lot ×10
-        icon: "fas fa-circle",
-        description: "Boul pe (00-99)",
-        category: "borlette"
-    },
-    lotto4: {
-        name: "LOTO 4",
-        multiplier: 5000,
-        icon: "fas fa-list-ol",
-        description: "4 chif (lot 1+2 accumulate) - 3 opsyon",
-        category: "lotto"
-    },
-    lotto5: {
-        name: "LOTO 5",
-        multiplier: 25000,
-        icon: "fas fa-list-ol",
-        description: "5 chif (lot 1+2+3 accumulate) - 3 opsyon",
-        category: "lotto"
-    },
-    // Types de paris automatiques
-    'auto-marriage': {
-        name: "MARYAJ OTOMATIK",
-        multiplier: 1000,
-        icon: "fas fa-robot",
-        description: "Marie boules otomatik",
-        category: "special"
-    },
-    'auto-lotto4': {
-        name: "LOTO 4 OTOMATIK",
-        multiplier: 5000,
-        icon: "fas fa-robot",
-        description: "Lotto 4 otomatik",
-        category: "special"
-    }
+    lotto3: { name: "LOTO 3", multiplier: 500, icon: "fas fa-list-ol", description: "3 chif (lot 1 + 1 chif devan)", category: "lotto" },
+    grap: { name: "GRAP", multiplier: 500, icon: "fas fa-chart-line", description: "Grap boule paire (111, 222, ..., 000)", category: "special" },
+    marriage: { name: "MARYAJ", multiplier: 1000, icon: "fas fa-link", description: "Maryaj 2 chif (ex: 12*34)", category: "special" },
+    borlette: { name: "BORLETTE", multiplier: 60, multiplier2: 20, multiplier3: 10, icon: "fas fa-dice", description: "2 chif (1er lot ×60, 2e ×20, 3e ×10)", category: "borlette" },
+    boulpe: { name: "BOUL PE", multiplier: 60, multiplier2: 20, multiplier3: 10, icon: "fas fa-circle", description: "Boul pe (00-99)", category: "borlette" },
+    lotto4: { name: "LOTO 4", multiplier: 5000, icon: "fas fa-list-ol", description: "4 chif (lot 1+2 accumulate) - 3 opsyon", category: "lotto" },
+    lotto5: { name: "LOTO 5", multiplier: 25000, icon: "fas fa-list-ol", description: "5 chif (lot 1+2+3 accumulate) - 3 opsyon", category: "lotto" },
+    'auto-marriage': { name: "MARYAJ OTOMATIK", multiplier: 1000, icon: "fas fa-robot", description: "Marie boules otomatik", category: "special" },
+    'auto-lotto4': { name: "LOTO 4 OTOMATIK", multiplier: 5000, icon: "fas fa-robot", description: "Lotto 4 otomatik", category: "special" }
 };
 
-// Variables globales
 let currentDraw = null;
 let currentDrawTime = null;
 let activeBets = [];
@@ -233,20 +78,17 @@ let restrictedBalls = [];
 let gameRestrictions = {};
 let selectedMultiDraws = new Set();
 let selectedMultiGame = 'borlette';
-let selectedBalls = []; // Stocke les boules sélectionnées pour les jeux automatiques
+let selectedBalls = [];
 
-// Variables pour les fiches multi-tirages
 let currentMultiDrawTicket = {
     id: Date.now().toString(),
-    bets: [], // Liste des paris multi-tirages
+    bets: [],
     totalAmount: 0,
-    draws: new Set(), // Tirages sélectionnés
+    draws: new Set(),
     createdAt: new Date().toISOString()
 };
+let multiDrawTickets = [];
 
-let multiDrawTickets = []; // Liste des fiches multi-tirages sauvegardées
-
-// Informations de l'entreprise
 let companyInfo = {
     name: "Nova Lotto",
     phone: "+509 32 53 49 58",
@@ -257,44 +99,25 @@ let companyInfo = {
     agentCommission: 10
 };
 
-// Tickets gagnants
 let winningTickets = [];
-
-// Gestion du token
 let authToken = null;
 
 // ==========================================
-// 1. Fonction de communication API (Corrigée)
+// 1. API
 // ==========================================
 async function apiCall(url, method = 'GET', body = null) {
-    const headers = {
-        'Content-Type': 'application/json'
-    };
-
-    if (authToken) {
-        headers['x-auth-token'] = authToken;
-    }
-
-    const options = {
-        method,
-        headers
-    };
-
-    if (body) {
-        options.body = JSON.stringify(body);
-    }
-
+    const headers = { 'Content-Type': 'application/json' };
+    if (authToken) headers['x-auth-token'] = authToken;
+    const options = { method, headers };
+    if (body) options.body = JSON.stringify(body);
     try {
         const response = await fetch(url, options);
-
         if (response.status === 401) {
-            // Token invalide ou expiré
             localStorage.removeItem('nova_token');
             authToken = null;
-            checkAuth(); // Affiche l'écran de connexion
+            checkAuth();
             return null;
         }
-
         const contentType = response.headers.get("content-type");
         if (contentType && contentType.indexOf("application/json") !== -1) {
             return await response.json();
@@ -308,36 +131,20 @@ async function apiCall(url, method = 'GET', body = null) {
 }
 
 // ==========================================
-// 2. Gestion de l'authentification
+// 2. Authentification
 // ==========================================
 function checkAuth() {
     const token = localStorage.getItem('nova_token');
     if (!token) {
-        // Afficher l'écran de connexion, cacher l'application
-        const loginScreen = document.getElementById('login-screen');
-        const mainContainer = document.getElementById('main-container');
-        const bottomNav = document.getElementById('bottom-nav');
-        const syncStatus = document.getElementById('sync-status');
-        const adminPanel = document.getElementById('admin-panel');
-        if (loginScreen) loginScreen.style.display = 'flex';
-        if (mainContainer) mainContainer.style.display = 'none';
-        if (bottomNav) bottomNav.style.display = 'none';
-        if (syncStatus) syncStatus.style.display = 'none';
-        if (adminPanel) adminPanel.style.display = 'none';
+        document.getElementById('login-screen').style.display = 'flex';
+        document.getElementById('main-container').style.display = 'none';
+        document.getElementById('bottom-nav').style.display = 'none';
+        document.getElementById('sync-status').style.display = 'none';
+        document.getElementById('admin-panel').style.display = 'none';
         return false;
     }
     authToken = token;
-    // Cacher l'écran de connexion, afficher l'application
-    const loginScreen = document.getElementById('login-screen');
-    const mainContainer = document.getElementById('main-container');
-    const bottomNav = document.getElementById('bottom-nav');
-    const syncStatus = document.getElementById('sync-status');
-    const adminPanel = document.getElementById('admin-panel');
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (mainContainer) mainContainer.style.display = 'block';
-    if (bottomNav) bottomNav.style.display = 'flex';
-    if (syncStatus) syncStatus.style.display = 'flex';
-    if (adminPanel) adminPanel.style.display = 'block';
+    showMainApp();
     return true;
 }
 
@@ -345,13 +152,11 @@ async function handleLogin() {
     const username = document.getElementById('admin-username').value;
     const password = document.getElementById('admin-password').value;
     const errorDiv = document.getElementById('login-error');
-    
     if (!username || !password) {
         errorDiv.style.display = 'block';
         errorDiv.textContent = "Antre non itilizatè ak modpas";
         return;
     }
-    
     try {
         const response = await fetch(APP_CONFIG.login, {
             method: 'POST',
@@ -359,20 +164,16 @@ async function handleLogin() {
             body: JSON.stringify({ username, password })
         });
         const data = await response.json();
-        
         if (data.success && data.token) {
             localStorage.setItem('nova_token', data.token);
             authToken = data.token;
-            // Mettre à jour l'affichage
-            checkAuth(); // Cela va cacher login et montrer l'app
+            showMainApp();
             errorDiv.style.display = 'none';
-            // Recharger les données
             loadDataFromAPI();
             loadResultsFromDatabase();
             updateCurrentTime();
             updateLogoDisplay();
-            // Réinitialiser les écrans si nécessaire
-            showScreen('home');
+            showScreen('home'); // Forcer l'affichage de l'accueil
         } else {
             errorDiv.style.display = 'block';
             errorDiv.textContent = data.message || "Idantifyan ou modpas pa bon";
@@ -386,216 +187,12 @@ async function handleLogin() {
 function handleLogout() {
     localStorage.removeItem('nova_token');
     authToken = null;
-    checkAuth(); // Affiche l'écran de connexion
+    checkAuth();
 }
 
 // ==========================================
-// 3. Chargement des données
+// 3. Affichage principal
 // ==========================================
-async function loadDataFromAPI() {
-    try {
-        const ticketsData = await apiCall(APP_CONFIG.tickets);
-        savedTickets = ticketsData.tickets || [];
-        ticketNumber = ticketsData.nextTicketNumber || 1;
-        
-        const pendingData = await apiCall(APP_CONFIG.ticketsPending);
-        pendingSyncTickets = pendingData.tickets || [];
-        
-        const winningData = await apiCall(APP_CONFIG.winningTickets);
-        winningTickets = winningData.tickets || [];
-        
-        const multiDrawData = await apiCall(APP_CONFIG.multiDrawTickets);
-        multiDrawTickets = multiDrawData.tickets || [];
-        
-        const companyData = await apiCall(APP_CONFIG.companyInfo);
-        if (companyData) {
-            companyInfo = { ...companyInfo, ...companyData };
-        }
-        
-        const logoData = await apiCall(APP_CONFIG.logo);
-        if (logoData && logoData.logoUrl) {
-            companyLogo = logoData.logoUrl;
-        }
-        
-        updateCompanyDisplay();
-        
-        console.log('Données chargées:', { 
-            tickets: savedTickets.length, 
-            ticketNumber, 
-            pending: pendingSyncTickets.length,
-            winning: winningTickets.length,
-            multiDraw: multiDrawTickets.length
-        });
-    } catch (error) {
-        console.error('Erreur chargement données:', error);
-        showNotification("Erreur de chargement des données", "error");
-    }
-}
-
-function updateCompanyDisplay() {
-    const nameEl = document.getElementById('company-name');
-    const sloganEl = document.getElementById('company-slogan');
-    const logoEl = document.getElementById('company-logo');
-    if (nameEl && companyInfo.name) nameEl.textContent = companyInfo.name;
-    if (sloganEl && companyInfo.slogan) sloganEl.textContent = companyInfo.slogan;
-    if (logoEl && companyInfo.logo) logoEl.src = companyInfo.logo;
-}
-
-// ==========================================
-// 4. Sauvegarde des tickets (pending, etc.)
-// ==========================================
-async function savePendingTicketAPI(ticket) {
-    if (!navigator.onLine) return null;
-    try {
-        const response = await apiCall(APP_CONFIG.ticketsPending, 'POST', { ticket: ticket });
-        return response;
-    } catch (e) {
-        console.error("Erreur savePendingTicketAPI:", e);
-        return null;
-    }
-}
-
-async function saveMultiDrawTicketAPI(ticket) {
-    try {
-        const response = await apiCall(APP_CONFIG.multiDrawTickets, 'POST', ticket);
-        return response;
-    } catch (error) {
-        console.error('Erreur saveMultiDrawTicketAPI:', error);
-        throw error;
-    }
-}
-
-async function saveHistoryAPI(historyRecord) {
-    try {
-        const response = await apiCall(APP_CONFIG.history, 'POST', historyRecord);
-        return response;
-    } catch (error) {
-        console.error('Erreur saveHistoryAPI:', error);
-        throw error;
-    }
-}
-
-// ==========================================
-// 5. Initialisation
-// ==========================================
-document.addEventListener('DOMContentLoaded', function() {
-    console.log("Document chargé, initialisation...");
-    
-    // Attacher l'événement de connexion
-    const loginBtn = document.getElementById('login-btn');
-    if (loginBtn) loginBtn.addEventListener('click', handleLogin);
-    
-    // Vérifier l'authentification
-    if (!checkAuth()) {
-        // Non authentifié, ne pas initialiser le reste
-        return;
-    }
-    
-    // Si authentifié, initialiser l'application
-    showMainApp();
-    updateCurrentTime();
-    loadDataFromAPI();
-    setupConnectionDetection();
-    updateLogoDisplay();
-    loadResultsFromDatabase();
-    
-    // Écouteurs des tirages
-    document.querySelectorAll('.draw-card').forEach(card => {
-        card.addEventListener('click', function() {
-            const drawId = this.getAttribute('data-draw');
-            openBettingScreen(drawId, 'morning');
-        });
-    });
-    
-    document.querySelectorAll('.draw-btn').forEach(btn => {
-        btn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const card = this.closest('.draw-card');
-            const drawId = card.getAttribute('data-draw');
-            const time = this.getAttribute('data-time');
-            card.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            openBettingScreen(drawId, time);
-        });
-    });
-    
-    // Boutons généraux
-    document.getElementById('back-button').addEventListener('click', closeBettingScreen);
-    document.getElementById('save-print-ticket').addEventListener('click', () => checkConnectionBeforeSavePrint());
-    document.getElementById('save-ticket-only').addEventListener('click', () => saveTicket());
-    document.getElementById('print-ticket-only').addEventListener('click', () => checkConnectionBeforePrint());
-    document.getElementById('save-print-multi-ticket').addEventListener('click', () => saveAndPrintMultiDrawTicket());
-    document.getElementById('view-current-multi-ticket').addEventListener('click', () => viewCurrentMultiDrawTicket());
-    document.getElementById('open-multi-tickets').addEventListener('click', () => openMultiTicketsScreen());
-    document.getElementById('back-from-multi-tickets').addEventListener('click', () => {
-        document.getElementById('multi-tickets-screen').style.display = 'none';
-        document.querySelector('.container').style.display = 'block';
-    });
-    
-    // Navigation
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', function() {
-            const screen = this.getAttribute('data-screen');
-            showScreen(screen);
-        });
-    });
-    
-    document.querySelectorAll('.back-button').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const screen = this.getAttribute('data-screen') || 'home';
-            showScreen(screen);
-        });
-    });
-    
-    document.getElementById('back-from-report').addEventListener('click', () => {
-        document.getElementById('report-screen').style.display = 'none';
-        document.querySelector('.container').style.display = 'block';
-    });
-    
-    document.getElementById('back-from-results').addEventListener('click', () => {
-        document.getElementById('results-check-screen').style.display = 'none';
-        document.querySelector('.container').style.display = 'block';
-    });
-    
-    document.getElementById('retry-connection').addEventListener('click', () => retryConnectionCheck());
-    document.getElementById('cancel-print').addEventListener('click', () => cancelPrint());
-    document.getElementById('generate-report-btn').addEventListener('click', () => generateEndOfDrawReport());
-    document.getElementById('open-results-check').addEventListener('click', () => openResultsCheckScreen());
-    document.getElementById('check-winners-btn').addEventListener('click', () => checkWinningTickets());
-    document.getElementById('multi-draw-toggle').addEventListener('click', () => toggleMultiDrawPanel());
-    document.getElementById('add-to-multi-draw').addEventListener('click', () => addToMultiDrawTicket());
-    
-    initMultiDrawPanel();
-    
-    document.getElementById('search-ticket-btn').addEventListener('click', () => searchTicket());
-    document.getElementById('show-all-tickets').addEventListener('click', () => showAllTickets());
-    document.getElementById('show-pending-tickets').addEventListener('click', () => showPendingTickets());
-    document.getElementById('search-history-btn').addEventListener('click', () => searchHistory());
-    document.getElementById('search-winning-btn').addEventListener('click', () => searchWinningTickets());
-    
-    document.getElementById('logout-btn').addEventListener('click', () => handleLogout());
-    
-    // Filtres de rapport
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
-            btn.classList.add('active');
-            if(btn.dataset.period) loadReportByPeriod(btn.dataset.period);
-        });
-    });
-    document.getElementById('apply-custom').addEventListener('click', () => {
-        const start = document.getElementById('start-date').value;
-        const end = document.getElementById('end-date').value;
-        if(start && end) loadReportData(new Date(start), new Date(end));
-    });
-    
-    setInterval(updateCurrentTime, 60000);
-    setInterval(updatePendingBadge, 30000);
-    setInterval(checkForNewResults, 300000);
-    
-    console.log("Initialisation terminée");
-});
-
 function showMainApp() {
     console.log("Affichage application principale");
     document.getElementById('login-screen').style.display = 'none';
@@ -603,67 +200,14 @@ function showMainApp() {
     document.getElementById('bottom-nav').style.display = 'flex';
     document.getElementById('sync-status').style.display = 'flex';
     document.getElementById('admin-panel').style.display = 'block';
-}
-
-function updateLogoDisplay() {
-    const logoElements = document.querySelectorAll('#company-logo, #ticket-logo');
-    logoElements.forEach(logo => {
-        if(companyInfo.logo) logo.src = companyInfo.logo;
-        else logo.src = companyLogo;
-        logo.onerror = function() {
-            this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YzOWMxMiIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Qk9STEVUVEU8L3RleHQ+PC9zdmc+';
-        };
+    // Cacher tous les écrans superflus
+    const screensToHide = ['report-screen', 'report-stats-screen', 'results-check-screen', 'multi-tickets-screen', 'end-draw-report-screen', 'ticket-management-screen', 'winning-tickets-screen', 'history-screen'];
+    screensToHide.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
     });
-    const nameEl = document.getElementById('company-name');
-    const sloganEl = document.getElementById('company-slogan');
-    if (nameEl && companyInfo.name) nameEl.textContent = companyInfo.name;
-    if (sloganEl && companyInfo.slogan) sloganEl.textContent = companyInfo.slogan;
-}
-
-function setupConnectionDetection() {
-    window.addEventListener('online', function() {
-        isOnline = true;
-        showNotification("Koneksyon entènèt retabli", "success");
-        checkForNewResults();
-    });
-    window.addEventListener('offline', function() {
-        isOnline = false;
-        showNotification("Pa konekte ak entènèt", "warning");
-    });
-}
-
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    let icon = 'fas fa-info-circle';
-    if (type === 'success') icon = 'fas fa-check-circle';
-    if (type === 'warning') icon = 'fas fa-exclamation-triangle';
-    if (type === 'error') icon = 'fas fa-times-circle';
-    notification.innerHTML = `<i class="${icon}"></i><span>${message}</span>`;
-    document.body.appendChild(notification);
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transform = 'translate(-50%, 20px)';
-        setTimeout(() => {
-            if (notification.parentNode) notification.parentNode.removeChild(notification);
-        }, 300);
-    }, 5000);
-}
-
-function updateCurrentTime() {
-    const now = new Date();
-    const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
-    const dateString = now.toLocaleDateString('fr-FR', options);
-    const timeString = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    const timeEl = document.getElementById('current-time');
-    if (timeEl) timeEl.textContent = `${dateString} - ${timeString}`;
-    const ticketDateEl = document.getElementById('ticket-date');
-    if (ticketDateEl) ticketDateEl.textContent = `${dateString} - ${timeString}`;
-}
-
-function updatePendingBadge() {
-    // Fonction utilitaire, peut être étendue
-    console.log("Pending tickets:", pendingSyncTickets.length);
+    // S'assurer que l'accueil est visible
+    document.querySelector('.container').style.display = 'block';
 }
 
 function showScreen(screenId) {
@@ -691,51 +235,100 @@ function showScreen(screenId) {
 }
 
 // ==========================================
-// 6. Fonctions de rapport et commission
+// 4. Chargement des données
 // ==========================================
-function updateReportScreen() {
-    loadReportByPeriod('15days');
-}
-
-function loadReportByPeriod(period) {
-    const end = new Date();
-    let start = new Date();
-    switch(period) {
-        case 'today': start.setHours(0,0,0,0); break;
-        case '7days': start.setDate(end.getDate()-7); break;
-        case '15days': start.setDate(end.getDate()-15); break;
-        case 'month': start = new Date(end.getFullYear(), end.getMonth(), 1); break;
-        default: start.setDate(end.getDate()-15);
+async function loadDataFromAPI() {
+    try {
+        const ticketsData = await apiCall(APP_CONFIG.tickets);
+        savedTickets = ticketsData.tickets || [];
+        ticketNumber = ticketsData.nextTicketNumber || 1;
+        const pendingData = await apiCall(APP_CONFIG.ticketsPending);
+        pendingSyncTickets = pendingData.tickets || [];
+        const winningData = await apiCall(APP_CONFIG.winningTickets);
+        winningTickets = winningData.tickets || [];
+        const multiDrawData = await apiCall(APP_CONFIG.multiDrawTickets);
+        multiDrawTickets = multiDrawData.tickets || [];
+        const companyData = await apiCall(APP_CONFIG.companyInfo);
+        if (companyData) companyInfo = { ...companyInfo, ...companyData };
+        const logoData = await apiCall(APP_CONFIG.logo);
+        if (logoData && logoData.logoUrl) companyLogo = logoData.logoUrl;
+        updateCompanyDisplay();
+    } catch (error) {
+        console.error('Erreur chargement données:', error);
+        showNotification("Erreur de chargement des données", "error");
     }
-    document.getElementById('start-date').value = start.toISOString().split('T')[0];
-    document.getElementById('end-date').value = end.toISOString().split('T')[0];
-    loadReportData(start, end);
 }
 
-function loadReportData(start, end) {
-    const filtered = savedTickets.filter(t => new Date(t.date) >= start && new Date(t.date) <= end);
-    const totalSales = filtered.reduce((s,t)=>s+t.total,0);
-    const commissionRate = companyInfo.agentCommission || 10;
-    const commissionEarned = totalSales * (commissionRate/100);
-    const filteredWinnings = winningTickets.filter(w => new Date(w.date) >= start && new Date(w.date) <= end);
-    const totalPayouts = filteredWinnings.reduce((s,w)=>s+(w.totalWinnings||0),0);
-    const netProfit = totalSales - totalPayouts;
-    
-    document.getElementById('total-sales').innerText = totalSales + ' G';
-    document.getElementById('commission-rate').innerText = commissionRate + '%';
-    document.getElementById('commission-earned').innerText = commissionEarned.toFixed(2) + ' G';
-    document.getElementById('total-payouts').innerText = totalPayouts + ' G';
-    document.getElementById('net-profit').innerText = netProfit + ' G';
-    
-    const drawStats = {};
-    filtered.forEach(t => { drawStats[t.draw] = (drawStats[t.draw]||0) + t.total; });
-    const detail = document.getElementById('report-detail-list');
-    detail.innerHTML = Object.entries(drawStats).map(([d,a]) => `<div class="report-detail-item"><span>${draws[d]?.name || d}</span><span>${a} G</span></div>`).join('');
-    if (Object.keys(drawStats).length === 0) detail.innerHTML = '<p>Pa gen done</p>';
+function updateCompanyDisplay() {
+    const nameEl = document.getElementById('company-name');
+    const sloganEl = document.getElementById('company-slogan');
+    const logoEl = document.getElementById('company-logo');
+    if (nameEl && companyInfo.name) nameEl.textContent = companyInfo.name;
+    if (sloganEl && companyInfo.slogan) sloganEl.textContent = companyInfo.slogan;
+    if (logoEl && companyInfo.logo) logoEl.src = companyInfo.logo;
 }
 
 // ==========================================
-// 7. Résultats
+// 5. Utilitaires
+// ==========================================
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    let icon = 'fas fa-info-circle';
+    if (type === 'success') icon = 'fas fa-check-circle';
+    if (type === 'warning') icon = 'fas fa-exclamation-triangle';
+    if (type === 'error') icon = 'fas fa-times-circle';
+    notification.innerHTML = `<i class="${icon}"></i><span>${message}</span>`;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translate(-50%, 20px)';
+        setTimeout(() => notification.parentNode?.removeChild(notification), 300);
+    }, 5000);
+}
+
+function updateCurrentTime() {
+    const now = new Date();
+    const options = { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' };
+    const dateString = now.toLocaleDateString('fr-FR', options);
+    const timeString = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const timeEl = document.getElementById('current-time');
+    if (timeEl) timeEl.textContent = `${dateString} - ${timeString}`;
+    const ticketDateEl = document.getElementById('ticket-date');
+    if (ticketDateEl) ticketDateEl.textContent = `${dateString} - ${timeString}`;
+}
+
+function updateLogoDisplay() {
+    const logoElements = document.querySelectorAll('#company-logo, #ticket-logo');
+    logoElements.forEach(logo => {
+        if(companyInfo.logo) logo.src = companyInfo.logo;
+        else logo.src = companyLogo;
+        logo.onerror = function() {
+            this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YzOWMxMiIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Qk9STEVUVEU8L3RleHQ+PC9zdmc+';
+        };
+    });
+    const nameEl = document.getElementById('company-name');
+    const sloganEl = document.getElementById('company-slogan');
+    if (nameEl && companyInfo.name) nameEl.textContent = companyInfo.name;
+    if (sloganEl && companyInfo.slogan) sloganEl.textContent = companyInfo.slogan;
+}
+
+function setupConnectionDetection() {
+    window.addEventListener('online', () => {
+        isOnline = true;
+        showNotification("Koneksyon entènèt retabli", "success");
+        checkForNewResults();
+    });
+    window.addEventListener('offline', () => {
+        isOnline = false;
+        showNotification("Pa konekte ak entènèt", "warning");
+    });
+}
+
+function updatePendingBadge() { /* fonction vide, gardée pour compatibilité */ }
+
+// ==========================================
+// 6. Résultats
 // ==========================================
 async function loadResultsFromDatabase() {
     try {
@@ -744,7 +337,6 @@ async function loadResultsFromDatabase() {
         updateResultsDisplay();
     } catch (error) {
         console.error("Erreur chargement résultats:", error);
-        showNotification("Erreur chargement résultats", "error");
     }
 }
 
@@ -756,9 +348,7 @@ async function checkForNewResults() {
             resultsDatabase = resultsData.results;
             updateResultsDisplay();
         }
-    } catch (error) {
-        console.error("Erreur vérification résultats:", error);
-    }
+    } catch (error) {}
 }
 
 function updateResultsDisplay() {
@@ -783,7 +373,7 @@ function updateResultsDisplay() {
 }
 
 // ==========================================
-// 8. Écran de pari
+// 7. Écran de pari (version complète)
 // ==========================================
 function openBettingScreen(drawId, time = null) {
     currentDraw = drawId;
@@ -828,9 +418,6 @@ function setupGameSelection() {
     });
 }
 
-// ==========================================
-// 9. Formulaire de pari avec bouton Nx
-// ==========================================
 function showBetForm(gameType) {
     const bet = betTypes[gameType];
     document.getElementById('games-interface').style.display = 'none';
@@ -971,9 +558,6 @@ function showBetForm(gameType) {
     document.getElementById('active-bets').style.display = 'block';
 }
 
-// ==========================================
-// 10. Ajout de paris et gestion du panier
-// ==========================================
 function addBet(gameType) {
     const bet = betTypes[gameType];
     let number, amount;
@@ -1108,7 +692,7 @@ function showTotalNotification(totalAmount, type = 'normal') {
 }
 
 // ==========================================
-// 11. Jeux automatiques
+// 8. Jeux automatiques
 // ==========================================
 function showAutoGameForm(gameType) {
     const bet = betTypes[gameType];
@@ -1216,7 +800,7 @@ function updateSelectedBallsDisplay() {
 }
 
 // ==========================================
-// 12. Sauvegarde et impression des tickets
+// 9. Sauvegarde et impression
 // ==========================================
 async function saveTicket() {
     if (activeBets.length === 0) { showNotification("Pa gen okenn parye pou sove", "warning"); return; }
@@ -1302,11 +886,11 @@ async function checkConnectionBeforePrint() {
     setTimeout(() => { connectionCheck.style.display = 'none'; printTicket(); }, 1000);
 }
 
-function retryConnectionCheck() { /* déjà géré par les boutons */ }
+function retryConnectionCheck() {}
 function cancelPrint() { document.getElementById('connection-check').style.display = 'none'; }
 
 // ==========================================
-// 13. Multi-tirages
+// 10. Multi-tirages
 // ==========================================
 function initMultiDrawPanel() {
     const multiDrawOptions = document.getElementById('multi-draw-options');
@@ -1441,8 +1025,17 @@ function updateMultiTicketsScreen() {
     container.innerHTML = multiDrawTickets.map(t => `<div class="multi-ticket-item"><strong>Fiche #${t.number}</strong> - ${t.total} G<br>${new Date(t.date).toLocaleString()}</div>`).join('');
 }
 
+async function saveMultiDrawTicketAPI(ticket) {
+    return await apiCall(APP_CONFIG.multiDrawTickets, 'POST', ticket);
+}
+
+async function loadMultiDrawTickets() {
+    const res = await apiCall(APP_CONFIG.multiDrawTickets);
+    multiDrawTickets = res.tickets || [];
+}
+
 // ==========================================
-// 14. Vérification des résultats et tickets gagnants
+// 11. Vérification des résultats et tickets gagnants
 // ==========================================
 function openResultsCheckScreen() {
     document.querySelector('.container').style.display = 'none';
@@ -1530,7 +1123,7 @@ function displayWinningTickets() {
 }
 
 // ==========================================
-// 15. Historique et gestion des tickets
+// 12. Historique et gestion des tickets
 // ==========================================
 function updateHistoryScreen() {
     const list = document.getElementById('history-list');
@@ -1588,9 +1181,164 @@ function generateEndOfDrawReport() {
     document.getElementById('report-content').innerHTML = `<h3>Rapò Fin Tiraj</h3><p>Total tickets: ${savedTickets.length}</p><p>Total montant: ${total} G</p>`;
 }
 
-async function loadMultiDrawTickets() {
-    const res = await apiCall(APP_CONFIG.multiDrawTickets);
-    multiDrawTickets = res.tickets || [];
+function updateReportScreen() {
+    loadReportByPeriod('15days');
+}
+
+function loadReportByPeriod(period) {
+    const end = new Date();
+    let start = new Date();
+    switch(period) {
+        case 'today': start.setHours(0,0,0,0); break;
+        case '7days': start.setDate(end.getDate()-7); break;
+        case '15days': start.setDate(end.getDate()-15); break;
+        case 'month': start = new Date(end.getFullYear(), end.getMonth(), 1); break;
+        default: start.setDate(end.getDate()-15);
+    }
+    document.getElementById('start-date').value = start.toISOString().split('T')[0];
+    document.getElementById('end-date').value = end.toISOString().split('T')[0];
+    loadReportData(start, end);
+}
+
+function loadReportData(start, end) {
+    const filtered = savedTickets.filter(t => new Date(t.date) >= start && new Date(t.date) <= end);
+    const totalSales = filtered.reduce((s,t)=>s+t.total,0);
+    const commissionRate = companyInfo.agentCommission || 10;
+    const commissionEarned = totalSales * (commissionRate/100);
+    const filteredWinnings = winningTickets.filter(w => new Date(w.date) >= start && new Date(w.date) <= end);
+    const totalPayouts = filteredWinnings.reduce((s,w)=>s+(w.totalWinnings||0),0);
+    const netProfit = totalSales - totalPayouts;
+    document.getElementById('total-sales').innerText = totalSales + ' G';
+    document.getElementById('commission-rate').innerText = commissionRate + '%';
+    document.getElementById('commission-earned').innerText = commissionEarned.toFixed(2) + ' G';
+    document.getElementById('total-payouts').innerText = totalPayouts + ' G';
+    document.getElementById('net-profit').innerText = netProfit + ' G';
+    const drawStats = {};
+    filtered.forEach(t => { drawStats[t.draw] = (drawStats[t.draw]||0) + t.total; });
+    const detail = document.getElementById('report-detail-list');
+    detail.innerHTML = Object.entries(drawStats).map(([d,a]) => `<div class="report-detail-item"><span>${draws[d]?.name || d}</span><span>${a} G</span></div>`).join('');
+    if (Object.keys(drawStats).length === 0) detail.innerHTML = '<p>Pa gen done</p>';
+}
+
+// ==========================================
+// 13. Initialisation
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("Document chargé, initialisation...");
+    
+    // Connexion
+    document.getElementById('login-btn').addEventListener('click', handleLogin);
+    document.getElementById('logout-btn').addEventListener('click', handleLogout);
+    
+    if (!checkAuth()) return;
+    
+    showMainApp();
+    updateCurrentTime();
+    loadDataFromAPI();
+    setupConnectionDetection();
+    updateLogoDisplay();
+    loadResultsFromDatabase();
+    
+    // Tirages
+    document.querySelectorAll('.draw-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const drawId = this.getAttribute('data-draw');
+            openBettingScreen(drawId, 'morning');
+        });
+    });
+    document.querySelectorAll('.draw-btn').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const card = this.closest('.draw-card');
+            const drawId = card.getAttribute('data-draw');
+            const time = this.getAttribute('data-time');
+            card.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            openBettingScreen(drawId, time);
+        });
+    });
+    
+    // Boutons généraux
+    document.getElementById('back-button').addEventListener('click', closeBettingScreen);
+    document.getElementById('save-print-ticket').addEventListener('click', () => checkConnectionBeforeSavePrint());
+    document.getElementById('save-ticket-only').addEventListener('click', () => saveTicket());
+    document.getElementById('print-ticket-only').addEventListener('click', () => checkConnectionBeforePrint());
+    document.getElementById('save-print-multi-ticket').addEventListener('click', () => saveAndPrintMultiDrawTicket());
+    document.getElementById('view-current-multi-ticket').addEventListener('click', () => viewCurrentMultiDrawTicket());
+    document.getElementById('open-multi-tickets').addEventListener('click', () => openMultiTicketsScreen());
+    document.getElementById('back-from-multi-tickets').addEventListener('click', () => {
+        document.getElementById('multi-tickets-screen').style.display = 'none';
+        document.querySelector('.container').style.display = 'block';
+    });
+    document.getElementById('back-from-report').addEventListener('click', () => {
+        document.getElementById('report-screen').style.display = 'none';
+        document.querySelector('.container').style.display = 'block';
+    });
+    document.getElementById('back-from-results').addEventListener('click', () => {
+        document.getElementById('results-check-screen').style.display = 'none';
+        document.querySelector('.container').style.display = 'block';
+    });
+    document.getElementById('retry-connection').addEventListener('click', () => retryConnectionCheck());
+    document.getElementById('cancel-print').addEventListener('click', () => cancelPrint());
+    document.getElementById('generate-report-btn').addEventListener('click', () => generateEndOfDrawReport());
+    document.getElementById('open-results-check').addEventListener('click', () => openResultsCheckScreen());
+    document.getElementById('check-winners-btn').addEventListener('click', () => checkWinningTickets());
+    document.getElementById('multi-draw-toggle').addEventListener('click', () => toggleMultiDrawPanel());
+    document.getElementById('add-to-multi-draw').addEventListener('click', () => addToMultiDrawTicket());
+    
+    initMultiDrawPanel();
+    
+    // Gestion des fiches
+    document.getElementById('search-ticket-btn').addEventListener('click', () => searchTicket());
+    document.getElementById('show-all-tickets').addEventListener('click', () => showAllTickets());
+    document.getElementById('show-pending-tickets').addEventListener('click', () => showPendingTickets());
+    document.getElementById('search-history-btn').addEventListener('click', () => searchHistory());
+    document.getElementById('search-winning-btn').addEventListener('click', () => searchWinningTickets());
+    
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const screen = this.getAttribute('data-screen');
+            showScreen(screen);
+        });
+    });
+    document.querySelectorAll('.back-button[data-screen]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const screen = this.getAttribute('data-screen') || 'home';
+            showScreen(screen);
+        });
+    });
+    
+    // Filtres rapport
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+            btn.classList.add('active');
+            if(btn.dataset.period) loadReportByPeriod(btn.dataset.period);
+        });
+    });
+    document.getElementById('apply-custom').addEventListener('click', () => {
+        const start = document.getElementById('start-date').value;
+        const end = document.getElementById('end-date').value;
+        if(start && end) loadReportData(new Date(start), new Date(end));
+    });
+    
+    // Mises à jour périodiques
+    setInterval(updateCurrentTime, 60000);
+    setInterval(updatePendingBadge, 30000);
+    setInterval(checkForNewResults, 300000);
+    
+    console.log("Initialisation terminée");
+});
+
+// Fonctions résiduelles pour compatibilité
+async function savePendingTicketAPI(ticket) {
+    if (!navigator.onLine) return null;
+    return await apiCall(APP_CONFIG.ticketsPending, 'POST', { ticket });
+}
+
+async function saveHistoryAPI(record) {
+    return await apiCall(APP_CONFIG.history, 'POST', record);
 }
 
 function setupAutoFocusInputs() {
