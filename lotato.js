@@ -107,13 +107,19 @@ let authToken = null;
 // ==========================================
 async function apiCall(url, method = 'GET', body = null) {
     const headers = { 'Content-Type': 'application/json' };
-    if (authToken) headers['x-auth-token'] = authToken;
+    if (authToken) {
+        // On envoie le token sous les deux formats pour compatibilité
+        headers['Authorization'] = `Bearer ${authToken}`;
+        headers['x-auth-token'] = authToken;
+    }
     const options = { method, headers };
     if (body) options.body = JSON.stringify(body);
     try {
         const response = await fetch(url, options);
         if (response.status === 401) {
             localStorage.removeItem('nova_token');
+            localStorage.removeItem('token');
+            localStorage.removeItem('auth_token');
             authToken = null;
             checkAuth();
             return null;
@@ -131,11 +137,16 @@ async function apiCall(url, method = 'GET', body = null) {
 }
 
 // ==========================================
-// 2. Authentification
+// 2. Authentification (CORRIGÉE)
 // ==========================================
 function checkAuth() {
-    const token = localStorage.getItem('nova_token');
+    // Récupérer le token depuis différents noms possibles
+    let token = localStorage.getItem('nova_token');
+    if (!token) token = localStorage.getItem('token');
+    if (!token) token = localStorage.getItem('auth_token');
+    
     if (!token) {
+        // Aucun token : afficher l'écran de connexion intégré
         document.getElementById('login-screen').style.display = 'flex';
         document.getElementById('main-container').style.display = 'none';
         document.getElementById('bottom-nav').style.display = 'none';
@@ -143,8 +154,16 @@ function checkAuth() {
         document.getElementById('admin-panel').style.display = 'none';
         return false;
     }
+    
+    // Token trouvé : le stocker sous le nom attendu par l'API
     authToken = token;
-    showMainApp();
+    localStorage.setItem('nova_token', token); // uniformisation
+    // Afficher l'application principale
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-container').style.display = 'block';
+    document.getElementById('bottom-nav').style.display = 'flex';
+    document.getElementById('sync-status').style.display = 'flex';
+    document.getElementById('admin-panel').style.display = 'block';
     return true;
 }
 
@@ -152,11 +171,13 @@ async function handleLogin() {
     const username = document.getElementById('admin-username').value;
     const password = document.getElementById('admin-password').value;
     const errorDiv = document.getElementById('login-error');
+    
     if (!username || !password) {
         errorDiv.style.display = 'block';
         errorDiv.textContent = "Antre non itilizatè ak modpas";
         return;
     }
+    
     try {
         const response = await fetch(APP_CONFIG.login, {
             method: 'POST',
@@ -165,7 +186,10 @@ async function handleLogin() {
         });
         const data = await response.json();
         if (data.success && data.token) {
+            // Stocker le token sous tous les noms utiles
             localStorage.setItem('nova_token', data.token);
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('auth_token', data.token);
             authToken = data.token;
             showMainApp();
             errorDiv.style.display = 'none';
@@ -186,13 +210,12 @@ async function handleLogin() {
 
 function handleLogout() {
     localStorage.removeItem('nova_token');
+    localStorage.removeItem('token');
+    localStorage.removeItem('auth_token');
     authToken = null;
     checkAuth();
 }
 
-// ==========================================
-// 3. Affichage principal
-// ==========================================
 function showMainApp() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('main-container').style.display = 'block';
@@ -208,32 +231,8 @@ function showMainApp() {
     document.querySelector('.container').style.display = 'block';
 }
 
-function showScreen(screenId) {
-    document.querySelectorAll('.screen, .betting-screen, .container, .report-screen, .results-check-screen, .multi-tickets-screen').forEach(screen => {
-        screen.style.display = 'none';
-    });
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-        if (item.getAttribute('data-screen') === screenId) item.classList.add('active');
-    });
-    if (screenId === 'home') {
-        document.querySelector('.container').style.display = 'block';
-    } else if (screenId === 'report-stats') {
-        document.getElementById('report-stats-screen').style.display = 'block';
-        updateReportScreen();
-    } else {
-        const screen = document.getElementById(screenId + '-screen');
-        if (screen) {
-            screen.style.display = 'block';
-            if (screenId === 'ticket-management') updateTicketManagementScreen();
-            else if (screenId === 'history') updateHistoryScreen();
-            else if (screenId === 'winning-tickets') updateWinningTicketsScreen();
-        }
-    }
-}
-
 // ==========================================
-// 4. Chargement des données
+// 3. Chargement des données
 // ==========================================
 async function loadDataFromAPI() {
     try {
@@ -267,7 +266,7 @@ function updateCompanyDisplay() {
 }
 
 // ==========================================
-// 5. Utilitaires
+// 4. Utilitaires
 // ==========================================
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
@@ -326,7 +325,7 @@ function setupConnectionDetection() {
 function updatePendingBadge() {}
 
 // ==========================================
-// 6. Résultats
+// 5. Résultats
 // ==========================================
 async function loadResultsFromDatabase() {
     try {
@@ -371,7 +370,7 @@ function updateResultsDisplay() {
 }
 
 // ==========================================
-// 7. Écran de pari
+// 6. Écran de pari (complet)
 // ==========================================
 function openBettingScreen(drawId, time = null) {
     currentDraw = drawId;
@@ -416,6 +415,9 @@ function setupGameSelection() {
     });
 }
 
+// ==========================================
+// 7. Formulaires de paris (version complète)
+// ==========================================
 function showBetForm(gameType) {
     const bet = betTypes[gameType];
     document.getElementById('games-interface').style.display = 'none';
@@ -798,7 +800,7 @@ function updateSelectedBallsDisplay() {
 }
 
 // ==========================================
-// 9. Sauvegarde et impression
+// 9. Sauvegarde et impression des tickets
 // ==========================================
 async function saveTicket() {
     if (activeBets.length === 0) { showNotification("Pa gen okenn parye pou sove", "warning"); return; }
@@ -931,8 +933,7 @@ function updateMultiGameForm(gameType) {
     switch(gameType) {
         case 'borlette': case 'boulpe': html = `<input type="text" id="multi-draw-number" placeholder="00" maxlength="2">`; break;
         case 'lotto3': case 'grap': html = `<input type="text" id="multi-draw-number" placeholder="000" maxlength="3">`; break;
-        case 'marriage': html = `<div class="number-inputs"><input id="multi-draw-number1" placeholder="00"><input id="multi-draw-number2" placeholder="00"></div>`; break;
-        case 'lotto4': html = `<div class="number-inputs"><input id="multi-draw-number1" placeholder="00"><input id="multi-draw-number2" placeholder="00"></div>`; break;
+        case 'marriage': case 'lotto4': html = `<div class="number-inputs"><input id="multi-draw-number1" placeholder="00"><input id="multi-draw-number2" placeholder="00"></div>`; break;
         case 'lotto5': html = `<div class="number-inputs"><input id="multi-draw-number1" placeholder="000"><input id="multi-draw-number2" placeholder="00"></div>`; break;
     }
     container.innerHTML = html;
