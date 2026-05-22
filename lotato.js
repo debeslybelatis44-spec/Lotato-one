@@ -140,11 +140,14 @@ async function apiCall(url, method = 'GET', body = null) {
 // 2. Authentification (inchangée)
 // ==========================================
 function checkAuth() {
-    let token = localStorage.getItem('nova_token');
+    // Recherche du token dans l'ordre : lotato_token (utilisé par index.html) puis les anciens noms
+    let token = localStorage.getItem('lotato_token');
+    if (!token) token = localStorage.getItem('nova_token');
     if (!token) token = localStorage.getItem('token');
     if (!token) token = localStorage.getItem('auth_token');
     
     if (!token) {
+        // Aucun token : afficher l'écran de connexion intégré
         document.getElementById('login-screen').style.display = 'flex';
         document.getElementById('main-container').style.display = 'none';
         document.getElementById('bottom-nav').style.display = 'none';
@@ -153,8 +156,10 @@ function checkAuth() {
         return false;
     }
     
+    // Token trouvé : le stocker sous le nom unifié
     authToken = token;
-    localStorage.setItem('nova_token', token);
+    localStorage.setItem('lotato_token', token); // uniformisation
+    // Afficher l'application principale
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('main-container').style.display = 'block';
     document.getElementById('bottom-nav').style.display = 'flex';
