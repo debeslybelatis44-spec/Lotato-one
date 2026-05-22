@@ -1,5 +1,6 @@
 // ==========================================
-// LOTATO - Interface Agent (Version Complète)
+// LOTATO - Version complète (originale)
+// Ajouts : partage (SMS/WhatsApp/Bluetooth) + commandes vocales
 // ==========================================
 
 // Configuration de base avec APP_CONFIG
@@ -108,7 +109,6 @@ let authToken = null;
 async function apiCall(url, method = 'GET', body = null) {
     const headers = { 'Content-Type': 'application/json' };
     if (authToken) {
-        // On envoie le token sous les deux formats pour compatibilité
         headers['Authorization'] = `Bearer ${authToken}`;
         headers['x-auth-token'] = authToken;
     }
@@ -137,16 +137,14 @@ async function apiCall(url, method = 'GET', body = null) {
 }
 
 // ==========================================
-// 2. Authentification (CORRIGÉE)
+// 2. Authentification (inchangée)
 // ==========================================
 function checkAuth() {
-    // Récupérer le token depuis différents noms possibles
     let token = localStorage.getItem('nova_token');
     if (!token) token = localStorage.getItem('token');
     if (!token) token = localStorage.getItem('auth_token');
     
     if (!token) {
-        // Aucun token : afficher l'écran de connexion intégré
         document.getElementById('login-screen').style.display = 'flex';
         document.getElementById('main-container').style.display = 'none';
         document.getElementById('bottom-nav').style.display = 'none';
@@ -155,10 +153,8 @@ function checkAuth() {
         return false;
     }
     
-    // Token trouvé : le stocker sous le nom attendu par l'API
     authToken = token;
-    localStorage.setItem('nova_token', token); // uniformisation
-    // Afficher l'application principale
+    localStorage.setItem('nova_token', token);
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('main-container').style.display = 'block';
     document.getElementById('bottom-nav').style.display = 'flex';
@@ -186,7 +182,6 @@ async function handleLogin() {
         });
         const data = await response.json();
         if (data.success && data.token) {
-            // Stocker le token sous tous les noms utiles
             localStorage.setItem('nova_token', data.token);
             localStorage.setItem('token', data.token);
             localStorage.setItem('auth_token', data.token);
@@ -222,7 +217,6 @@ function showMainApp() {
     document.getElementById('bottom-nav').style.display = 'flex';
     document.getElementById('sync-status').style.display = 'flex';
     document.getElementById('admin-panel').style.display = 'block';
-    // Cacher tous les écrans superflus
     const screensToHide = ['report-screen', 'report-stats-screen', 'results-check-screen', 'multi-tickets-screen', 'end-draw-report-screen', 'ticket-management-screen', 'winning-tickets-screen', 'history-screen'];
     screensToHide.forEach(id => {
         const el = document.getElementById(id);
@@ -232,7 +226,7 @@ function showMainApp() {
 }
 
 // ==========================================
-// 3. Chargement des données
+// 3. Chargement des données (inchangé)
 // ==========================================
 async function loadDataFromAPI() {
     try {
@@ -266,7 +260,7 @@ function updateCompanyDisplay() {
 }
 
 // ==========================================
-// 4. Utilitaires
+// 4. Utilitaires (inchangés)
 // ==========================================
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
@@ -325,7 +319,7 @@ function setupConnectionDetection() {
 function updatePendingBadge() {}
 
 // ==========================================
-// 5. Résultats
+// 5. Résultats (inchangé)
 // ==========================================
 async function loadResultsFromDatabase() {
     try {
@@ -370,7 +364,7 @@ function updateResultsDisplay() {
 }
 
 // ==========================================
-// 6. Écran de pari (complet)
+// 6. Écran de pari (complet, inchangé)
 // ==========================================
 function openBettingScreen(drawId, time = null) {
     currentDraw = drawId;
@@ -416,7 +410,7 @@ function setupGameSelection() {
 }
 
 // ==========================================
-// 7. Formulaires de paris (version complète)
+// 7. Formulaires de paris (inchangé)
 // ==========================================
 function showBetForm(gameType) {
     const bet = betTypes[gameType];
@@ -692,7 +686,7 @@ function showTotalNotification(totalAmount, type = 'normal') {
 }
 
 // ==========================================
-// 8. Jeux automatiques
+// 8. Jeux automatiques (inchangé)
 // ==========================================
 function showAutoGameForm(gameType) {
     const bet = betTypes[gameType];
@@ -800,10 +794,10 @@ function updateSelectedBallsDisplay() {
 }
 
 // ==========================================
-// 9. Sauvegarde et impression des tickets
+// 9. Sauvegarde et impression des tickets (MODIFIÉ pour partage)
 // ==========================================
 async function saveTicket() {
-    if (activeBets.length === 0) { showNotification("Pa gen okenn parye pou sove", "warning"); return; }
+    if (activeBets.length === 0) { showNotification("Pa gen okenn parye pou sove", "warning"); return null; }
     const ticket = {
         id: Date.now().toString(),
         number: ticketNumber,
@@ -820,27 +814,86 @@ async function saveTicket() {
         savedTickets.push(ticket);
         ticketNumber++;
         showNotification("Fiche sove avèk siksè!", "success");
-        return response;
+        return ticket; // Retourne le ticket pour le partage
     } catch (error) {
         console.error('Erreur sauvegarde ticket:', error);
         showNotification("Erreur lors de la sauvegarde du ticket", "error");
-        throw error;
+        return null;
     }
 }
 
-async function saveAndPrintTicket() {
-    if (activeBets.length === 0) { showNotification("Pa gen okenn parye pou sove", "warning"); return; }
-    await saveTicket();
-    setTimeout(() => printTicket(), 100);
+// NOUVEAU : fonction de partage après sauvegarde
+async function saveAndShare() {
+    const ticket = await saveTicket();
+    if (ticket) {
+        activeBets = [];
+        updateBetsList();
+        openShareModal(ticket);
+    }
 }
 
-function printTicket() {
-    const lastTicket = savedTickets[savedTickets.length-1];
-    if (!lastTicket) { showNotification("Pa gen fiche ki sove pou enprime.", "warning"); return; }
+function openShareModal(ticket) {
+    const modal = document.getElementById('share-modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    document.getElementById('phone-input-container').style.display = 'none';
+    document.getElementById('share-sms').onclick = () => askPhoneNumber(ticket, 'sms');
+    document.getElementById('share-wa').onclick = () => askPhoneNumber(ticket, 'whatsapp');
+    document.getElementById('share-bluetooth').onclick = () => shareViaBluetooth(ticket);
+    document.getElementById('share-print').onclick = () => { modal.style.display = 'none'; printTicket(ticket); };
+    document.getElementById('share-close').onclick = () => modal.style.display = 'none';
+}
+
+function askPhoneNumber(ticket, method) {
+    const container = document.getElementById('phone-input-container');
+    container.style.display = 'flex';
+    const sendBtn = document.getElementById('send-phone');
+    sendBtn.onclick = () => {
+        let phone = document.getElementById('phone-number').value.trim();
+        if (!phone) { showNotification("Numéro requis", "error"); return; }
+        if (!phone.startsWith('+')) phone = '+' + phone;
+        if (method === 'sms') sendSMS(ticket, phone);
+        else sendWhatsApp(ticket, phone);
+        document.getElementById('share-modal').style.display = 'none';
+    };
+}
+
+function generateTicketText(ticket) {
+    let text = `🏆 LOTATO - TICKET #${ticket.number}\n`;
+    text += `Date: ${new Date(ticket.date).toLocaleString()}\n`;
+    text += `Tirage: ${draws[ticket.draw]?.name} (${ticket.drawTime === 'morning' ? 'Matin' : 'Soir'})\n`;
+    text += `--- Paris ---\n`;
+    ticket.bets.forEach(b => { text += `${b.name} : ${b.number} → ${b.amount} G\n`; });
+    text += `Total: ${ticket.total} G\n`;
+    text += `Merci pour votre confiance !`;
+    return text;
+}
+
+function sendSMS(ticket, phone) {
+    const body = encodeURIComponent(generateTicketText(ticket));
+    window.location.href = `sms:${phone}?body=${body}`;
+    showNotification("Ouverture SMS...", "info");
+}
+
+function sendWhatsApp(ticket, phone) {
+    const text = encodeURIComponent(generateTicketText(ticket));
+    window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+}
+
+function shareViaBluetooth(ticket) {
+    const text = generateTicketText(ticket);
+    if (navigator.share) {
+        navigator.share({ title: 'Ticket LOTATO', text: text }).catch(e => console.log(e));
+    } else {
+        showNotification("Partage non supporté sur ce navigateur", "error");
+    }
+}
+
+function printTicket(ticket) {
     const printWindow = window.open('', '_blank');
     let betsHTML = '';
     let total = 0;
-    lastTicket.bets.forEach(bet => { total += bet.amount; betsHTML += `<div style="margin-bottom:10px;padding:5px;border-bottom:1px solid #ddd;"><strong>${bet.name}</strong><br>${bet.number}<br>${bet.amount} G</div>`; });
+    ticket.bets.forEach(bet => { total += bet.amount; betsHTML += `<div style="margin-bottom:10px;padding:5px;border-bottom:1px solid #ddd;"><strong>${bet.name}</strong><br>${bet.number}<br>${bet.amount} G</div>`; });
     const html = `
         <html><head><title>Fiche ${companyInfo.name}</title>
         <style>body{font-family:Arial;padding:20px} @media print{body{margin:0;padding:0} @page{margin:0}}</style>
@@ -849,9 +902,9 @@ function printTicket() {
             <div><img src="${companyInfo.logo || companyLogo}" style="max-width:80px;"></div>
             <h2>${companyInfo.name}</h2>
             <p>Fiche Parye</p>
-            <p><strong>Nimewo:</strong> #${String(lastTicket.number).padStart(6,'0')}</p>
-            <p><strong>Dat:</strong> ${new Date(lastTicket.date).toLocaleString('fr-FR')}</p>
-            <p><strong>Tiraj:</strong> ${draws[lastTicket.draw]?.name || lastTicket.draw} (${lastTicket.drawTime === 'morning' ? 'Maten' : 'Swè'})</p>
+            <p><strong>Nimewo:</strong> #${String(ticket.number).padStart(6,'0')}</p>
+            <p><strong>Dat:</strong> ${new Date(ticket.date).toLocaleString('fr-FR')}</p>
+            <p><strong>Tiraj:</strong> ${draws[ticket.draw]?.name || ticket.draw} (${ticket.drawTime === 'morning' ? 'Maten' : 'Swè'})</p>
             <hr>${betsHTML}<hr>
             <div style="display:flex;justify-content:space-between;font-weight:bold;"><span>Total:</span><span>${total} goud</span></div>
             <p>Mèsi pou konfyans ou!</p>
@@ -864,6 +917,7 @@ function printTicket() {
     printWindow.print();
 }
 
+// Fonctions existantes de vérification de connexion (inchangées)
 async function checkConnectionBeforeSavePrint() {
     const connectionCheck = document.getElementById('connection-check');
     connectionCheck.style.display = 'flex';
@@ -883,14 +937,21 @@ async function checkConnectionBeforePrint() {
     const connectionCheck = document.getElementById('connection-check');
     connectionCheck.style.display = 'flex';
     document.getElementById('connection-message').textContent = 'Koneksyon entènèt ok. Wap kontinye...';
-    setTimeout(() => { connectionCheck.style.display = 'none'; printTicket(); }, 1000);
+    setTimeout(() => { connectionCheck.style.display = 'none'; printTicket(savedTickets[savedTickets.length-1]); }, 1000);
 }
 
 function retryConnectionCheck() {}
 function cancelPrint() { document.getElementById('connection-check').style.display = 'none'; }
 
+// Ancienne fonction saveAndPrintTicket conservée pour compatibilité
+async function saveAndPrintTicket() {
+    if (activeBets.length === 0) { showNotification("Pa gen okenn parye pou sove", "warning"); return; }
+    await saveTicket();
+    setTimeout(() => printTicket(savedTickets[savedTickets.length-1]), 100);
+}
+
 // ==========================================
-// 10. Multi-tirages
+// 10. Multi-tirages (inchangé)
 // ==========================================
 function initMultiDrawPanel() {
     const multiDrawOptions = document.getElementById('multi-draw-options');
@@ -1034,7 +1095,7 @@ async function loadMultiDrawTickets() {
 }
 
 // ==========================================
-// 11. Vérification des résultats et tickets gagnants
+// 11. Vérification des résultats et tickets gagnants (inchangé)
 // ==========================================
 function openResultsCheckScreen() {
     document.querySelector('.container').style.display = 'none';
@@ -1122,7 +1183,7 @@ function displayWinningTickets() {
 }
 
 // ==========================================
-// 12. Historique et gestion des tickets
+// 12. Historique et gestion des tickets (inchangé)
 // ==========================================
 function updateHistoryScreen() {
     const list = document.getElementById('history-list');
@@ -1220,7 +1281,116 @@ function loadReportData(start, end) {
 }
 
 // ==========================================
-// 13. Initialisation principale
+// 13. Commandes vocales (NOUVEAU)
+// ==========================================
+let recognition = null;
+if ('webkitSpeechRecognition' in window) {
+    recognition = new webkitSpeechRecognition();
+    recognition.lang = 'fr-FR';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+}
+
+document.getElementById('voice-command-btn')?.addEventListener('click', () => {
+    if (!recognition) { showNotification("Reconnaissance vocale non supportée", "error"); return; }
+    recognition.start();
+    showNotification("Parlez maintenant...", "info");
+});
+
+recognition.onresult = async (event) => {
+    const command = event.results[0][0].transcript.toLowerCase();
+    showNotification(`Commande: "${command}"`, "info");
+    await processVoiceCommand(command);
+};
+
+async function processVoiceCommand(command) {
+    if (command.includes('rapport du jour') || command.includes("rapport aujourd'hui")) {
+        generateVoiceReport('today');
+    } else if (command.includes("rapport d'hier")) {
+        generateVoiceReport('yesterday');
+    } else if (command.includes('rapport de la semaine')) {
+        generateVoiceReport('7days');
+    } else if (command.includes('rapport du mois')) {
+        generateVoiceReport('month');
+    } else if (command.includes('rapport de la quinzaine')) {
+        generateVoiceReport('15days');
+    } else if (command.includes('rejouer le ticket')) {
+        const match = command.match(/ticket (\d+)/);
+        const drawMatch = command.match(/(miami|georgia|new york|texas|tunisie)/i);
+        if (match && drawMatch) {
+            const ticketNum = parseInt(match[1]);
+            const drawName = drawMatch[1].toLowerCase();
+            const drawId = Object.keys(draws).find(k => draws[k].name.toLowerCase().includes(drawName));
+            if (drawId) await replayTicket(ticketNum, drawId);
+            else showNotification("Tirage non trouvé", "error");
+        } else showNotification("Format: rejouer le ticket [numéro] dans [tirage]", "error");
+    } else if (command.includes('mettre') && command.includes('numéro') && command.includes('montant')) {
+        await voiceBet(command);
+    } else {
+        showNotification("Commande non reconnue", "warning");
+    }
+}
+
+async function generateVoiceReport(period) {
+    let start = new Date();
+    let end = new Date();
+    if (period === 'today') start.setHours(0,0,0,0);
+    else if (period === 'yesterday') { start.setDate(end.getDate()-1); start.setHours(0,0,0,0); end.setHours(23,59,59,999); }
+    else if (period === '7days') start.setDate(end.getDate()-7);
+    else if (period === '15days') start.setDate(end.getDate()-15);
+    else if (period === 'month') start = new Date(end.getFullYear(), end.getMonth(), 1);
+    const filtered = savedTickets.filter(t => new Date(t.date) >= start && new Date(t.date) <= end);
+    const total = filtered.reduce((s,t)=>s+t.total,0);
+    const commission = total * (companyInfo.agentCommission/100);
+    const msg = `Rapport ${period}: Total des ventes ${total} gourdes, commission ${commission.toFixed(2)} gourdes.`;
+    speakText(msg);
+    showNotification(msg, "success");
+}
+
+async function replayTicket(ticketNumber, drawId) {
+    const ticket = savedTickets.find(t => t.number === ticketNumber);
+    if (!ticket) { speakText("Ticket non trouvé"); return; }
+    activeBets = ticket.bets.map(b => ({ ...b, id: Date.now()+Math.random() }));
+    currentDraw = drawId;
+    currentDrawTime = ticket.drawTime || 'morning';
+    updateBetsList();
+    openBettingScreen(drawId, currentDrawTime);
+    speakText(`Ticket ${ticketNumber} rejoué pour ${draws[drawId]?.name}`);
+}
+
+async function voiceBet(command) {
+    const numberMatch = command.match(/numéro (\d+)/);
+    const amountMatch = command.match(/montant (\d+)/);
+    const drawMatch = command.match(/(miami|georgia|new york|texas|tunisie)/i);
+    if (!numberMatch || !amountMatch || !drawMatch) {
+        speakText("Commande invalide. Exemple: mettre le numéro 123 pour 50 gourdes dans miami");
+        return;
+    }
+    const number = numberMatch[1];
+    const amount = parseInt(amountMatch[1]);
+    const drawName = drawMatch[1].toLowerCase();
+    const drawId = Object.keys(draws).find(k => draws[k].name.toLowerCase().includes(drawName));
+    if (!drawId) { speakText("Tirage non reconnu"); return; }
+    activeBets.push({ id: Date.now(), type: 'borlette', name: 'BORLETTE', number: number.padStart(2,'0'), amount, multiplier: 60 });
+    updateBetsList();
+    currentDraw = drawId;
+    currentDrawTime = 'morning';
+    openBettingScreen(drawId, 'morning');
+    speakText(`Paris ajouté: ${number} pour ${amount} gourdes dans ${draws[drawId]?.name}. Voulez-vous enregistrer ?`);
+    setTimeout(() => {
+        if (confirm("Enregistrer ce ticket ?")) saveAndShare();
+    }, 1000);
+}
+
+function speakText(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'fr-FR';
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+}
+
+// ==========================================
+// 14. Initialisation principale (modifiée pour nouveaux boutons)
 // ==========================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Document chargé, initialisation...");
@@ -1257,9 +1427,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Boutons généraux
+    // Boutons généraux (modifiés : save-print-ticket utilise saveAndShare)
     document.getElementById('back-button').addEventListener('click', closeBettingScreen);
-    document.getElementById('save-print-ticket').addEventListener('click', () => checkConnectionBeforeSavePrint());
+    document.getElementById('save-print-ticket').addEventListener('click', () => saveAndShare());
     document.getElementById('save-ticket-only').addEventListener('click', () => saveTicket());
     document.getElementById('print-ticket-only').addEventListener('click', () => checkConnectionBeforePrint());
     document.getElementById('save-print-multi-ticket').addEventListener('click', () => saveAndPrintMultiDrawTicket());
@@ -1352,4 +1522,28 @@ function setupAutoFocusInputs() {
             }
         });
     });
+}
+
+function showScreen(screenId) {
+    // Écrans principaux
+    const mainContainer = document.querySelector('.container');
+    const screens = ['report-screen', 'report-stats-screen', 'results-check-screen', 'multi-tickets-screen', 'end-draw-report-screen', 'ticket-management-screen', 'winning-tickets-screen', 'history-screen'];
+    screens.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+    if (screenId === 'home') {
+        if (mainContainer) mainContainer.style.display = 'block';
+        document.getElementById('bottom-nav').style.display = 'flex';
+    } else {
+        if (mainContainer) mainContainer.style.display = 'none';
+        const target = document.getElementById(screenId);
+        if (target) target.style.display = 'block';
+        document.getElementById('bottom-nav').style.display = 'flex';
+    }
+    // Mettre à jour le contenu des écrans
+    if (screenId === 'history') updateHistoryScreen();
+    if (screenId === 'winning-tickets') updateWinningTicketsScreen();
+    if (screenId === 'ticket-management') updateTicketManagementScreen();
+    if (screenId === 'report-stats') updateReportScreen();
 }
