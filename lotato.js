@@ -2,7 +2,7 @@
 // LOTATO - Interface Agent (Version Complète)
 // ==========================================
 
-// Configuration de base avec APP_CONFIG
+// Configuration de base
 const API_BASE_URL = 'https://lotatonova-fv0b.onrender.com';
 const APP_CONFIG = {
     health: `${API_BASE_URL}/api/health`,
@@ -18,32 +18,8 @@ const APP_CONFIG = {
     logo: `${API_BASE_URL}/api/logo`
 };
 
-const FIVE_MINUTES = 5 * 60 * 1000;
-
-// Base de données simulée pour les résultats
-let resultsDatabase = {
-    'miami': {
-        'morning': { date: new Date().toISOString(), lot1: '123', lot2: '45', lot3: '34' },
-        'evening': { date: new Date().toISOString(), lot1: '892', lot2: '34', lot3: '56' }
-    },
-    'georgia': {
-        'morning': { date: new Date().toISOString(), lot1: '327', lot2: '45', lot3: '89' },
-        'evening': { date: new Date().toISOString(), lot1: '567', lot2: '12', lot3: '34' }
-    },
-    'newyork': {
-        'morning': { date: new Date().toISOString(), lot1: '892', lot2: '34', lot3: '56' },
-        'evening': { date: new Date().toISOString(), lot1: '123', lot2: '45', lot3: '67' }
-    },
-    'texas': {
-        'morning': { date: new Date().toISOString(), lot1: '567', lot2: '89', lot3: '01' },
-        'evening': { date: new Date().toISOString(), lot1: '234', lot2: '56', lot3: '78' }
-    },
-    'tunisia': {
-        'morning': { date: new Date().toISOString(), lot1: '234', lot2: '56', lot3: '78' },
-        'evening': { date: new Date().toISOString(), lot1: '345', lot2: '67', lot3: '89' }
-    }
-};
-
+// Variables globales
+let resultsDatabase = {};
 const draws = {
     miami: { name: "Miami (Florida)", times: { morning: "1:30 PM", evening: "9:50 PM" }, date: "Sam, 29 Nov", countdown: "18 h 30 min" },
     georgia: { name: "Georgia", times: { morning: "12:30 PM", evening: "7:00 PM" }, date: "Sam, 29 Nov", countdown: "17 h 29 min" },
@@ -73,42 +49,24 @@ let currentAdmin = null;
 let pendingSyncTickets = [];
 let isOnline = navigator.onLine;
 let companyLogo = "logo-borlette.jpg";
-let currentBetCategory = null;
-let restrictedBalls = [];
-let gameRestrictions = {};
 let selectedMultiDraws = new Set();
 let selectedMultiGame = 'borlette';
 let selectedBalls = [];
-
-let currentMultiDrawTicket = {
-    id: Date.now().toString(),
-    bets: [],
-    totalAmount: 0,
-    draws: new Set(),
-    createdAt: new Date().toISOString()
-};
+let currentMultiDrawTicket = { id: Date.now().toString(), bets: [], totalAmount: 0, draws: new Set(), createdAt: new Date().toISOString() };
 let multiDrawTickets = [];
-
-let companyInfo = {
-    name: "Nova Lotto",
-    phone: "+509 32 53 49 58",
-    address: "Cap Haïtien",
-    reportTitle: "Nova Lotto",
-    reportPhone: "40104585",
-    slogan: "Chwazi yon Jwet",
-    agentCommission: 10
-};
-
+let companyInfo = { name: "Nova Lotto", phone: "+509 32 53 49 58", address: "Cap Haïtien", slogan: "Chwazi yon Jwet", agentCommission: 10, logo: "" };
 let winningTickets = [];
 let authToken = null;
+let currentTicketToSend = null;
+let recognition = null;
+let isListening = false;
 
 // ==========================================
-// 1. API
+// 1. API Helper
 // ==========================================
 async function apiCall(url, method = 'GET', body = null) {
     const headers = { 'Content-Type': 'application/json' };
     if (authToken) {
-        // On envoie le token sous les deux formats pour compatibilité
         headers['Authorization'] = `Bearer ${authToken}`;
         headers['x-auth-token'] = authToken;
     }
@@ -117,9 +75,7 @@ async function apiCall(url, method = 'GET', body = null) {
     try {
         const response = await fetch(url, options);
         if (response.status === 401) {
-            localStorage.removeItem('nova_token');
-            localStorage.removeItem('token');
-            localStorage.removeItem('auth_token');
+            localStorage.removeItem('lotato_token');
             authToken = null;
             checkAuth();
             return null;
@@ -137,17 +93,13 @@ async function apiCall(url, method = 'GET', body = null) {
 }
 
 // ==========================================
-// 2. Authentification (CORRIGÉE)
+// 2. Authentification
 // ==========================================
 function checkAuth() {
-    // Recherche du token dans l'ordre : lotato_token (utilisé par index.html) puis les anciens noms
     let token = localStorage.getItem('lotato_token');
     if (!token) token = localStorage.getItem('nova_token');
     if (!token) token = localStorage.getItem('token');
-    if (!token) token = localStorage.getItem('auth_token');
-    
     if (!token) {
-        // Aucun token : afficher l'écran de connexion intégré
         document.getElementById('login-screen').style.display = 'flex';
         document.getElementById('main-container').style.display = 'none';
         document.getElementById('bottom-nav').style.display = 'none';
@@ -155,11 +107,8 @@ function checkAuth() {
         document.getElementById('admin-panel').style.display = 'none';
         return false;
     }
-    
-    // Token trouvé : le stocker sous le nom unifié
     authToken = token;
-    localStorage.setItem('lotato_token', token); // uniformisation
-    // Afficher l'application principale
+    localStorage.setItem('lotato_token', token);
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('main-container').style.display = 'block';
     document.getElementById('bottom-nav').style.display = 'flex';
@@ -172,13 +121,11 @@ async function handleLogin() {
     const username = document.getElementById('admin-username').value;
     const password = document.getElementById('admin-password').value;
     const errorDiv = document.getElementById('login-error');
-    
     if (!username || !password) {
         errorDiv.style.display = 'block';
         errorDiv.textContent = "Antre non itilizatè ak modpas";
         return;
     }
-    
     try {
         const response = await fetch(APP_CONFIG.login, {
             method: 'POST',
@@ -187,10 +134,7 @@ async function handleLogin() {
         });
         const data = await response.json();
         if (data.success && data.token) {
-            // Stocker le token sous tous les noms utiles
-            localStorage.setItem('nova_token', data.token);
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('auth_token', data.token);
+            localStorage.setItem('lotato_token', data.token);
             authToken = data.token;
             showMainApp();
             errorDiv.style.display = 'none';
@@ -210,9 +154,7 @@ async function handleLogin() {
 }
 
 function handleLogout() {
-    localStorage.removeItem('nova_token');
-    localStorage.removeItem('token');
-    localStorage.removeItem('auth_token');
+    localStorage.removeItem('lotato_token');
     authToken = null;
     checkAuth();
 }
@@ -223,9 +165,8 @@ function showMainApp() {
     document.getElementById('bottom-nav').style.display = 'flex';
     document.getElementById('sync-status').style.display = 'flex';
     document.getElementById('admin-panel').style.display = 'block';
-    // Cacher tous les écrans superflus
-    const screensToHide = ['report-screen', 'report-stats-screen', 'results-check-screen', 'multi-tickets-screen', 'end-draw-report-screen', 'ticket-management-screen', 'winning-tickets-screen', 'history-screen'];
-    screensToHide.forEach(id => {
+    const screens = ['report-screen', 'report-stats-screen', 'results-check-screen', 'multi-tickets-screen', 'ticket-management-screen', 'winning-tickets-screen', 'history-screen', 'betting-screen'];
+    screens.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
@@ -233,37 +174,31 @@ function showMainApp() {
 }
 
 // ==========================================
-// 3. Chargement des données
+// 3. Navigation (CORRIGÉE)
 // ==========================================
-async function loadDataFromAPI() {
-    try {
-        const ticketsData = await apiCall(APP_CONFIG.tickets);
-        savedTickets = ticketsData.tickets || [];
-        ticketNumber = ticketsData.nextTicketNumber || 1;
-        const pendingData = await apiCall(APP_CONFIG.ticketsPending);
-        pendingSyncTickets = pendingData.tickets || [];
-        const winningData = await apiCall(APP_CONFIG.winningTickets);
-        winningTickets = winningData.tickets || [];
-        const multiDrawData = await apiCall(APP_CONFIG.multiDrawTickets);
-        multiDrawTickets = multiDrawData.tickets || [];
-        const companyData = await apiCall(APP_CONFIG.companyInfo);
-        if (companyData) companyInfo = { ...companyInfo, ...companyData };
-        const logoData = await apiCall(APP_CONFIG.logo);
-        if (logoData && logoData.logoUrl) companyLogo = logoData.logoUrl;
-        updateCompanyDisplay();
-    } catch (error) {
-        console.error('Erreur chargement données:', error);
-        showNotification("Erreur de chargement des données", "error");
-    }
-}
-
-function updateCompanyDisplay() {
-    const nameEl = document.getElementById('company-name');
-    const sloganEl = document.getElementById('company-slogan');
-    const logoEl = document.getElementById('company-logo');
-    if (nameEl && companyInfo.name) nameEl.textContent = companyInfo.name;
-    if (sloganEl && companyInfo.slogan) sloganEl.textContent = companyInfo.slogan;
-    if (logoEl && companyInfo.logo) logoEl.src = companyInfo.logo;
+function showScreen(screenName) {
+    // Masquer tous les écrans principaux
+    document.querySelector('.container').style.display = screenName === 'home' ? 'block' : 'none';
+    document.getElementById('winning-tickets-screen').style.display = screenName === 'winning-tickets' ? 'block' : 'none';
+    document.getElementById('history-screen').style.display = screenName === 'history' ? 'block' : 'none';
+    document.getElementById('report-stats-screen').style.display = screenName === 'report-stats' ? 'block' : 'none';
+    document.getElementById('betting-screen').style.display = 'none';
+    document.getElementById('results-check-screen').style.display = 'none';
+    document.getElementById('multi-tickets-screen').style.display = 'none';
+    document.getElementById('report-screen').style.display = 'none';
+    document.getElementById('ticket-management-screen').style.display = 'none';
+    document.getElementById('tickets-screen').style.display = 'none';
+    
+    // Mettre à jour la navigation active
+    document.querySelectorAll('.nav-item').forEach(item => {
+        if (item.getAttribute('data-screen') === screenName) item.classList.add('active');
+        else item.classList.remove('active');
+    });
+    
+    // Charger les données si nécessaire
+    if (screenName === 'winning-tickets') updateWinningTicketsScreen();
+    if (screenName === 'history') updateHistoryScreen();
+    if (screenName === 'report-stats') updateReportScreen();
 }
 
 // ==========================================
@@ -301,9 +236,7 @@ function updateLogoDisplay() {
     logoElements.forEach(logo => {
         if(companyInfo.logo) logo.src = companyInfo.logo;
         else logo.src = companyLogo;
-        logo.onerror = function() {
-            this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YzOWMxMiIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Qk9STEVUVEU8L3RleHQ+PC9zdmc+';
-        };
+        logo.onerror = function() { this.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2YzOWMxMiIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Qk9STEVUVEU8L3RleHQ+PC9zdmc+'; };
     });
     const nameEl = document.getElementById('company-name');
     const sloganEl = document.getElementById('company-slogan');
@@ -311,22 +244,47 @@ function updateLogoDisplay() {
     if (sloganEl && companyInfo.slogan) sloganEl.textContent = companyInfo.slogan;
 }
 
-function setupConnectionDetection() {
-    window.addEventListener('online', () => {
-        isOnline = true;
-        showNotification("Koneksyon entènèt retabli", "success");
-        checkForNewResults();
-    });
-    window.addEventListener('offline', () => {
-        isOnline = false;
-        showNotification("Pa konekte ak entènèt", "warning");
-    });
+function speakText(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'fr-FR';
+    window.speechSynthesis.speak(utterance);
 }
 
-function updatePendingBadge() {}
+// ==========================================
+// 5. Chargement des données
+// ==========================================
+async function loadDataFromAPI() {
+    try {
+        const ticketsData = await apiCall(APP_CONFIG.tickets);
+        savedTickets = ticketsData.tickets || [];
+        ticketNumber = ticketsData.nextTicketNumber || 1;
+        const pendingData = await apiCall(APP_CONFIG.ticketsPending);
+        pendingSyncTickets = pendingData.tickets || [];
+        const winningData = await apiCall(APP_CONFIG.winningTickets);
+        winningTickets = winningData.tickets || [];
+        const multiDrawData = await apiCall(APP_CONFIG.multiDrawTickets);
+        multiDrawTickets = multiDrawData.tickets || [];
+        const companyData = await apiCall(APP_CONFIG.companyInfo);
+        if (companyData) companyInfo = { ...companyInfo, ...companyData };
+        const logoData = await apiCall(APP_CONFIG.logo);
+        if (logoData && logoData.logoUrl) companyLogo = logoData.logoUrl;
+        updateCompanyDisplay();
+    } catch (error) {
+        console.error('Erreur chargement données:', error);
+    }
+}
+
+function updateCompanyDisplay() {
+    const nameEl = document.getElementById('company-name');
+    const sloganEl = document.getElementById('company-slogan');
+    const logoEl = document.getElementById('company-logo');
+    if (nameEl && companyInfo.name) nameEl.textContent = companyInfo.name;
+    if (sloganEl && companyInfo.slogan) sloganEl.textContent = companyInfo.slogan;
+    if (logoEl && companyInfo.logo) logoEl.src = companyInfo.logo;
+}
 
 // ==========================================
-// 5. Résultats
+// 6. Résultats
 // ==========================================
 async function loadResultsFromDatabase() {
     try {
@@ -360,10 +318,7 @@ function updateResultsDisplay() {
                 const timeName = time === 'morning' ? 'Maten' : 'Swè';
                 const div = document.createElement('div');
                 div.className = 'lot-result';
-                div.innerHTML = `
-                    <div><strong>${draws[drawId].name} ${timeName}</strong><br><small>${new Date(result.date).toLocaleString()}</small></div>
-                    <div style="text-align:right;"><div class="lot-number">${result.lot1}</div><div>${result.lot2} (×20)</div><div>${result.lot3} (×10)</div></div>
-                `;
+                div.innerHTML = `<div><strong>${draws[drawId].name} ${timeName}</strong><br><small>${new Date(result.date).toLocaleString()}</small></div><div style="text-align:right;"><div class="lot-number">${result.lot1}</div><div>${result.lot2} (×20)</div><div>${result.lot3} (×10)</div></div>`;
                 latestResults.appendChild(div);
             }
         });
@@ -371,7 +326,7 @@ function updateResultsDisplay() {
 }
 
 // ==========================================
-// 6. Écran de pari (complet)
+// 7. Écran de pari
 // ==========================================
 function openBettingScreen(drawId, time = null) {
     currentDraw = drawId;
@@ -386,8 +341,6 @@ function openBettingScreen(drawId, time = null) {
     bettingScreen.classList.add('slide-in');
     document.querySelector('.container').style.display = 'none';
     document.getElementById('games-interface').style.display = 'block';
-    document.getElementById('bet-type-nav').style.display = 'none';
-    document.getElementById('auto-buttons').style.display = 'none';
     document.getElementById('bet-form').style.display = 'none';
     document.getElementById('active-bets').style.display = 'block';
     setupGameSelection();
@@ -416,98 +369,34 @@ function setupGameSelection() {
     });
 }
 
-// ==========================================
-// 7. Formulaires de paris (version complète)
-// ==========================================
 function showBetForm(gameType) {
     const bet = betTypes[gameType];
     document.getElementById('games-interface').style.display = 'none';
-    document.getElementById('bet-type-nav').style.display = 'none';
     document.getElementById('auto-buttons').style.display = 'none';
     const betForm = document.getElementById('bet-form');
     betForm.style.display = 'block';
     let formHTML = '';
     switch(gameType) {
         case 'borlette':
-            formHTML = `
-                <h3>${bet.name} - ${bet.description}</h3>
-                <div class="quick-bet-form">
-                    <input type="text" id="borlette-number" class="quick-number-input" placeholder="00" maxlength="2">
-                    <input type="number" id="borlette-amount" class="quick-amount-input" placeholder="Kantite" min="1" value="1">
-                    <button class="btn-primary" id="add-bet">Ajoute</button>
-                </div>
-                <div class="nx-button" id="show-nx-balls">Nx</div>
-                <div class="n-balls-container">${[...Array(10)].map((_,i)=>`<div class="n-ball" data-n="${i}">N${i}</div>`).join('')}</div>
-                <div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>
-            `;
+            formHTML = `<h3>${bet.name} - ${bet.description}</h3><div class="quick-bet-form"><input type="text" id="borlette-number" class="quick-number-input" placeholder="00" maxlength="2"><input type="number" id="borlette-amount" class="quick-amount-input" placeholder="Kantite" min="1" value="1"><button class="btn-primary" id="add-bet">Ajoute</button></div><div class="nx-button" id="show-nx-balls">Nx</div><div class="n-balls-container">${[...Array(10)].map((_,i)=>`<div class="n-ball" data-n="${i}">N${i}</div>`).join('')}</div><div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>`;
             break;
         case 'boulpe':
-            formHTML = `
-                <h3>${bet.name} - ${bet.description}</h3>
-                <div class="quick-bet-form">
-                    <input type="text" id="boulpe-number" class="quick-number-input" placeholder="00" maxlength="2">
-                    <input type="number" id="boulpe-amount" class="quick-amount-input" placeholder="Kantite" min="1" value="1">
-                    <button class="btn-primary" id="add-bet">Ajoute</button>
-                </div>
-                <div class="nx-button" id="show-nx-balls">Nx</div>
-                <div class="n-balls-container">${[...Array(10)].map((_,i)=>`<div class="n-ball" data-n="${i}">N${i}</div>`).join('')}</div>
-                <div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>
-            `;
+            formHTML = `<h3>${bet.name} - ${bet.description}</h3><div class="quick-bet-form"><input type="text" id="boulpe-number" class="quick-number-input" placeholder="00" maxlength="2"><input type="number" id="boulpe-amount" class="quick-amount-input" placeholder="Kantite" min="1" value="1"><button class="btn-primary" id="add-bet">Ajoute</button></div><div class="nx-button" id="show-nx-balls">Nx</div><div class="n-balls-container">${[...Array(10)].map((_,i)=>`<div class="n-ball" data-n="${i}">N${i}</div>`).join('')}</div><div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>`;
             break;
         case 'lotto3':
-            formHTML = `
-                <h3>${bet.name} - ${bet.description}</h3>
-                <div class="quick-bet-form">
-                    <input type="text" id="lotto3-number" class="quick-number-input" placeholder="000" maxlength="3">
-                    <input type="number" id="lotto3-amount" class="quick-amount-input" placeholder="Kantite" min="1" value="1">
-                    <button class="btn-primary" id="add-bet">Ajoute</button>
-                </div>
-                <div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>
-            `;
+            formHTML = `<h3>${bet.name} - ${bet.description}</h3><div class="quick-bet-form"><input type="text" id="lotto3-number" class="quick-number-input" placeholder="000" maxlength="3"><input type="number" id="lotto3-amount" class="quick-amount-input" placeholder="Kantite" min="1" value="1"><button class="btn-primary" id="add-bet">Ajoute</button></div><div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>`;
             break;
         case 'marriage':
-            formHTML = `
-                <h3>${bet.name} - ${bet.description}</h3>
-                <div class="number-inputs"><input type="text" id="marriage-number1" placeholder="00" maxlength="2"><input type="text" id="marriage-number2" placeholder="00" maxlength="2"></div>
-                <div class="quick-bet-form"><input type="number" id="marriage-amount" class="quick-amount-input" placeholder="Kantite" min="1" value="1"><button class="btn-primary" id="add-bet">Ajoute</button></div>
-                <div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>
-            `;
+            formHTML = `<h3>${bet.name} - ${bet.description}</h3><div class="number-inputs"><input type="text" id="marriage-number1" placeholder="00" maxlength="2"><input type="text" id="marriage-number2" placeholder="00" maxlength="2"></div><div class="quick-bet-form"><input type="number" id="marriage-amount" class="quick-amount-input" placeholder="Kantite" min="1" value="1"><button class="btn-primary" id="add-bet">Ajoute</button></div><div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>`;
             break;
         case 'lotto4':
-            formHTML = `
-                <h3>${bet.name} - ${bet.description}</h3>
-                <div class="number-inputs"><input type="text" id="lotto4-number1" placeholder="00" maxlength="2"><input type="text" id="lotto4-number2" placeholder="00" maxlength="2"></div>
-                <div class="options-container">
-                    <div class="option-checkbox"><input type="checkbox" id="lotto4-option1" checked><label>Opsyon 1</label><span class="option-multiplier">×${bet.multiplier}</span></div>
-                    <div class="option-checkbox"><input type="checkbox" id="lotto4-option2" checked><label>Opsyon 2</label><span class="option-multiplier">×${bet.multiplier}</span></div>
-                    <div class="option-checkbox"><input type="checkbox" id="lotto4-option3" checked><label>Opsyon 3</label><span class="option-multiplier">×${bet.multiplier}</span></div>
-                </div>
-                <div class="quick-bet-form"><input type="number" id="lotto4-amount" placeholder="Kantite pa opsyon" min="1" value="1"><button class="btn-primary" id="add-bet">Ajoute</button></div>
-                <div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>
-            `;
+            formHTML = `<h3>${bet.name} - ${bet.description}</h3><div class="number-inputs"><input type="text" id="lotto4-number1" placeholder="00" maxlength="2"><input type="text" id="lotto4-number2" placeholder="00" maxlength="2"></div><div class="options-container"><div class="option-checkbox"><input type="checkbox" id="lotto4-option1" checked><label>Opsyon 1</label><span class="option-multiplier">×${bet.multiplier}</span></div><div class="option-checkbox"><input type="checkbox" id="lotto4-option2" checked><label>Opsyon 2</label><span class="option-multiplier">×${bet.multiplier}</span></div><div class="option-checkbox"><input type="checkbox" id="lotto4-option3" checked><label>Opsyon 3</label><span class="option-multiplier">×${bet.multiplier}</span></div></div><div class="quick-bet-form"><input type="number" id="lotto4-amount" placeholder="Kantite pa opsyon" min="1" value="1"><button class="btn-primary" id="add-bet">Ajoute</button></div><div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>`;
             break;
         case 'lotto5':
-            formHTML = `
-                <h3>${bet.name} - ${bet.description}</h3>
-                <div class="number-inputs"><input type="text" id="lotto5-number1" placeholder="000" maxlength="3"><input type="text" id="lotto5-number2" placeholder="00" maxlength="2"></div>
-                <div class="options-container">
-                    <div class="option-checkbox"><input type="checkbox" id="lotto5-option1" checked><label>Opsyon 1</label><span class="option-multiplier">×${bet.multiplier}</span></div>
-                    <div class="option-checkbox"><input type="checkbox" id="lotto5-option2" checked><label>Opsyon 2</label><span class="option-multiplier">×${bet.multiplier}</span></div>
-                    <div class="option-checkbox"><input type="checkbox" id="lotto5-option3" checked><label>Opsyon 3</label><span class="option-multiplier">×${bet.multiplier}</span></div>
-                </div>
-                <div class="quick-bet-form"><input type="number" id="lotto5-amount" placeholder="Kantite pa opsyon" min="1" value="1"><button class="btn-primary" id="add-bet">Ajoute</button></div>
-                <div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>
-            `;
+            formHTML = `<h3>${bet.name} - ${bet.description}</h3><div class="number-inputs"><input type="text" id="lotto5-number1" placeholder="000" maxlength="3"><input type="text" id="lotto5-number2" placeholder="00" maxlength="2"></div><div class="options-container"><div class="option-checkbox"><input type="checkbox" id="lotto5-option1" checked><label>Opsyon 1</label><span class="option-multiplier">×${bet.multiplier}</span></div><div class="option-checkbox"><input type="checkbox" id="lotto5-option2" checked><label>Opsyon 2</label><span class="option-multiplier">×${bet.multiplier}</span></div><div class="option-checkbox"><input type="checkbox" id="lotto5-option3" checked><label>Opsyon 3</label><span class="option-multiplier">×${bet.multiplier}</span></div></div><div class="quick-bet-form"><input type="number" id="lotto5-amount" placeholder="Kantite pa opsyon" min="1" value="1"><button class="btn-primary" id="add-bet">Ajoute</button></div><div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>`;
             break;
         case 'grap':
-            formHTML = `
-                <h3>${bet.name} - ${bet.description}</h3>
-                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:15px;">
-                    ${['111','222','333','444','555','666','777','888','999','000'].map(p => `<div class="pair-ball" data-pair="${p}">${p}</div>`).join('')}
-                </div>
-                <div class="quick-bet-form"><input type="number" id="grap-amount" placeholder="Kantite" min="1" value="1"><button class="btn-primary" id="add-grap-bet">Ajoute</button></div>
-                <div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>
-            `;
+            formHTML = `<h3>${bet.name} - ${bet.description}</h3><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:15px;">${['111','222','333','444','555','666','777','888','999','000'].map(p => `<div class="pair-ball" data-pair="${p}">${p}</div>`).join('')}</div><div class="quick-bet-form"><input type="number" id="grap-amount" placeholder="Kantite" min="1" value="1"><button class="btn-primary" id="add-grap-bet">Ajoute</button></div><div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>`;
             break;
         default:
             formHTML = `<p>Jeu non supporté</p><div class="bet-actions"><button class="btn-secondary" id="return-to-types">Retounen</button></div>`;
@@ -556,7 +445,6 @@ function showBetForm(gameType) {
     if (addGrapBtn) addGrapBtn.addEventListener('click', () => showNotification("Klike sou yon boule grap pou ajoute", "info"));
     const returnBtn = document.getElementById('return-to-types');
     if (returnBtn) returnBtn.addEventListener('click', () => { betForm.style.display = 'none'; document.getElementById('games-interface').style.display = 'block'; });
-    document.getElementById('active-bets').style.display = 'block';
 }
 
 function addBet(gameType) {
@@ -692,41 +580,18 @@ function showTotalNotification(totalAmount, type = 'normal') {
     }, 5000);
 }
 
-// ==========================================
-// 8. Jeux automatiques
-// ==========================================
 function showAutoGameForm(gameType) {
     const bet = betTypes[gameType];
     document.getElementById('games-interface').style.display = 'none';
-    document.getElementById('bet-type-nav').style.display = 'none';
     document.getElementById('auto-buttons').style.display = 'none';
     const betForm = document.getElementById('bet-form');
     betForm.style.display = 'block';
     selectedBalls = [];
     let formHTML = '';
     if (gameType === 'auto-marriage') {
-        formHTML = `
-            <h3>${bet.name} - ${bet.description}</h3>
-            <div class="options-container">
-                <div style="margin-bottom:15px;"><div class="all-graps-btn" id="use-basket-balls"><i class="fas fa-shopping-basket"></i> Itilize Boul nan Panye</div><div class="all-graps-btn" id="enter-manual-balls"><i class="fas fa-keyboard"></i> Antre Boul Manyèlman</div></div>
-                <div id="manual-balls-input" style="display:none;"><input type="text" id="manual-balls" placeholder="12 34 56 78" style="width:100%;margin-bottom:10px;"><button class="btn-primary" id="process-manual-balls">Proses</button></div>
-                <div><strong>Boules sélectionnées:</strong> <span id="selected-balls-list">Pa gen boul</span></div>
-            </div>
-            <div class="form-group"><label for="auto-game-amount">Kantite pou chak maryaj</label><input type="number" id="auto-game-amount" min="1" value="1"></div>
-            <div class="bet-actions"><button class="btn-primary" id="add-auto-marriages">Ajoute Maryaj Otomatik</button><button class="btn-secondary" id="return-to-types">Retounen</button></div>
-        `;
+        formHTML = `<h3>${bet.name} - ${bet.description}</h3><div class="options-container"><div style="margin-bottom:15px;"><div class="all-graps-btn" id="use-basket-balls"><i class="fas fa-shopping-basket"></i> Itilize Boul nan Panye</div><div class="all-graps-btn" id="enter-manual-balls"><i class="fas fa-keyboard"></i> Antre Boul Manyèlman</div></div><div id="manual-balls-input" style="display:none;"><input type="text" id="manual-balls" placeholder="12 34 56 78" style="width:100%;margin-bottom:10px;"><button class="btn-primary" id="process-manual-balls">Proses</button></div><div><strong>Boules sélectionnées:</strong> <span id="selected-balls-list">Pa gen boul</span></div></div><div class="form-group"><label for="auto-game-amount">Kantite pou chak maryaj</label><input type="number" id="auto-game-amount" min="1" value="1"></div><div class="bet-actions"><button class="btn-primary" id="add-auto-marriages">Ajoute Maryaj Otomatik</button><button class="btn-secondary" id="return-to-types">Retounen</button></div>`;
     } else {
-        formHTML = `
-            <h3>${bet.name} - ${bet.description}</h3>
-            <div class="options-container">
-                <div style="margin-bottom:15px;"><div class="all-graps-btn" id="use-basket-balls"><i class="fas fa-shopping-basket"></i> Itilize Boul nan Panye</div><div class="all-graps-btn" id="enter-manual-balls"><i class="fas fa-keyboard"></i> Antre Boul Manyèlman</div></div>
-                <div id="manual-balls-input" style="display:none;"><input type="text" id="manual-balls" placeholder="12 34 56 78" style="width:100%;margin-bottom:10px;"><button class="btn-primary" id="process-manual-balls">Proses</button></div>
-                <div><strong>Boules sélectionnées:</strong> <span id="selected-balls-list">Pa gen boul</span></div>
-                <div class="option-checkbox"><input type="checkbox" id="include-reverse" checked> <label>Enkli renverse yo</label></div>
-            </div>
-            <div class="form-group"><label for="auto-game-amount">Kantite pou chak Lotto 4</label><input type="number" id="auto-game-amount" min="1" value="1"></div>
-            <div class="bet-actions"><button class="btn-primary" id="add-auto-lotto4">Ajoute Lotto 4 Otomatik</button><button class="btn-secondary" id="return-to-types">Retounen</button></div>
-        `;
+        formHTML = `<h3>${bet.name} - ${bet.description}</h3><div class="options-container"><div style="margin-bottom:15px;"><div class="all-graps-btn" id="use-basket-balls"><i class="fas fa-shopping-basket"></i> Itilize Boul nan Panye</div><div class="all-graps-btn" id="enter-manual-balls"><i class="fas fa-keyboard"></i> Antre Boul Manyèlman</div></div><div id="manual-balls-input" style="display:none;"><input type="text" id="manual-balls" placeholder="12 34 56 78" style="width:100%;margin-bottom:10px;"><button class="btn-primary" id="process-manual-balls">Proses</button></div><div><strong>Boules sélectionnées:</strong> <span id="selected-balls-list">Pa gen boul</span></div><div class="option-checkbox"><input type="checkbox" id="include-reverse" checked> <label>Enkli renverse yo</label></div></div><div class="form-group"><label for="auto-game-amount">Kantite pou chak Lotto 4</label><input type="number" id="auto-game-amount" min="1" value="1"></div><div class="bet-actions"><button class="btn-primary" id="add-auto-lotto4">Ajoute Lotto 4 Otomatik</button><button class="btn-secondary" id="return-to-types">Retounen</button></div>`;
     }
     betForm.innerHTML = formHTML;
     
@@ -801,10 +666,10 @@ function updateSelectedBallsDisplay() {
 }
 
 // ==========================================
-// 9. Sauvegarde et impression des tickets
+// 8. Sauvegarde et impression des tickets
 // ==========================================
 async function saveTicket() {
-    if (activeBets.length === 0) { showNotification("Pa gen okenn parye pou sove", "warning"); return; }
+    if (activeBets.length === 0) { showNotification("Pa gen okenn parye pou sove", "warning"); return null; }
     const ticket = {
         id: Date.now().toString(),
         number: ticketNumber,
@@ -821,77 +686,281 @@ async function saveTicket() {
         savedTickets.push(ticket);
         ticketNumber++;
         showNotification("Fiche sove avèk siksè!", "success");
-        return response;
+        return ticket;
     } catch (error) {
         console.error('Erreur sauvegarde ticket:', error);
         showNotification("Erreur lors de la sauvegarde du ticket", "error");
-        throw error;
+        return null;
     }
 }
 
-async function saveAndPrintTicket() {
-    if (activeBets.length === 0) { showNotification("Pa gen okenn parye pou sove", "warning"); return; }
-    await saveTicket();
-    setTimeout(() => printTicket(), 100);
-}
-
-function printTicket() {
-    const lastTicket = savedTickets[savedTickets.length-1];
-    if (!lastTicket) { showNotification("Pa gen fiche ki sove pou enprime.", "warning"); return; }
+async function printTicketOnly() {
+    if (activeBets.length === 0) { showNotification("Pa gen okenn parye pou enprime", "warning"); return; }
+    const ticket = await saveTicket();
+    if (!ticket) return;
     const printWindow = window.open('', '_blank');
     let betsHTML = '';
-    let total = 0;
-    lastTicket.bets.forEach(bet => { total += bet.amount; betsHTML += `<div style="margin-bottom:10px;padding:5px;border-bottom:1px solid #ddd;"><strong>${bet.name}</strong><br>${bet.number}<br>${bet.amount} G</div>`; });
-    const html = `
-        <html><head><title>Fiche ${companyInfo.name}</title>
-        <style>body{font-family:Arial;padding:20px} @media print{body{margin:0;padding:0} @page{margin:0}}</style>
-        </head><body>
-        <div style="text-align:center;padding:20px;border:2px solid #000;">
-            <div><img src="${companyInfo.logo || companyLogo}" style="max-width:80px;"></div>
-            <h2>${companyInfo.name}</h2>
-            <p>Fiche Parye</p>
-            <p><strong>Nimewo:</strong> #${String(lastTicket.number).padStart(6,'0')}</p>
-            <p><strong>Dat:</strong> ${new Date(lastTicket.date).toLocaleString('fr-FR')}</p>
-            <p><strong>Tiraj:</strong> ${draws[lastTicket.draw]?.name || lastTicket.draw} (${lastTicket.drawTime === 'morning' ? 'Maten' : 'Swè'})</p>
-            <hr>${betsHTML}<hr>
-            <div style="display:flex;justify-content:space-between;font-weight:bold;"><span>Total:</span><span>${total} goud</span></div>
-            <p>Mèsi pou konfyans ou!</p>
-            <p>${companyInfo.address || ''} - Tel: ${companyInfo.phone || ''}</p>
-        </div>
-        </body></html>
-    `;
-    printWindow.document.write(html);
+    ticket.bets.forEach(bet => {
+        betsHTML += `<div style="margin-bottom:8px;padding:5px;border-bottom:1px solid #eee;"><strong>${bet.name}</strong> ${bet.number}<br>${bet.amount} G</div>`;
+    });
+    printWindow.document.write(`
+        <html><head><title>Ticket ${companyInfo.name}</title>
+        <style>body{font-family:Arial;padding:20px} @media print{@page{margin:0}} .ticket{border:2px solid #000;padding:20px;text-align:center}</style>
+        </head><body><div class="ticket"><img src="${companyInfo.logo || companyLogo}" style="max-width:80px;"><h2>${companyInfo.name}</h2>
+        <p>Fiche #${String(ticket.number).padStart(6,'0')}</p><p>${new Date(ticket.date).toLocaleString()}</p>
+        <p>Tiraj: ${draws[ticket.draw]?.name} (${ticket.drawTime === 'morning' ? 'Maten' : 'Swè'})</p>
+        <hr>${betsHTML}<hr><div style="font-weight:bold;">Total: ${ticket.total} G</div>
+        <p>Merci pour votre confiance!<br>${companyInfo.phone || ''}</p></div></body></html>
+    `);
     printWindow.document.close();
     printWindow.print();
+    activeBets = [];
+    updateBetsList();
 }
 
-async function checkConnectionBeforeSavePrint() {
-    const connectionCheck = document.getElementById('connection-check');
-    connectionCheck.style.display = 'flex';
-    if (navigator.onLine) {
-        document.getElementById('internet-status').className = 'status-indicator connected';
-        document.getElementById('internet-text').textContent = 'Entènèt: Konekte';
-    } else {
-        document.getElementById('internet-status').className = 'status-indicator disconnected';
-        document.getElementById('internet-text').textContent = 'Entènèt: Pa konekte';
-        document.getElementById('connection-message').textContent = 'Pa gen koneksyon entènèt. Fiche a pa kapab synchronize.';
-        return;
-    }
-    setTimeout(() => { connectionCheck.style.display = 'none'; saveAndPrintTicket(); }, 1500);
+async function shareTicketAfterSave() {
+    if (activeBets.length === 0) { showNotification("Pa gen okenn parye pou voye", "warning"); return; }
+    const ticket = await saveTicket();
+    if (ticket) shareTicket(ticket);
 }
-
-async function checkConnectionBeforePrint() {
-    const connectionCheck = document.getElementById('connection-check');
-    connectionCheck.style.display = 'flex';
-    document.getElementById('connection-message').textContent = 'Koneksyon entènèt ok. Wap kontinye...';
-    setTimeout(() => { connectionCheck.style.display = 'none'; printTicket(); }, 1000);
-}
-
-function retryConnectionCheck() {}
-function cancelPrint() { document.getElementById('connection-check').style.display = 'none'; }
 
 // ==========================================
-// 10. Multi-tirages
+// 9. Envoi de ticket (WhatsApp, SMS, Bluetooth)
+// ==========================================
+function shareTicket(ticket) {
+    currentTicketToSend = ticket;
+    const modal = document.getElementById('send-ticket-modal');
+    modal.style.display = 'flex';
+    document.getElementById('phone-input-container').style.display = 'none';
+    document.getElementById('bluetooth-info').style.display = 'none';
+}
+
+document.querySelectorAll('.send-option-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const method = btn.getAttribute('data-method');
+        if (method === 'whatsapp' || method === 'sms') {
+            document.getElementById('phone-input-container').style.display = 'block';
+            document.getElementById('bluetooth-info').style.display = 'none';
+            document.getElementById('confirm-send-btn').onclick = () => sendViaPhone(method);
+        } else if (method === 'bluetooth') {
+            document.getElementById('phone-input-container').style.display = 'none';
+            document.getElementById('bluetooth-info').style.display = 'block';
+            sendViaBluetooth();
+        }
+    });
+});
+
+document.getElementById('close-send-modal').addEventListener('click', () => {
+    document.getElementById('send-ticket-modal').style.display = 'none';
+});
+
+async function sendViaPhone(method) {
+    const phone = document.getElementById('send-phone-number').value.trim();
+    if (!phone) {
+        showNotification("Antre nimewo telefòn", "warning");
+        return;
+    }
+    const ticketText = formatTicketForShare(currentTicketToSend);
+    if (method === 'whatsapp') {
+        const url = `https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(ticketText)}`;
+        window.open(url, '_blank');
+    } else if (method === 'sms') {
+        window.location.href = `sms:${phone}?body=${encodeURIComponent(ticketText)}`;
+    }
+    document.getElementById('send-ticket-modal').style.display = 'none';
+    showNotification("Ticket voye avèk siksè!", "success");
+    activeBets = [];
+    updateBetsList();
+}
+
+async function sendViaBluetooth() {
+    showNotification("Bluetooth: rechèch aparèy...", "info");
+    try {
+        const device = await navigator.bluetooth.requestDevice({
+            acceptAllDevices: true,
+            optionalServices: ['00001101-0000-1000-8000-00805f9b34fb']
+        });
+        const pdfBlob = await generateTicketPDF(currentTicketToSend);
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService('00001101-0000-1000-8000-00805f9b34fb');
+        const characteristic = await service.getCharacteristic('00001101-0000-1000-8000-00805f9b34fb');
+        const arrayBuffer = await pdfBlob.arrayBuffer();
+        await characteristic.writeValue(arrayBuffer);
+        showNotification("Ticket voye pa Bluetooth!", "success");
+        activeBets = [];
+        updateBetsList();
+    } catch (error) {
+        console.error(error);
+        showNotification("Bluetooth: pa kapab konekte oswa voye", "error");
+    }
+    document.getElementById('send-ticket-modal').style.display = 'none';
+}
+
+function formatTicketForShare(ticket) {
+    let text = `${companyInfo.name}\nFiche #${String(ticket.number).padStart(6,'0')}\nDate: ${new Date(ticket.date).toLocaleString()}\nTiraj: ${draws[ticket.draw]?.name} (${ticket.drawTime === 'morning' ? 'Maten' : 'Swè'})\n`;
+    ticket.bets.forEach(bet => {
+        text += `${bet.name} ${bet.number} : ${bet.amount} G\n`;
+    });
+    text += `Total: ${ticket.total} G\nMerci!`;
+    return text;
+}
+
+async function generateTicketPDF(ticket) {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(companyInfo.name, 20, 20);
+    doc.setFontSize(12);
+    doc.text(`Fiche #${String(ticket.number).padStart(6,'0')}`, 20, 30);
+    doc.text(`Date: ${new Date(ticket.date).toLocaleString()}`, 20, 40);
+    doc.text(`Tiraj: ${draws[ticket.draw]?.name} (${ticket.drawTime === 'morning' ? 'Maten' : 'Swè'})`, 20, 50);
+    let y = 65;
+    ticket.bets.forEach(bet => {
+        doc.text(`${bet.name} ${bet.number} : ${bet.amount} G`, 20, y);
+        y += 10;
+        if (y > 270) { doc.addPage(); y = 20; }
+    });
+    doc.text(`Total: ${ticket.total} G`, 20, y + 10);
+    return doc.output('blob');
+}
+
+// ==========================================
+// 10. Commandes vocales
+// ==========================================
+function initVoiceCommands() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        showNotification("Reconnaissance vocale non supportée", "warning");
+        return;
+    }
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.lang = 'fr-FR';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    
+    recognition.onresult = (event) => {
+        const command = event.results[0][0].transcript.toLowerCase();
+        showVoiceFeedback(`Commande: ${command}`);
+        processVoiceCommand(command);
+    };
+    recognition.onerror = (event) => {
+        console.error("Erreur vocale:", event.error);
+        showVoiceFeedback("Erreur, réessayez");
+        stopListening();
+    };
+    recognition.onend = () => { stopListening(); };
+}
+
+function startListening() {
+    if (!recognition) initVoiceCommands();
+    if (recognition && !isListening) {
+        recognition.start();
+        isListening = true;
+        document.getElementById('voice-command-btn').classList.add('listening');
+        showVoiceFeedback("Écoute active...");
+    }
+}
+
+function stopListening() {
+    if (recognition) recognition.stop();
+    isListening = false;
+    document.getElementById('voice-command-btn').classList.remove('listening');
+    const fb = document.querySelector('.voice-feedback');
+    if (fb) fb.remove();
+}
+
+function showVoiceFeedback(msg) {
+    let fb = document.querySelector('.voice-feedback');
+    if (!fb) {
+        fb = document.createElement('div');
+        fb.className = 'voice-feedback';
+        document.body.appendChild(fb);
+    }
+    fb.textContent = msg;
+    setTimeout(() => { if (fb) fb.remove(); }, 3000);
+}
+
+function processVoiceCommand(command) {
+    // 1. Rapport
+    if (command.includes('rapport du jour') || command.includes('rappo jodi a')) {
+        loadReportByPeriod('today');
+        speakText(`Total vant jodi a se ${document.getElementById('total-sales').innerText}`);
+        showScreen('report-stats');
+    }
+    else if (command.includes('rapport semaine')) {
+        loadReportByPeriod('7days');
+        speakText(`Total vant semèn sa a se ${document.getElementById('total-sales').innerText}`);
+        showScreen('report-stats');
+    }
+    else if (command.includes('rapport mois') || command.includes('rapport mwa')) {
+        loadReportByPeriod('month');
+        speakText(`Total vant mwa sa a se ${document.getElementById('total-sales').innerText}`);
+        showScreen('report-stats');
+    }
+    else if (command.includes('rapport quinzaine') || command.includes('rapport 15 jou')) {
+        loadReportByPeriod('15days');
+        speakText(`Total vant kenz jou yo se ${document.getElementById('total-sales').innerText}`);
+        showScreen('report-stats');
+    }
+    else if (command.includes('rapport hier')) {
+        const yesterday = new Date(); yesterday.setDate(yesterday.getDate()-1);
+        const start = new Date(yesterday.setHours(0,0,0,0));
+        const end = new Date(yesterday.setHours(23,59,59,999));
+        loadReportData(start, end);
+        speakText(`Total vant yè se ${document.getElementById('total-sales').innerText}`);
+        showScreen('report-stats');
+    }
+    // 2. Mariages auto / Lotto auto
+    else if (command.includes('maryaj otomatik') || (command.includes('ajoute') && command.includes('maryaj'))) {
+        showAutoGameForm('auto-marriage');
+        speakText("Ouverture maryaj otomatik");
+    }
+    else if (command.includes('lotto 4 otomatik') || (command.includes('ajoute') && command.includes('lotto'))) {
+        showAutoGameForm('auto-lotto4');
+        speakText("Ouverture lotto 4 otomatik");
+    }
+    // 3. Tickets gagnants
+    else if (command.includes('tickets gagnants') || command.includes('fiche genyen')) {
+        checkWinningTickets();
+        showScreen('winning-tickets');
+        speakText(`${winningTickets.length} fiche genyen.`);
+    }
+    // 4. Tickets d'un tirage
+    else if (command.includes('ticket tirage') || command.includes('fiche pou tiraj')) {
+        let drawName = '';
+        if (command.includes('miami')) drawName = 'miami';
+        else if (command.includes('georgia')) drawName = 'georgia';
+        else if (command.includes('new york')) drawName = 'newyork';
+        else if (command.includes('texas')) drawName = 'texas';
+        else if (command.includes('tunisie')) drawName = 'tunisia';
+        if (drawName) {
+            const tickets = savedTickets.filter(t => t.draw === drawName);
+            speakText(`${tickets.length} ticket pou ${drawName}`);
+            showNotification(`${tickets.length} ticket pou ${drawName}`, "info");
+            showScreen('history');
+        } else {
+            showNotification("Tiraj pa rekonèt", "warning");
+        }
+    }
+    // 5. Rejouer un ticket
+    else if (command.includes('rejoue ticket') || command.includes('jwe ankò')) {
+        const lastTicket = savedTickets[savedTickets.length-1];
+        if (lastTicket) {
+            activeBets = [...lastTicket.bets];
+            updateBetsList();
+            showNotification("Dènye fiche rejoue!", "success");
+            openBettingScreen(lastTicket.draw, lastTicket.drawTime);
+        } else {
+            showNotification("Pa gen ticket anvan", "warning");
+        }
+    }
+    else {
+        showVoiceFeedback("Commande non reconnue");
+    }
+}
+
+// ==========================================
+// 11. Multi-tirages
 // ==========================================
 function initMultiDrawPanel() {
     const multiDrawOptions = document.getElementById('multi-draw-options');
@@ -981,36 +1050,37 @@ function updateMultiDrawTicketDisplay() {
 function viewCurrentMultiDrawTicket() {
     if (currentMultiDrawTicket.bets.length === 0) { showNotification("Fiche multi-tirages vide", "warning"); return; }
     const win = window.open('', '_blank');
-    win.document.write(`<pre>${JSON.stringify(currentMultiDrawTicket,null,2)}</pre>`);
-}
-
-async function saveAndPrintMultiDrawTicket() {
-    if (currentMultiDrawTicket.bets.length === 0) { showNotification("Fiche multi-tirages vide", "warning"); return; }
-    const ticket = { id: currentMultiDrawTicket.id, number: multiDrawTickets.length+1, date: new Date().toISOString(), bets: currentMultiDrawTicket.bets, total: currentMultiDrawTicket.totalAmount, draws: Array.from(currentMultiDrawTicket.draws), agentName: currentAdmin ? currentAdmin.name : 'Agent' };
-    await saveMultiDrawTicketAPI(ticket);
-    printMultiDrawTicket(ticket);
-    currentMultiDrawTicket = { id: Date.now().toString(), bets: [], totalAmount: 0, draws: new Set(), createdAt: new Date().toISOString() };
-    updateMultiDrawTicketDisplay();
-    await loadMultiDrawTickets();
-    showNotification("Fiche multi-tirages sove ak enprime!", "success");
-}
-
-function printMultiDrawTicket(ticket) {
-    const win = window.open('', '_blank');
     let betsHTML = '';
-    ticket.bets.forEach(bet => { betsHTML += `<div><strong>${bet.name}</strong> ${bet.number} (${bet.draws.length} tiraj) - ${bet.amount * bet.draws.length} G</div>`; });
+    currentMultiDrawTicket.bets.forEach(bet => {
+        betsHTML += `<div>${bet.name} ${bet.number} (${bet.draws.length} tiraj) - ${bet.amount * bet.draws.length} G</div>`;
+    });
     win.document.write(`
-        <html><head><title>Fiche Multi-Tirages</title><style>body{font-family:monospace;padding:20px}.ticket{border:2px solid #000;padding:20px}</style></head>
-        <body><div class="ticket"><h2>${companyInfo.name}</h2><p>Fiche Multi-Tirages #${ticket.number}</p><p>${new Date(ticket.date).toLocaleString()}</p><hr>${betsHTML}<hr><div>Total: ${ticket.total} G</div></div></body></html>
+        <html><head><title>Multi-Tirages</title><style>body{font-family:monospace;padding:20px}</style></head>
+        <body><h2>${companyInfo.name}</h2><p>Fiche Multi-Tirages</p><hr>${betsHTML}<hr><div>Total: ${currentMultiDrawTicket.totalAmount} G</div></body></html>
     `);
     win.document.close();
-    win.print();
 }
 
-function toggleMultiDrawPanel() {
-    const content = document.getElementById('multi-draw-content');
-    content.classList.toggle('expanded');
-    document.getElementById('multi-draw-toggle').innerHTML = content.classList.contains('expanded') ? '<i class="fas fa-chevron-up"></i>' : '<i class="fas fa-chevron-down"></i>';
+async function printMultiDrawTicket() {
+    if (currentMultiDrawTicket.bets.length === 0) { showNotification("Fiche multi-tirages vide", "warning"); return; }
+    const ticket = { ...currentMultiDrawTicket, number: multiDrawTickets.length+1, date: new Date().toISOString() };
+    const printWindow = window.open('', '_blank');
+    let betsHTML = '';
+    ticket.bets.forEach(bet => {
+        betsHTML += `<div>${bet.name} ${bet.number} (${bet.draws.length} tiraj) - ${bet.amount * bet.draws.length} G</div>`;
+    });
+    printWindow.document.write(`
+        <html><head><title>Multi-Tirage</title><style>body{font-family:Arial;padding:20px}</style></head>
+        <body><div><h2>${companyInfo.name}</h2><p>Fiche Multi-Tirages #${ticket.number}</p><p>${new Date(ticket.date).toLocaleString()}</p><hr>${betsHTML}<hr><div>Total: ${ticket.totalAmount} G</div></div></body></html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+}
+
+async function shareMultiDrawTicket() {
+    if (currentMultiDrawTicket.bets.length === 0) { showNotification("Fiche multi-tirages vide", "warning"); return; }
+    const ticket = { ...currentMultiDrawTicket, number: multiDrawTickets.length+1, date: new Date().toISOString() };
+    shareTicket(ticket);
 }
 
 function openMultiTicketsScreen() {
@@ -1029,21 +1099,9 @@ async function saveMultiDrawTicketAPI(ticket) {
     return await apiCall(APP_CONFIG.multiDrawTickets, 'POST', ticket);
 }
 
-async function loadMultiDrawTickets() {
-    const res = await apiCall(APP_CONFIG.multiDrawTickets);
-    multiDrawTickets = res.tickets || [];
-}
-
 // ==========================================
-// 11. Vérification des résultats et tickets gagnants
+// 12. Vérification des résultats et tickets gagnants
 // ==========================================
-function openResultsCheckScreen() {
-    document.querySelector('.container').style.display = 'none';
-    document.getElementById('results-check-screen').style.display = 'block';
-    updateResultsDisplay();
-    document.getElementById('winning-tickets-container').innerHTML = '';
-}
-
 async function checkWinningTickets() {
     winningTickets = [];
     const allTickets = [...savedTickets, ...pendingSyncTickets];
@@ -1123,7 +1181,7 @@ function displayWinningTickets() {
 }
 
 // ==========================================
-// 12. Historique et gestion des tickets
+// 13. Historique et gestion des tickets
 // ==========================================
 function updateHistoryScreen() {
     const list = document.getElementById('history-list');
@@ -1142,45 +1200,19 @@ function searchWinningTickets() {
     const term = document.getElementById('search-winning-tickets').value.toLowerCase();
     const filtered = winningTickets.filter(t => t.number.toString().includes(term));
     const list = document.getElementById('winning-tickets-list');
-    list.innerHTML = filtered.length ? filtered.map(t=>`<div>#${t.number} - ${t.totalWinnings} G</div>`).join('') : '<p>Aucun résultat</p>';
+    list.innerHTML = filtered.length ? filtered.map(t=>`<div class="winning-ticket"><strong>#${t.number}</strong> - ${t.totalWinnings} G</div>`).join('') : '<p>Aucun résultat</p>';
 }
 
 function searchHistory() {
     const term = document.getElementById('search-history').value.toLowerCase();
     const filtered = savedTickets.filter(t => t.number.toString().includes(term));
     const list = document.getElementById('history-list');
-    list.innerHTML = filtered.length ? filtered.map(t=>`<div>#${t.number} - ${t.total} G</div>`).join('') : '<p>Aucun résultat</p>';
+    list.innerHTML = filtered.length ? filtered.map(t=>`<div class="history-item"><strong>#${t.number}</strong> - ${t.total} G</div>`).join('') : '<p>Aucun résultat</p>';
 }
 
-function updateTicketManagementScreen() {
-    const list = document.getElementById('ticket-management-list');
-    const all = [...savedTickets, ...pendingSyncTickets];
-    if (all.length===0) { list.innerHTML='<p>Pa gen fiche</p>'; return; }
-    list.innerHTML = all.map(t => `<div class="ticket-management"><strong>#${t.number}</strong> - ${t.total} G - ${new Date(t.date).toLocaleString()}</div>`).join('');
-}
-
-function searchTicket() {
-    const term = document.getElementById('search-ticket-number').value.toLowerCase();
-    const all = [...savedTickets, ...pendingSyncTickets];
-    const filtered = all.filter(t => t.number.toString().includes(term));
-    const list = document.getElementById('ticket-management-list');
-    list.innerHTML = filtered.length ? filtered.map(t=>`<div>#${t.number} - ${t.total} G</div>`).join('') : '<p>Aucun résultat</p>';
-}
-
-function showAllTickets() { updateTicketManagementScreen(); }
-function showPendingTickets() {
-    const list = document.getElementById('ticket-management-list');
-    if (pendingSyncTickets.length===0) { list.innerHTML='<p>Pa gen fiche an attente</p>'; return; }
-    list.innerHTML = pendingSyncTickets.map(t => `<div>#${t.number} - ${t.total} G</div>`).join('');
-}
-
-function generateEndOfDrawReport() {
-    document.querySelector('.container').style.display = 'none';
-    document.getElementById('report-screen').style.display = 'block';
-    const total = savedTickets.reduce((s,t)=>s+t.total,0);
-    document.getElementById('report-content').innerHTML = `<h3>Rapò Fin Tiraj</h3><p>Total tickets: ${savedTickets.length}</p><p>Total montant: ${total} G</p>`;
-}
-
+// ==========================================
+// 14. Rapports
+// ==========================================
 function updateReportScreen() {
     loadReportByPeriod('15days');
 }
@@ -1190,6 +1222,7 @@ function loadReportByPeriod(period) {
     let start = new Date();
     switch(period) {
         case 'today': start.setHours(0,0,0,0); break;
+        case 'yesterday': start.setDate(end.getDate()-1); start.setHours(0,0,0,0); end.setDate(end.getDate()-1); end.setHours(23,59,59,999); break;
         case '7days': start.setDate(end.getDate()-7); break;
         case '15days': start.setDate(end.getDate()-15); break;
         case 'month': start = new Date(end.getFullYear(), end.getMonth(), 1); break;
@@ -1221,7 +1254,7 @@ function loadReportData(start, end) {
 }
 
 // ==========================================
-// 13. Initialisation principale
+// 15. Initialisation principale
 // ==========================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Document chargé, initialisation...");
@@ -1235,37 +1268,45 @@ document.addEventListener('DOMContentLoaded', function() {
     showMainApp();
     updateCurrentTime();
     loadDataFromAPI();
-    setupConnectionDetection();
     updateLogoDisplay();
     loadResultsFromDatabase();
+    initVoiceCommands();
+    
+    // Microphone
+    document.getElementById('voice-command-btn').addEventListener('click', startListening);
+    
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function() {
+            showScreen(this.getAttribute('data-screen'));
+        });
+    });
+    document.querySelectorAll('.back-button[data-screen]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            showScreen(this.getAttribute('data-screen'));
+        });
+    });
     
     // Tirages
     document.querySelectorAll('.draw-card').forEach(card => {
         card.addEventListener('click', function() {
-            const drawId = this.getAttribute('data-draw');
-            openBettingScreen(drawId, 'morning');
+            openBettingScreen(this.getAttribute('data-draw'), 'morning');
         });
     });
     document.querySelectorAll('.draw-btn').forEach(btn => {
         btn.addEventListener('click', function(e) {
             e.stopPropagation();
             const card = this.closest('.draw-card');
-            const drawId = card.getAttribute('data-draw');
-            const time = this.getAttribute('data-time');
-            card.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            openBettingScreen(drawId, time);
+            openBettingScreen(card.getAttribute('data-draw'), this.getAttribute('data-time'));
         });
     });
     
     // Boutons généraux
     document.getElementById('back-button').addEventListener('click', closeBettingScreen);
-    document.getElementById('save-print-ticket').addEventListener('click', () => checkConnectionBeforeSavePrint());
-    document.getElementById('save-ticket-only').addEventListener('click', () => saveTicket());
-    document.getElementById('print-ticket-only').addEventListener('click', () => checkConnectionBeforePrint());
-    document.getElementById('save-print-multi-ticket').addEventListener('click', () => saveAndPrintMultiDrawTicket());
-    document.getElementById('view-current-multi-ticket').addEventListener('click', () => viewCurrentMultiDrawTicket());
-    document.getElementById('open-multi-tickets').addEventListener('click', () => openMultiTicketsScreen());
+    document.getElementById('print-ticket-btn').addEventListener('click', printTicketOnly);
+    document.getElementById('share-ticket-btn').addEventListener('click', shareTicketAfterSave);
+    document.getElementById('open-results-check').addEventListener('click', () => { showScreen('winning-tickets'); checkWinningTickets(); });
+    document.getElementById('open-multi-tickets').addEventListener('click', openMultiTicketsScreen);
     document.getElementById('back-from-multi-tickets').addEventListener('click', () => {
         document.getElementById('multi-tickets-screen').style.display = 'none';
         document.querySelector('.container').style.display = 'block';
@@ -1278,37 +1319,17 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('results-check-screen').style.display = 'none';
         document.querySelector('.container').style.display = 'block';
     });
-    document.getElementById('retry-connection').addEventListener('click', () => retryConnectionCheck());
-    document.getElementById('cancel-print').addEventListener('click', () => cancelPrint());
-    document.getElementById('generate-report-btn').addEventListener('click', () => generateEndOfDrawReport());
-    document.getElementById('open-results-check').addEventListener('click', () => openResultsCheckScreen());
-    document.getElementById('check-winners-btn').addEventListener('click', () => checkWinningTickets());
-    document.getElementById('multi-draw-toggle').addEventListener('click', () => toggleMultiDrawPanel());
-    document.getElementById('add-to-multi-draw').addEventListener('click', () => addToMultiDrawTicket());
-    document.getElementById('show-results-btn').addEventListener('click', () => openResultsCheckScreen());
+    document.getElementById('check-winners-btn').addEventListener('click', checkWinningTickets);
     
+    // Multi-draw
+    document.getElementById('multi-draw-toggle').addEventListener('click', () => {
+        document.getElementById('multi-draw-content').classList.toggle('expanded');
+    });
     initMultiDrawPanel();
-    
-    // Gestion des fiches
-    document.getElementById('search-ticket-btn').addEventListener('click', () => searchTicket());
-    document.getElementById('show-all-tickets').addEventListener('click', () => showAllTickets());
-    document.getElementById('show-pending-tickets').addEventListener('click', () => showPendingTickets());
-    document.getElementById('search-history-btn').addEventListener('click', () => searchHistory());
-    document.getElementById('search-winning-btn').addEventListener('click', () => searchWinningTickets());
-    
-    // Navigation
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.addEventListener('click', function() {
-            const screen = this.getAttribute('data-screen');
-            showScreen(screen);
-        });
-    });
-    document.querySelectorAll('.back-button[data-screen]').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const screen = this.getAttribute('data-screen') || 'home';
-            showScreen(screen);
-        });
-    });
+    document.getElementById('add-to-multi-draw').addEventListener('click', addToMultiDrawTicket);
+    document.getElementById('view-current-multi-ticket').addEventListener('click', viewCurrentMultiDrawTicket);
+    document.getElementById('print-multi-ticket')?.addEventListener('click', printMultiDrawTicket);
+    document.getElementById('share-multi-ticket')?.addEventListener('click', shareMultiDrawTicket);
     
     // Filtres rapport
     document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -1324,33 +1345,42 @@ document.addEventListener('DOMContentLoaded', function() {
         if(start && end) loadReportData(new Date(start), new Date(end));
     });
     
+    // Gestion des fiches
+    document.getElementById('search-ticket-btn')?.addEventListener('click', () => searchTicket());
+    document.getElementById('show-all-tickets')?.addEventListener('click', () => showAllTickets());
+    document.getElementById('show-pending-tickets')?.addEventListener('click', () => showPendingTickets());
+    document.getElementById('search-history-btn')?.addEventListener('click', () => searchHistory());
+    document.getElementById('search-winning-btn')?.addEventListener('click', () => searchWinningTickets());
+    
     // Mises à jour périodiques
     setInterval(updateCurrentTime, 60000);
-    setInterval(updatePendingBadge, 30000);
     setInterval(checkForNewResults, 300000);
     
     console.log("Initialisation terminée");
 });
 
-// Fonctions résiduelles pour compatibilité
-async function savePendingTicketAPI(ticket) {
-    if (!navigator.onLine) return null;
-    return await apiCall(APP_CONFIG.ticketsPending, 'POST', { ticket });
+function searchTicket() {
+    const term = document.getElementById('search-ticket-number').value.toLowerCase();
+    const all = [...savedTickets, ...pendingSyncTickets];
+    const filtered = all.filter(t => t.number.toString().includes(term));
+    const list = document.getElementById('ticket-management-list');
+    list.innerHTML = filtered.length ? filtered.map(t=>`<div class="ticket-management"><strong>#${t.number}</strong> - ${t.total} G</div>`).join('') : '<p>Aucun résultat</p>';
 }
 
-async function saveHistoryAPI(record) {
-    return await apiCall(APP_CONFIG.history, 'POST', record);
+function showAllTickets() {
+    const list = document.getElementById('ticket-management-list');
+    const all = [...savedTickets, ...pendingSyncTickets];
+    if (all.length===0) { list.innerHTML='<p>Pa gen fiche</p>'; return; }
+    list.innerHTML = all.map(t => `<div class="ticket-management"><strong>#${t.number}</strong> - ${t.total} G - ${new Date(t.date).toLocaleString()}</div>`).join('');
 }
 
-function setupAutoFocusInputs() {
-    document.querySelectorAll('input[type="text"]').forEach(input => {
-        input.addEventListener('input', function() {
-            const max = parseInt(this.maxLength);
-            if (max && this.value.length >= max) {
-                const inputs = Array.from(document.querySelectorAll('input[type="text"], input[type="number"]'));
-                const idx = inputs.indexOf(this);
-                if (idx < inputs.length-1) inputs[idx+1].focus();
-            }
-        });
-    });
+function showPendingTickets() {
+    const list = document.getElementById('ticket-management-list');
+    if (pendingSyncTickets.length===0) { list.innerHTML='<p>Pa gen fiche an attente</p>'; return; }
+    list.innerHTML = pendingSyncTickets.map(t => `<div class="ticket-management"><strong>#${t.number}</strong> - ${t.total} G</div>`).join('');
 }
+
+function updatePendingBadge() {}
+function setupConnectionDetection() {}
+function retryConnectionCheck() {}
+function cancelPrint() {}
