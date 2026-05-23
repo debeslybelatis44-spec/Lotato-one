@@ -16,8 +16,6 @@ const APP_CONFIG = {
     multiDrawTickets: `${API_BASE_URL}/api/tickets/multi-draw`,
     companyInfo: `${API_BASE_URL}/api/company-info`,
     logo: `${API_BASE_URL}/api/logo`
-    // Dans APP_CONFIG, ajouter :
-authCheck: `${API_BASE_URL}/api/auth/check`,
 };
 
 // Variables globales
@@ -99,60 +97,29 @@ async function apiCall(url, method = 'GET', body = null) {
 // ==========================================
 async function checkAuth() {
     let token = localStorage.getItem('lotato_token');
-    if (!token) token = localStorage.getItem('nova_token');
-    if (!token) token = localStorage.getItem('token');
-    
     if (!token) {
-        console.log("Aucun token trouvé");
         showLoginScreen();
         return false;
     }
-    
     authToken = token;
     try {
-        const response = await fetch(APP_CONFIG.authCheck, {
+        const res = await fetch('/api/auth/check', {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
-        console.log("Réponse authCheck :", response.status);
-        
-        if (!response.ok) {
-            // 401, 403, etc. → token invalide
-            console.warn("Token invalide ou expiré");
+        if (res.ok) {
+            // Token valide → afficher l’interface
+            showMainApp();
+            return true;
+        } else {
+            // Token invalide → effacer et afficher login
             localStorage.removeItem('lotato_token');
             showLoginScreen();
             return false;
         }
-        
-        const data = await response.json();
-        console.log("Données authCheck :", data);
-        
-        if (!data.success) {
-            console.warn("Session non valide côté serveur");
-            localStorage.removeItem('lotato_token');
-            showLoginScreen();
-            return false;
-        }
-        
-        // Token valide
-        showMainApp();
-        return true;
     } catch (err) {
-        // Erreur réseau (serveur injoignable)
-        console.error("Erreur réseau lors de la vérification du token", err);
-        // Optionnel : afficher un message à l'utilisateur
-        showNotification("Problème de connexion au serveur, mode dégradé", "error");
-        showMainApp();  // On tente quand même d'afficher l'app
-        return true;
+        showLoginScreen();
+        return false;
     }
-}
-
-function showLoginScreen() {
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('main-container').style.display = 'none';
-    document.getElementById('bottom-nav').style.display = 'none';
-    document.getElementById('sync-status').style.display = 'none';
-    document.getElementById('admin-panel').style.display = 'none';
 }
 
 async function handleLogin() {
