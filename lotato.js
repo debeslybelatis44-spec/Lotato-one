@@ -16,6 +16,8 @@ const APP_CONFIG = {
     multiDrawTickets: `${API_BASE_URL}/api/tickets/multi-draw`,
     companyInfo: `${API_BASE_URL}/api/company-info`,
     logo: `${API_BASE_URL}/api/logo`
+    // Dans APP_CONFIG, ajouter :
+authCheck: `${API_BASE_URL}/api/auth/check`,
 };
 
 // Variables globales
@@ -95,33 +97,62 @@ async function apiCall(url, method = 'GET', body = null) {
 // ==========================================
 // 2. Authentification
 // ==========================================
-function checkAuth() {
-    // Recherche du token dans l'ordre : lotato_token (utilisé par index.html) puis les anciens noms
+async function checkAuth() {
     let token = localStorage.getItem('lotato_token');
     if (!token) token = localStorage.getItem('nova_token');
     if (!token) token = localStorage.getItem('token');
-    if (!token) token = localStorage.getItem('auth_token');
     
     if (!token) {
-        // Aucun token : afficher l'écran de connexion intégré
-        document.getElementById('login-screen').style.display = 'flex';
-        document.getElementById('main-container').style.display = 'none';
-        document.getElementById('bottom-nav').style.display = 'none';
-        document.getElementById('sync-status').style.display = 'none';
-        document.getElementById('admin-panel').style.display = 'none';
+        console.log("Aucun token trouvé");
+        showLoginScreen();
         return false;
     }
     
-    // Token trouvé : le stocker sous le nom unifié
     authToken = token;
-    localStorage.setItem('lotato_token', token); // uniformisation
-    // Afficher l'application principale
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('main-container').style.display = 'block';
-    document.getElementById('bottom-nav').style.display = 'flex';
-    document.getElementById('sync-status').style.display = 'flex';
-    document.getElementById('admin-panel').style.display = 'block';
-    return true;
+    try {
+        const response = await fetch(APP_CONFIG.authCheck, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        console.log("Réponse authCheck :", response.status);
+        
+        if (!response.ok) {
+            // 401, 403, etc. → token invalide
+            console.warn("Token invalide ou expiré");
+            localStorage.removeItem('lotato_token');
+            showLoginScreen();
+            return false;
+        }
+        
+        const data = await response.json();
+        console.log("Données authCheck :", data);
+        
+        if (!data.success) {
+            console.warn("Session non valide côté serveur");
+            localStorage.removeItem('lotato_token');
+            showLoginScreen();
+            return false;
+        }
+        
+        // Token valide
+        showMainApp();
+        return true;
+    } catch (err) {
+        // Erreur réseau (serveur injoignable)
+        console.error("Erreur réseau lors de la vérification du token", err);
+        // Optionnel : afficher un message à l'utilisateur
+        showNotification("Problème de connexion au serveur, mode dégradé", "error");
+        showMainApp();  // On tente quand même d'afficher l'app
+        return true;
+    }
+}
+
+function showLoginScreen() {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('main-container').style.display = 'none';
+    document.getElementById('bottom-nav').style.display = 'none';
+    document.getElementById('sync-status').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'none';
 }
 
 async function handleLogin() {
