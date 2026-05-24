@@ -107,11 +107,9 @@ async function checkAuth() {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
-            // Token valide → afficher l’interface
             showMainApp();
             return true;
         } else {
-            // Token invalide → effacer et afficher login
             localStorage.removeItem('lotato_token');
             showLoginScreen();
             return false;
@@ -179,10 +177,9 @@ function showMainApp() {
 }
 
 // ==========================================
-// 3. Navigation (CORRIGÉE)
+// 3. Navigation
 // ==========================================
 function showScreen(screenName) {
-    // Masquer tous les écrans principaux
     document.querySelector('.container').style.display = screenName === 'home' ? 'block' : 'none';
     document.getElementById('winning-tickets-screen').style.display = screenName === 'winning-tickets' ? 'block' : 'none';
     document.getElementById('history-screen').style.display = screenName === 'history' ? 'block' : 'none';
@@ -194,13 +191,11 @@ function showScreen(screenName) {
     document.getElementById('ticket-management-screen').style.display = 'none';
     document.getElementById('tickets-screen').style.display = 'none';
     
-    // Mettre à jour la navigation active
     document.querySelectorAll('.nav-item').forEach(item => {
         if (item.getAttribute('data-screen') === screenName) item.classList.add('active');
         else item.classList.remove('active');
     });
     
-    // Charger les données si nécessaire
     if (screenName === 'winning-tickets') updateWinningTicketsScreen();
     if (screenName === 'history') updateHistoryScreen();
     if (screenName === 'report-stats') updateReportScreen();
@@ -331,7 +326,7 @@ function updateResultsDisplay() {
 }
 
 // ==========================================
-// 7. Écran de pari
+// 7. Écran de pari et améliorations
 // ==========================================
 function openBettingScreen(drawId, time = null) {
     currentDraw = drawId;
@@ -376,7 +371,8 @@ function setupGameSelection() {
 
 function showBetForm(gameType) {
     const bet = betTypes[gameType];
-    document.getElementById('games-interface').style.display = 'none';
+    // On garde les jeux visibles
+    document.getElementById('games-interface').style.display = 'block';
     document.getElementById('auto-buttons').style.display = 'none';
     const betForm = document.getElementById('bet-form');
     betForm.style.display = 'block';
@@ -408,6 +404,7 @@ function showBetForm(gameType) {
     }
     betForm.innerHTML = formHTML;
     
+    // Gestion des Nx
     const nxBtn = document.getElementById('show-nx-balls');
     if (nxBtn) nxBtn.addEventListener('click', () => document.querySelector('.n-balls-container')?.classList.toggle('show'));
     
@@ -444,12 +441,95 @@ function showBetForm(gameType) {
         });
     });
     
+    // Ajout automatique du focus + ajout
     const addBtn = document.getElementById('add-bet');
     if (addBtn) addBtn.addEventListener('click', () => addBet(gameType));
     const addGrapBtn = document.getElementById('add-grap-bet');
     if (addGrapBtn) addGrapBtn.addEventListener('click', () => showNotification("Klike sou yon boule grap pou ajoute", "info"));
     const returnBtn = document.getElementById('return-to-types');
     if (returnBtn) returnBtn.addEventListener('click', () => { betForm.style.display = 'none'; document.getElementById('games-interface').style.display = 'block'; });
+    
+    // Curseur automatique : passage au champ suivant après saisie complète
+    if (gameType === 'borlette' || gameType === 'boulpe') {
+        const numField = document.getElementById(`${gameType}-number`);
+        if (numField) {
+            numField.addEventListener('input', function(e) {
+                if (this.value.length === 2) {
+                    const amountField = document.getElementById(`${gameType}-amount`);
+                    if (amountField) amountField.focus();
+                }
+            });
+        }
+    }
+    if (gameType === 'lotto3') {
+        const numField = document.getElementById('lotto3-number');
+        if (numField) {
+            numField.addEventListener('input', function(e) {
+                if (this.value.length === 3) {
+                    const amountField = document.getElementById('lotto3-amount');
+                    if (amountField) amountField.focus();
+                }
+            });
+        }
+    }
+    if (gameType === 'marriage') {
+        const n1 = document.getElementById('marriage-number1');
+        const n2 = document.getElementById('marriage-number2');
+        if (n1) {
+            n1.addEventListener('input', function() {
+                if (this.value.length === 2) n2.focus();
+            });
+        }
+        if (n2) {
+            n2.addEventListener('input', function() {
+                if (this.value.length === 2) {
+                    const amountField = document.getElementById('marriage-amount');
+                    if (amountField) amountField.focus();
+                }
+            });
+        }
+    }
+    if (gameType === 'lotto4') {
+        const n1 = document.getElementById('lotto4-number1');
+        const n2 = document.getElementById('lotto4-number2');
+        if (n1) {
+            n1.addEventListener('input', function() {
+                if (this.value.length === 2) n2.focus();
+            });
+        }
+        if (n2) {
+            n2.addEventListener('input', function() {
+                if (this.value.length === 2) {
+                    const amountField = document.getElementById('lotto4-amount');
+                    if (amountField) amountField.focus();
+                }
+            });
+        }
+    }
+    if (gameType === 'lotto5') {
+        const n1 = document.getElementById('lotto5-number1');
+        const n2 = document.getElementById('lotto5-number2');
+        if (n1) {
+            n1.addEventListener('input', function() {
+                if (this.value.length === 3) n2.focus();
+            });
+        }
+        if (n2) {
+            n2.addEventListener('input', function() {
+                if (this.value.length === 2) {
+                    const amountField = document.getElementById('lotto5-amount');
+                    if (amountField) amountField.focus();
+                }
+            });
+        }
+    }
+}
+
+function clearBetFormFields(gameType) {
+    const fields = document.querySelectorAll('#bet-form input');
+    fields.forEach(f => { if (f.type !== 'number' || f.id.includes('amount')) f.value = ''; });
+    const firstInput = document.querySelector('#bet-form input:not([type=number])');
+    if (firstInput) firstInput.focus();
 }
 
 function addBet(gameType) {
@@ -490,8 +570,7 @@ function addBet(gameType) {
             activeBets.push({ id: Date.now()+Math.random(), type: gameType, name: bet.name, number, amount: totalAmount, multiplier: bet.multiplier, options: { option1: opt1, option2: opt2, option3: opt3 }, perOptionAmount: amount, isLotto4: true });
             updateBetsList();
             showNotification("Lotto 4 ajoute avèk siksè!", "success");
-            document.getElementById('bet-form').style.display = 'none';
-            document.getElementById('games-interface').style.display = 'block';
+            clearBetFormFields(gameType);
             return;
         case 'lotto5':
             const n51 = document.getElementById('lotto5-number1').value, n52 = document.getElementById('lotto5-number2').value;
@@ -505,8 +584,7 @@ function addBet(gameType) {
             activeBets.push({ id: Date.now()+Math.random(), type: gameType, name: bet.name, number, amount: lotto5Total, multiplier: bet.multiplier, options: { option1: o1, option2: o2, option3: o3 }, perOptionAmount: amount, isLotto5: true });
             updateBetsList();
             showNotification("Lotto 5 ajoute avèk siksè!", "success");
-            document.getElementById('bet-form').style.display = 'none';
-            document.getElementById('games-interface').style.display = 'block';
+            clearBetFormFields(gameType);
             return;
         default:
             showNotification("Jeu non reconnu", "error");
@@ -516,10 +594,7 @@ function addBet(gameType) {
     activeBets.push({ id: Date.now()+Math.random(), type: gameType, name: bet.name, number, amount, multiplier: bet.multiplier });
     updateBetsList();
     showNotification("Parye ajoute avèk siksè!", "success");
-    setTimeout(() => {
-        document.getElementById('bet-form').style.display = 'none';
-        document.getElementById('games-interface').style.display = 'block';
-    }, 500);
+    clearBetFormFields(gameType);
 }
 
 function updateBetsList() {
@@ -531,6 +606,7 @@ function updateBetsList() {
         betTotal.textContent = '0 goud';
         const notification = document.querySelector('.total-notification');
         if (notification) notification.remove();
+        updateCartBadge();
         return;
     }
     const grouped = {};
@@ -564,6 +640,7 @@ function updateBetsList() {
     }
     betTotal.textContent = `${total} goud`;
     if (total > 0) showTotalNotification(total, 'normal');
+    updateCartBadge();
 }
 
 function showTotalNotification(totalAmount, type = 'normal') {
@@ -585,9 +662,48 @@ function showTotalNotification(totalAmount, type = 'normal') {
     }, 5000);
 }
 
+function updateCartBadge() {
+    const badge = document.getElementById('cart-badge');
+    if (badge) badge.innerText = activeBets.length;
+}
+
+// ========== PANIER (vue détaillée) ==========
+function openCartModal() {
+    const modal = document.getElementById('cart-modal');
+    const cartList = document.getElementById('cart-bets-list');
+    const cartTotalSpan = document.getElementById('cart-total-amount');
+    if (activeBets.length === 0) {
+        cartList.innerHTML = '<p>Aucun pari dans le ticket.</p>';
+        cartTotalSpan.innerText = '0';
+    } else {
+        let total = 0;
+        let html = '';
+        activeBets.forEach((bet, idx) => {
+            total += bet.amount;
+            html += `<div class="bet-item">
+                        <div class="bet-details"><strong>${bet.name}</strong><br>${bet.number}</div>
+                        <div class="bet-amount">${bet.amount} G <span class="bet-remove-cart" data-index="${idx}"><i class="fas fa-times"></i></span></div>
+                    </div>`;
+        });
+        cartList.innerHTML = html;
+        cartTotalSpan.innerText = total;
+        document.querySelectorAll('.bet-remove-cart').forEach(el => {
+            el.addEventListener('click', (e) => {
+                const idx = parseInt(el.dataset.index);
+                if (!isNaN(idx)) {
+                    activeBets.splice(idx, 1);
+                    updateBetsList();
+                    openCartModal();
+                }
+            });
+        });
+    }
+    modal.style.display = 'flex';
+}
+
 function showAutoGameForm(gameType) {
     const bet = betTypes[gameType];
-    document.getElementById('games-interface').style.display = 'none';
+    document.getElementById('games-interface').style.display = 'block';
     document.getElementById('auto-buttons').style.display = 'none';
     const betForm = document.getElementById('bet-form');
     betForm.style.display = 'block';
@@ -730,7 +846,7 @@ async function shareTicketAfterSave() {
 }
 
 // ==========================================
-// 9. Envoi de ticket (WhatsApp, SMS, Bluetooth)
+// 9. Envoi de ticket (WhatsApp pro)
 // ==========================================
 function shareTicket(ticket) {
     currentTicketToSend = ticket;
@@ -801,12 +917,25 @@ async function sendViaBluetooth() {
     document.getElementById('send-ticket-modal').style.display = 'none';
 }
 
+// Format professionnel pour WhatsApp
 function formatTicketForShare(ticket) {
-    let text = `${companyInfo.name}\nFiche #${String(ticket.number).padStart(6,'0')}\nDate: ${new Date(ticket.date).toLocaleString()}\nTiraj: ${draws[ticket.draw]?.name} (${ticket.drawTime === 'morning' ? 'Maten' : 'Swè'})\n`;
+    const line = '--------------------------------';
+    const topLine = '═══════════════════════════════';
+    let text = `${topLine}\n`;
+    text += `🏢 ${companyInfo.name.toUpperCase()}\n`;
+    text += `🎫 TICKET #${String(ticket.number).padStart(6, '0')}\n`;
+    text += `📅 ${new Date(ticket.date).toLocaleString()}\n`;
+    text += `🎲 TIRAJ: ${draws[ticket.draw]?.name} (${ticket.drawTime === 'morning' ? 'MATIN' : 'SOIR'})\n`;
+    text += `${line}\n`;
     ticket.bets.forEach(bet => {
-        text += `${bet.name} ${bet.number} : ${bet.amount} G\n`;
+        let lineBet = `🔸 ${bet.name.padEnd(12)} ${bet.number.padEnd(8)} ${bet.amount} G`;
+        text += lineBet + '\n';
     });
-    text += `Total: ${ticket.total} G\nMerci!`;
+    text += `${line}\n`;
+    text += `💰 TOTAL : ${ticket.total} G\n`;
+    text += `🙏 MERCI POUR VOTRE CONFIANCE\n`;
+    if (companyInfo.phone) text += `📞 ${companyInfo.phone}\n`;
+    text += `${topLine}`;
     return text;
 }
 
@@ -886,7 +1015,6 @@ function showVoiceFeedback(msg) {
 }
 
 function processVoiceCommand(command) {
-    // 1. Rapport
     if (command.includes('rapport du jour') || command.includes('rappo jodi a')) {
         loadReportByPeriod('today');
         speakText(`Total vant jodi a se ${document.getElementById('total-sales').innerText}`);
@@ -915,7 +1043,6 @@ function processVoiceCommand(command) {
         speakText(`Total vant yè se ${document.getElementById('total-sales').innerText}`);
         showScreen('report-stats');
     }
-    // 2. Mariages auto / Lotto auto
     else if (command.includes('maryaj otomatik') || (command.includes('ajoute') && command.includes('maryaj'))) {
         showAutoGameForm('auto-marriage');
         speakText("Ouverture maryaj otomatik");
@@ -924,13 +1051,11 @@ function processVoiceCommand(command) {
         showAutoGameForm('auto-lotto4');
         speakText("Ouverture lotto 4 otomatik");
     }
-    // 3. Tickets gagnants
     else if (command.includes('tickets gagnants') || command.includes('fiche genyen')) {
         checkWinningTickets();
         showScreen('winning-tickets');
         speakText(`${winningTickets.length} fiche genyen.`);
     }
-    // 4. Tickets d'un tirage
     else if (command.includes('ticket tirage') || command.includes('fiche pou tiraj')) {
         let drawName = '';
         if (command.includes('miami')) drawName = 'miami';
@@ -947,7 +1072,6 @@ function processVoiceCommand(command) {
             showNotification("Tiraj pa rekonèt", "warning");
         }
     }
-    // 5. Rejouer un ticket
     else if (command.includes('rejoue ticket') || command.includes('jwe ankò')) {
         const lastTicket = savedTickets[savedTickets.length-1];
         if (lastTicket) {
@@ -965,7 +1089,7 @@ function processVoiceCommand(command) {
 }
 
 // ==========================================
-// 11. Multi-tirages
+// 11. Multi-tirages (inchangé)
 // ==========================================
 function initMultiDrawPanel() {
     const multiDrawOptions = document.getElementById('multi-draw-options');
@@ -1264,7 +1388,6 @@ function loadReportData(start, end) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Document chargé, initialisation...");
     
-    // Connexion
     document.getElementById('login-btn').addEventListener('click', handleLogin);
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
     
@@ -1277,10 +1400,8 @@ document.addEventListener('DOMContentLoaded', function() {
     loadResultsFromDatabase();
     initVoiceCommands();
     
-    // Microphone
     document.getElementById('voice-command-btn').addEventListener('click', startListening);
     
-    // Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
         item.addEventListener('click', function() {
             showScreen(this.getAttribute('data-screen'));
@@ -1292,7 +1413,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Tirages
     document.querySelectorAll('.draw-card').forEach(card => {
         card.addEventListener('click', function() {
             openBettingScreen(this.getAttribute('data-draw'), 'morning');
@@ -1306,7 +1426,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Boutons généraux
     document.getElementById('back-button').addEventListener('click', closeBettingScreen);
     document.getElementById('print-ticket-btn').addEventListener('click', printTicketOnly);
     document.getElementById('share-ticket-btn').addEventListener('click', shareTicketAfterSave);
@@ -1326,6 +1445,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     document.getElementById('check-winners-btn').addEventListener('click', checkWinningTickets);
     
+    // Panier
+    const cartBtn = document.getElementById('cart-icon-btn');
+    if (cartBtn) cartBtn.addEventListener('click', openCartModal);
+    const closeCart = document.getElementById('close-cart-modal');
+    if (closeCart) closeCart.addEventListener('click', () => {
+        document.getElementById('cart-modal').style.display = 'none';
+    });
+    const cartPrint = document.getElementById('cart-print-btn');
+    if (cartPrint) cartPrint.addEventListener('click', () => {
+        document.getElementById('cart-modal').style.display = 'none';
+        printTicketOnly();
+    });
+    const cartShare = document.getElementById('cart-share-btn');
+    if (cartShare) cartShare.addEventListener('click', () => {
+        document.getElementById('cart-modal').style.display = 'none';
+        shareTicketAfterSave();
+    });
+    updateCartBadge();
+    
     // Multi-draw
     document.getElementById('multi-draw-toggle').addEventListener('click', () => {
         document.getElementById('multi-draw-content').classList.toggle('expanded');
@@ -1336,7 +1474,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('print-multi-ticket')?.addEventListener('click', printMultiDrawTicket);
     document.getElementById('share-multi-ticket')?.addEventListener('click', shareMultiDrawTicket);
     
-    // Filtres rapport
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
@@ -1350,14 +1487,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if(start && end) loadReportData(new Date(start), new Date(end));
     });
     
-    // Gestion des fiches
     document.getElementById('search-ticket-btn')?.addEventListener('click', () => searchTicket());
     document.getElementById('show-all-tickets')?.addEventListener('click', () => showAllTickets());
     document.getElementById('show-pending-tickets')?.addEventListener('click', () => showPendingTickets());
     document.getElementById('search-history-btn')?.addEventListener('click', () => searchHistory());
     document.getElementById('search-winning-btn')?.addEventListener('click', () => searchWinningTickets());
     
-    // Mises à jour périodiques
     setInterval(updateCurrentTime, 60000);
     setInterval(checkForNewResults, 300000);
     
@@ -1384,8 +1519,3 @@ function showPendingTickets() {
     if (pendingSyncTickets.length===0) { list.innerHTML='<p>Pa gen fiche an attente</p>'; return; }
     list.innerHTML = pendingSyncTickets.map(t => `<div class="ticket-management"><strong>#${t.number}</strong> - ${t.total} G</div>`).join('');
 }
-
-function updatePendingBadge() {}
-function setupConnectionDetection() {}
-function retryConnectionCheck() {}
-function cancelPrint() {}

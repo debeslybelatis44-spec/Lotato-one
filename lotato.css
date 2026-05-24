@@ -89,8 +89,30 @@ header {
     margin: 0 auto;
     z-index: 1100;
 }
-.betting-header { display: flex; align-items: center; margin-bottom: 20px; }
-.back-button { background: none; border: none; font-size: 1.5rem; margin-right: 15px; cursor: pointer; }
+.betting-header { display: flex; align-items: center; margin-bottom: 20px; gap: 15px; }
+.back-button { background: none; border: none; font-size: 1.5rem; margin-right: 5px; cursor: pointer; }
+.betting-title { flex-grow: 1; }
+
+/* Icône panier */
+.cart-icon-btn {
+    background: none;
+    border: none;
+    font-size: 1.6rem;
+    cursor: pointer;
+    position: relative;
+    color: var(--primary-color);
+}
+.cart-badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: red;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 5px;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
 
 .game-category { margin-bottom: 20px; }
 .game-category-title { font-size: 1.1rem; font-weight: bold; color: var(--primary-color); border-bottom: 2px solid var(--light-color); margin-bottom: 10px; padding-bottom: 5px; }
@@ -285,6 +307,79 @@ button { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-
 
 .ticket-actions { display: flex; gap: 10px; margin-bottom: 15px; }
 .save-print-btn { background: var(--warning-color); color: white; flex: 1; }
+
+/* Boutons imprimer / envoyer améliorés */
+.ticket-action-btn {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: bold;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+.ticket-action-btn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+.ticket-action-btn i {
+    font-size: 1.1rem;
+}
+#share-ticket-btn, .cart-share-btn {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+}
+#share-ticket-btn:hover, .cart-share-btn:hover {
+    background: linear-gradient(135deg, #2980b9, #1f618d);
+}
+.cart-print-btn {
+    background: linear-gradient(135deg, #e67e22, #d35400);
+}
+.cart-print-btn:hover {
+    background: linear-gradient(135deg, #d35400, #b44300);
+}
+
+/* Modal panier */
+.cart-modal-content {
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+.cart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+.close-cart-btn {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: #999;
+}
+.close-cart-btn:hover {
+    color: #333;
+}
+.cart-total {
+    font-weight: bold;
+    font-size: 1.2rem;
+    margin: 15px 0;
+    text-align: right;
+}
+.cart-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
 
 .quick-bet-form { display: flex; gap: 8px; margin-bottom: 15px; }
 .quick-number-input { flex: 2; text-align: center; }
