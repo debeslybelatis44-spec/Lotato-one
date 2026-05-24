@@ -850,6 +850,28 @@ app.get('*', (req, res) => {
     res.status(404).json({ error: 'Endpoint non trouvé' });
   }
 });
+mongoose.connect(MONGODB_URI)
+  .then(async () => {
+    console.log('✅ Connecté à MongoDB');
+    
+    // Supprimer l'ancien index "key_1" de la collection draws s'il existe
+    try {
+      const drawsCollection = mongoose.connection.collection('draws');
+      await drawsCollection.dropIndex('key_1');
+      console.log('✅ Ancien index key_1 supprimé avec succès');
+    } catch (err) {
+      // Le code 27 signifie "index introuvable" - on ignore
+      if (err.code !== 27) {
+        console.warn('⚠️ Erreur lors de la suppression de l\'index:', err.message);
+      } else {
+        console.log('ℹ️ Index key_1 non trouvé, pas de suppression nécessaire');
+      }
+    }
+    
+    await initializeData();
+    // ... le reste (démarrage du serveur)
+  })
+  .catch(err => { console.error('❌ MongoDB error:', err); process.exit(1); });
 
 // ==================== DÉMARRAGE ====================
 initializeData().then(() => {
