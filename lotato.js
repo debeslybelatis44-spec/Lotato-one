@@ -60,6 +60,7 @@ let authToken = null;
 let currentTicketToSend = null;
 let recognition = null;
 let isListening = false;
+let gameClickHandler = null;
 
 // ==========================================
 // 1. API Helper
@@ -358,15 +359,26 @@ function closeBettingScreen() {
 }
 
 function setupGameSelection() {
-    const existingItems = document.querySelectorAll('.game-item');
-    existingItems.forEach(item => item.replaceWith(item.cloneNode(true)));
-    document.querySelectorAll('.game-item').forEach(item => {
-        item.addEventListener('click', function() {
-            const gameType = this.getAttribute('data-game');
-            if (gameType === 'auto-marriage' || gameType === 'auto-lotto4') showAutoGameForm(gameType);
-            else showBetForm(gameType);
-        });
-    });
+    // Utilisation de la délégation d'événements sur le conteneur parent
+    const gamesContainer = document.getElementById('games-interface');
+    if (!gamesContainer) return;
+    
+    // Supprimer l'ancien écouteur pour éviter les doublons
+    gamesContainer.removeEventListener('click', gameClickHandler);
+    gamesContainer.addEventListener('click', gameClickHandler);
+}
+
+function gameClickHandler(event) {
+    const gameItem = event.target.closest('.game-item');
+    if (!gameItem) return;
+    const gameType = gameItem.getAttribute('data-game');
+    if (!gameType) return;
+    
+    if (gameType === 'auto-marriage' || gameType === 'auto-lotto4') {
+        showAutoGameForm(gameType);
+    } else {
+        showBetForm(gameType);
+    }
 }
 
 function showBetForm(gameType) {
