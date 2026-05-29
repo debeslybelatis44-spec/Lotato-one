@@ -60,7 +60,7 @@ let authToken = null;
 let currentTicketToSend = null;
 let recognition = null;
 let isListening = false;
-let gameClickHandler = null;
+let gameClickHandler = null;  // Pour la délégation d'événements
 
 // ==========================================
 // 1. API Helper
@@ -327,7 +327,7 @@ function updateResultsDisplay() {
 }
 
 // ==========================================
-// 7. Écran de pari et améliorations
+// 7. Écran de pari (avec délégation d'événements)
 // ==========================================
 function openBettingScreen(drawId, time = null) {
     currentDraw = drawId;
@@ -344,7 +344,7 @@ function openBettingScreen(drawId, time = null) {
     document.getElementById('games-interface').style.display = 'block';
     document.getElementById('bet-form').style.display = 'none';
     document.getElementById('active-bets').style.display = 'block';
-    setupGameSelection();
+    setupGameSelection();   // Attache l'écouteur par délégation
     updateBetsList();
 }
 
@@ -358,32 +358,34 @@ function closeBettingScreen() {
     }, 300);
 }
 
+// Délégation d'événements pour les jeux (fonctionne même après réouverture)
 function setupGameSelection() {
-    // Utilisation de la délégation d'événements sur le conteneur parent
     const gamesContainer = document.getElementById('games-interface');
     if (!gamesContainer) return;
     
     // Supprimer l'ancien écouteur pour éviter les doublons
-    gamesContainer.removeEventListener('click', gameClickHandler);
-    gamesContainer.addEventListener('click', gameClickHandler);
-}
-
-function gameClickHandler(event) {
-    const gameItem = event.target.closest('.game-item');
-    if (!gameItem) return;
-    const gameType = gameItem.getAttribute('data-game');
-    if (!gameType) return;
-    
-    if (gameType === 'auto-marriage' || gameType === 'auto-lotto4') {
-        showAutoGameForm(gameType);
-    } else {
-        showBetForm(gameType);
+    if (gameClickHandler) {
+        gamesContainer.removeEventListener('click', gameClickHandler);
     }
+    
+    gameClickHandler = function(event) {
+        const gameItem = event.target.closest('.game-item');
+        if (!gameItem) return;
+        const gameType = gameItem.getAttribute('data-game');
+        if (!gameType) return;
+        
+        if (gameType === 'auto-marriage' || gameType === 'auto-lotto4') {
+            showAutoGameForm(gameType);
+        } else {
+            showBetForm(gameType);
+        }
+    };
+    
+    gamesContainer.addEventListener('click', gameClickHandler);
 }
 
 function showBetForm(gameType) {
     const bet = betTypes[gameType];
-    // On garde les jeux visibles
     document.getElementById('games-interface').style.display = 'block';
     document.getElementById('auto-buttons').style.display = 'none';
     const betForm = document.getElementById('bet-form');
@@ -453,7 +455,6 @@ function showBetForm(gameType) {
         });
     });
     
-    // Ajout automatique du focus + ajout
     const addBtn = document.getElementById('add-bet');
     if (addBtn) addBtn.addEventListener('click', () => addBet(gameType));
     const addGrapBtn = document.getElementById('add-grap-bet');
@@ -461,7 +462,7 @@ function showBetForm(gameType) {
     const returnBtn = document.getElementById('return-to-types');
     if (returnBtn) returnBtn.addEventListener('click', () => { betForm.style.display = 'none'; document.getElementById('games-interface').style.display = 'block'; });
     
-    // Curseur automatique : passage au champ suivant après saisie complète
+    // Curseur automatique
     if (gameType === 'borlette' || gameType === 'boulpe') {
         const numField = document.getElementById(`${gameType}-number`);
         if (numField) {
@@ -679,7 +680,7 @@ function updateCartBadge() {
     if (badge) badge.innerText = activeBets.length;
 }
 
-// ========== PANIER (vue détaillée) ==========
+// ========== PANIER ==========
 function openCartModal() {
     const modal = document.getElementById('cart-modal');
     const cartList = document.getElementById('cart-bets-list');
@@ -713,6 +714,7 @@ function openCartModal() {
     modal.style.display = 'flex';
 }
 
+// ========== JEUX AUTO ==========
 function showAutoGameForm(gameType) {
     const bet = betTypes[gameType];
     document.getElementById('games-interface').style.display = 'block';
@@ -929,7 +931,6 @@ async function sendViaBluetooth() {
     document.getElementById('send-ticket-modal').style.display = 'none';
 }
 
-// Format professionnel pour WhatsApp
 function formatTicketForShare(ticket) {
     const line = '--------------------------------';
     const topLine = '═══════════════════════════════';
@@ -1101,7 +1102,7 @@ function processVoiceCommand(command) {
 }
 
 // ==========================================
-// 11. Multi-tirages (inchangé)
+// 11. Multi-tirages
 // ==========================================
 function initMultiDrawPanel() {
     const multiDrawOptions = document.getElementById('multi-draw-options');
