@@ -60,7 +60,6 @@ let authToken = null;
 let currentTicketToSend = null;
 let recognition = null;
 let isListening = false;
-let gameClickHandler = null;  // Pour la délégation d'événements
 
 // ==========================================
 // 1. API Helper
@@ -358,17 +357,18 @@ function closeBettingScreen() {
     }, 300);
 }
 
-// Délégation d'événements pour les jeux (fonctionne même après réouverture)
+// Délégation d'événements pour les jeux (CORRIGÉE)
 function setupGameSelection() {
     const gamesContainer = document.getElementById('games-interface');
     if (!gamesContainer) return;
     
-    // Supprimer l'ancien écouteur pour éviter les doublons
-    if (gameClickHandler) {
-        gamesContainer.removeEventListener('click', gameClickHandler);
+    // Supprimer l'ancien écouteur s'il existe
+    if (window.gameClickHandler) {
+        gamesContainer.removeEventListener('click', window.gameClickHandler);
     }
     
-    gameClickHandler = function(event) {
+    // Définir le gestionnaire
+    window.gameClickHandler = function(event) {
         const gameItem = event.target.closest('.game-item');
         if (!gameItem) return;
         const gameType = gameItem.getAttribute('data-game');
@@ -381,7 +381,7 @@ function setupGameSelection() {
         }
     };
     
-    gamesContainer.addEventListener('click', gameClickHandler);
+    gamesContainer.addEventListener('click', window.gameClickHandler);
 }
 
 function showBetForm(gameType) {
