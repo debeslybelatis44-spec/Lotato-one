@@ -326,7 +326,7 @@ function updateResultsDisplay() {
 }
 
 // ==========================================
-// 7. Écran de pari (avec délégation d'événements)
+// 7. Écran de pari (avec délégation d'événements globale)
 // ==========================================
 function openBettingScreen(drawId, time = null) {
     currentDraw = drawId;
@@ -343,7 +343,6 @@ function openBettingScreen(drawId, time = null) {
     document.getElementById('games-interface').style.display = 'block';
     document.getElementById('bet-form').style.display = 'none';
     document.getElementById('active-bets').style.display = 'block';
-    setupGameSelection();   // Attache l'écouteur par délégation
     updateBetsList();
 }
 
@@ -357,20 +356,16 @@ function closeBettingScreen() {
     }, 300);
 }
 
-// Délégation d'événements pour les jeux (CORRIGÉE)
-function setupGameSelection() {
-    const gamesContainer = document.getElementById('games-interface');
-    if (!gamesContainer) return;
-    
-    // Supprimer l'ancien écouteur s'il existe
-    if (window.gameClickHandler) {
-        gamesContainer.removeEventListener('click', window.gameClickHandler);
-    }
-    
-    // Définir le gestionnaire
-    window.gameClickHandler = function(event) {
+// Écouteur unique permanent pour tous les jeux (fonctionne même si les éléments sont créés après)
+function initGameClickDelegate() {
+    document.body.addEventListener('click', function(event) {
         const gameItem = event.target.closest('.game-item');
         if (!gameItem) return;
+        
+        // Vérifier que l'écran de pari est visible
+        const bettingScreen = document.getElementById('betting-screen');
+        if (!bettingScreen || bettingScreen.style.display !== 'block') return;
+        
         const gameType = gameItem.getAttribute('data-game');
         if (!gameType) return;
         
@@ -379,9 +374,7 @@ function setupGameSelection() {
         } else {
             showBetForm(gameType);
         }
-    };
-    
-    gamesContainer.addEventListener('click', window.gameClickHandler);
+    });
 }
 
 function showBetForm(gameType) {
@@ -1400,6 +1393,9 @@ function loadReportData(start, end) {
 // ==========================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Document chargé, initialisation...");
+    
+    // Initialiser la délégation des clics pour les jeux (une seule fois)
+    initGameClickDelegate();
     
     document.getElementById('login-btn').addEventListener('click', handleLogin);
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
