@@ -95,6 +95,14 @@ async function apiCall(url, method = 'GET', body = null) {
 // ==========================================
 // 2. Authentification
 // ==========================================
+function showLoginScreen() {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('main-container').style.display = 'none';
+    document.getElementById('bottom-nav').style.display = 'none';
+    document.getElementById('sync-status').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'none';
+}
+
 async function checkAuth() {
     let token = localStorage.getItem('lotato_token');
     if (!token) {
@@ -326,7 +334,7 @@ function updateResultsDisplay() {
 }
 
 // ==========================================
-// 7. Écran de pari (correction définitive)
+// 7. Écran de pari (CORRECTION DÉFINITIVE)
 // ==========================================
 function openBettingScreen(drawId, time = null) {
     currentDraw = drawId;
@@ -344,9 +352,24 @@ function openBettingScreen(drawId, time = null) {
     document.getElementById('bet-form').style.display = 'none';
     document.getElementById('active-bets').style.display = 'block';
     updateBetsList();
-    
-    // Attacher l'écouteur des jeux sur le conteneur
-    attachGameDelegate();
+
+    // FORCER L'ATTACHEMENT DIRECT SUR CHAQUE JEU
+    const gameItems = document.querySelectorAll('.game-item');
+    gameItems.forEach(item => {
+        // On clone pour supprimer les anciens écouteurs
+        const newItem = item.cloneNode(true);
+        item.parentNode.replaceChild(newItem, item);
+        newItem.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const gameType = this.getAttribute('data-game');
+            if (!gameType) return;
+            if (gameType === 'auto-marriage' || gameType === 'auto-lotto4') {
+                showAutoGameForm(gameType);
+            } else {
+                showBetForm(gameType);
+            }
+        });
+    });
 }
 
 function closeBettingScreen() {
@@ -357,32 +380,6 @@ function closeBettingScreen() {
         bettingScreen.style.display = 'none';
         document.querySelector('.container').style.display = 'block';
     }, 300);
-}
-
-// Délégation d'événements propre sur #games-interface
-function attachGameDelegate() {
-    const gamesContainer = document.getElementById('games-interface');
-    if (!gamesContainer) return;
-    
-    // Supprimer l'ancien écouteur s'il existe
-    if (window.gameDelegateListener) {
-        gamesContainer.removeEventListener('click', window.gameDelegateListener);
-    }
-    
-    window.gameDelegateListener = function(event) {
-        const gameItem = event.target.closest('.game-item');
-        if (!gameItem) return;
-        const gameType = gameItem.getAttribute('data-game');
-        if (!gameType) return;
-        
-        if (gameType === 'auto-marriage' || gameType === 'auto-lotto4') {
-            showAutoGameForm(gameType);
-        } else {
-            showBetForm(gameType);
-        }
-    };
-    
-    gamesContainer.addEventListener('click', window.gameDelegateListener);
 }
 
 function showBetForm(gameType) {
@@ -1532,4 +1529,433 @@ function showPendingTickets() {
     const list = document.getElementById('ticket-management-list');
     if (pendingSyncTickets.length===0) { list.innerHTML='<p>Pa gen fiche an attente</p>'; return; }
     list.innerHTML = pendingSyncTickets.map(t => `<div class="ticket-management"><strong>#${t.number}</strong> - ${t.total} G</div>`).join('');
-}
+}<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOTATO PRO · Super Admin</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="config.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+        body { background:#0a0b1e; color:#fff; padding:20px; }
+        .app { max-width:1400px; margin:0 auto; }
+        header { display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); border-radius:20px; padding:20px; margin-bottom:30px; }
+        .logo h1 { font-size:1.8rem; background:linear-gradient(135deg,#ad00f1,#ff007a); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .logout-btn { background:rgba(255,77,77,0.2); border:1px solid #ff4d4d; color:#ff4d4d; padding:10px 20px; border-radius:30px; cursor:pointer; }
+        .section-title { margin:30px 0 20px; font-size:1.4rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px; }
+        .tabs { display:flex; gap:10px; margin-bottom:30px; flex-wrap:wrap; }
+        .tab { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:30px; padding:12px 24px; cursor:pointer; transition:0.2s; }
+        .tab.active { background:linear-gradient(135deg,#ad00f1,#00d4ff); color:white; border-color:transparent; }
+        .tab-content { display:none; }
+        .tab-content.active { display:block; }
+        .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:20px; background:rgba(255,255,255,0.03); border-radius:20px; padding:25px; margin-bottom:20px; }
+        .form-group { margin-bottom:15px; }
+        .form-group label { display:block; color:#a0a0b8; margin-bottom:6px; }
+        .form-group input, .form-group select, .form-group textarea { width:100%; padding:12px 16px; background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:white; }
+        .btn-primary { background:linear-gradient(135deg,#ad00f1,#00d4ff); border:none; border-radius:30px; padding:12px 30px; color:white; font-weight:600; cursor:pointer; }
+        .btn-secondary { background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.2); border-radius:30px; padding:12px 30px; color:white; cursor:pointer; }
+        .btn-danger { background:rgba(255,77,77,0.2); border:1px solid #ff4d4d; color:#ff4d4d; border-radius:30px; padding:10px 20px; cursor:pointer; }
+        .list-container { background:rgba(255,255,255,0.02); border-radius:20px; padding:20px; max-height:500px; overflow-y:auto; }
+        .badge-success { background:#00f190; color:black; padding:4px 12px; border-radius:20px; }
+        .badge-danger { background:#ff4d4d; color:white; padding:4px 12px; border-radius:20px; }
+        .badge-warning { background:#ffaa00; color:black; padding:4px 12px; border-radius:20px; }
+        .alert { padding:15px; border-radius:12px; margin-bottom:20px; display:none; }
+        .alert-success { background:rgba(0,241,144,0.2); border:1px solid #00f190; color:#00f190; }
+        .alert-danger { background:rgba(255,77,77,0.2); border:1px solid #ff4d4d; color:#ff4d4d; }
+        table { width:100%; border-collapse:collapse; }
+        th { text-align:left; padding:10px; background:rgba(255,255,255,0.05); }
+        td { padding:10px; border-bottom:1px solid rgba(255,255,255,0.05); }
+        .modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center; }
+        .modal-content { background:#1e1f36; border-radius:20px; padding:25px; max-width:500px; width:90%; max-height:80%; overflow-y:auto; }
+        .checkbox-group { display:flex; flex-wrap:wrap; gap:10px; max-height:200px; overflow-y:auto; border:1px solid #333; padding:10px; border-radius:8px; }
+        .checkbox-item { display:flex; align-items:center; gap:5px; width:200px; }
+        .checkbox-item input[type="checkbox"] { width:auto; margin-right:5px; }
+        .profit { color:#00f190; }
+        .loss { color:#ff4d4d; }
+        .owners-table td, .owners-table th { padding:12px 10px; vertical-align:middle; }
+        .owners-table tr:hover { background:rgba(255,255,255,0.03); }
+        .status-badge { display:inline-block; min-width:90px; text-align:center; }
+        .result-numbers { font-family:monospace; font-size:1.1em; letter-spacing:1px; }
+    </style>
+</head>
+<body>
+    <div class="app" id="login-section" style="display:flex; align-items:center; justify-content:center; min-height:100vh;">
+        <div style="background:rgba(255,255,255,0.05); backdrop-filter:blur(20px); border-radius:20px; padding:40px; width:100%; max-width:400px;">
+            <h2 style="text-align:center; margin-bottom:30px;">🔐 Super Admin</h2>
+            <div class="form-group">
+                <label>Identifiant</label>
+                <input type="text" id="login-username" placeholder="admin@lotato.com">
+            </div>
+            <div class="form-group">
+                <label>Mot de passe</label>
+                <input type="password" id="login-password" placeholder="********">
+            </div>
+            <button class="btn-primary" style="width:100%;" onclick="superAdminLogin()">Se connecter</button>
+            <div id="login-error" class="alert alert-danger" style="margin-top:20px;"></div>
+        </div>
+    </div>
+
+    <div class="app" id="main-section" style="display:none;">
+        <header>
+            <div class="logo">
+                <h1>LOTATO PRO · Super Admin</h1>
+            </div>
+            <div>
+                <span id="admin-name"></span>
+                <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('owners')">👥 Propriétaires</div>
+            <div class="tab" onclick="switchTab('agents')">👤 Agents & Superviseurs</div>
+            <div class="tab" onclick="switchTab('messages')">📢 Messages</div>
+            <div class="tab" onclick="switchTab('reports')">📊 Rapports consolidés</div>
+            <div class="tab" onclick="switchTab('publish')">📢 Publier résultats (multi)</div>
+            <div class="tab" onclick="switchTab('results')">📋 Résultats du jour</div>
+            <div class="tab" onclick="switchTab('drawsActivation')">🎲 Gestion tirages</div>
+        </div>
+
+        <!-- Propriétaires (inchangé) -->
+        <div id="tab-owners" class="tab-content active">...</div>
+        <!-- Agents & Superviseurs (inchangé) -->
+        <div id="tab-agents" class="tab-content">...</div>
+        <!-- Messages (inchangé) -->
+        <div id="tab-messages" class="tab-content">...</div>
+        <!-- Rapports (inchangé) -->
+        <div id="tab-reports" class="tab-content">...</div>
+        <!-- Publier résultats (inchangé) -->
+        <div id="tab-publish" class="tab-content">...</div>
+        <!-- Résultats du jour (inchangé) -->
+        <div id="tab-results" class="tab-content">...</div>
+
+        <!-- ========== NOUVEL ONGLET : Gestion des tirages ========== -->
+        <div id="tab-drawsActivation" class="tab-content">
+            <!-- Création d'un nouveau tirage -->
+            <div class="section-title"><i class="fas fa-plus-circle"></i> Créer un nouveau tirage</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Nom du tirage</label>
+                    <input type="text" id="new-draw-name" placeholder="Ex: California">
+                </div>
+                <div class="form-group">
+                    <label>Heure (HH:MM)</label>
+                    <input type="time" id="new-draw-time" step="60">
+                </div>
+                <div class="form-group">
+                    <label>Couleur (optionnel, code hexa)</label>
+                    <input type="text" id="new-draw-color" placeholder="#ff4757">
+                </div>
+                <div>
+                    <button class="btn-primary" onclick="createNewDraw()">Créer</button>
+                </div>
+            </div>
+            <div id="create-draw-message" class="alert"></div>
+
+            <!-- Activation / Désactivation d'un tirage pour un propriétaire -->
+            <div class="section-title"><i class="fas fa-toggle-on"></i> Activer / Désactiver un tirage pour un propriétaire</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Propriétaire</label>
+                    <select id="activation-owner-id"></select>
+                </div>
+                <div class="form-group">
+                    <label>Tirage</label>
+                    <select id="activation-draw-id"></select>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: flex-end;">
+                    <button class="btn-primary" onclick="setDrawForOwner(true)">✅ Activer</button>
+                    <button class="btn-danger" onclick="setDrawForOwner(false)">❌ Désactiver</button>
+                </div>
+            </div>
+            <div id="activation-message" class="alert"></div>
+
+            <!-- État des tirages par propriétaire -->
+            <div class="section-title"><i class="fas fa-list"></i> État des tirages par propriétaire</div>
+            <div class="form-grid" style="grid-template-columns:1fr auto;">
+                <div class="form-group">
+                    <label>Sélectionner un propriétaire</label>
+                    <select id="state-owner-id"></select>
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                    <button class="btn-primary" onclick="loadDrawsStateForOwner()">Voir l'état</button>
+                </div>
+            </div>
+            <div id="draws-state-container" class="list-container">
+                <p>Sélectionnez un propriétaire pour voir quels tirages lui sont activés.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals (inchangés, gardez ceux que vous avez déjà) -->
+    <div id="edit-owner-modal" class="modal">...</div>
+    <div id="edit-agent-modal" class="modal">...</div>
+    <div id="edit-supervisor-modal" class="modal">...</div>
+
+    <script>
+        const API_BASE = window.API_URL || 'https://lotato1.onrender.com/api';
+        let token = localStorage.getItem('superadmin_token');
+        let adminName = localStorage.getItem('superadmin_name') || '';
+
+        if (token) {
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('main-section').style.display = 'block';
+            document.getElementById('admin-name').innerText = adminName;
+            loadOwners();
+            loadOwnerSelect();
+            loadAgents();
+            loadSupervisors();
+            loadReports();
+            loadPublishOwnersCheckbox();
+            loadDrawsForPublish();
+            loadTodayResults();
+            loadOwnersForActivation();
+            loadDrawsForActivation();
+        }
+
+        // === AUTHENTIFICATION ===
+        async function superAdminLogin() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+            const errorDiv = document.getElementById('login-error');
+            if (!username || !password) {
+                errorDiv.style.display = 'block';
+                errorDiv.innerText = 'Veuillez saisir identifiant et mot de passe';
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/auth/superadmin-login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    token = data.token;
+                    adminName = data.name;
+                    localStorage.setItem('superadmin_token', token);
+                    localStorage.setItem('superadmin_name', adminName);
+                    document.getElementById('login-section').style.display = 'none';
+                    document.getElementById('main-section').style.display = 'block';
+                    document.getElementById('admin-name').innerText = adminName;
+                    loadOwners();
+                    loadOwnerSelect();
+                    loadAgents();
+                    loadSupervisors();
+                    loadReports();
+                    loadPublishOwnersCheckbox();
+                    loadDrawsForPublish();
+                    loadTodayResults();
+                    loadOwnersForActivation();
+                    loadDrawsForActivation();
+                } else {
+                    errorDiv.style.display = 'block';
+                    errorDiv.innerText = data.error || 'Identifiants incorrects';
+                }
+            } catch (e) {
+                errorDiv.style.display = 'block';
+                errorDiv.innerText = 'Erreur réseau: ' + e.message;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('superadmin_token');
+            localStorage.removeItem('superadmin_name');
+            window.location.reload();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.tab[onclick*="${tabId}"]`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            if (tabId === 'owners') loadOwners();
+            if (tabId === 'agents') { loadAgents(); loadSupervisors(); }
+            if (tabId === 'messages') loadOwnerSelect();
+            if (tabId === 'reports') loadReports();
+            if (tabId === 'publish') { loadPublishOwnersCheckbox(); loadDrawsForPublish(); }
+            if (tabId === 'results') loadTodayResults();
+            if (tabId === 'drawsActivation') {
+                loadOwnersForActivation();
+                loadDrawsForActivation();
+            }
+        }
+
+        async function fetchWithToken(url, options = {}) {
+            const headers = { 'Authorization': `Bearer ${token}`, ...options.headers };
+            const res = await fetch(`${API_BASE}${url}`, { ...options, headers });
+            if (res.status === 401) {
+                alert('Session expirée, veuillez vous reconnecter');
+                logout();
+                return null;
+            }
+            return res;
+        }
+
+        function showMessage(elId, text, isSuccess) {
+            const el = document.getElementById(elId);
+            if (!el) return;
+            el.style.display = 'block';
+            el.className = isSuccess ? 'alert alert-success' : 'alert alert-danger';
+            el.innerText = text;
+            setTimeout(() => el.style.display = 'none', 5000);
+        }
+
+        // === GESTION PROPRIÉTAIRES (inchangé, mais ajout de loadOwnersForActivation) ===
+        async function loadOwners() {
+            // ... gardez votre code existant (ne pas modifier)
+        }
+        async function createOwner() {
+            // ... gardez votre code existant (ne pas modifier)
+        }
+        // etc. (toutes les fonctions existantes restent identiques)
+        // Pour gagner de la place, je n'écris pas tout le code inchangé ici,
+        // mais vous devez conserver TOUTES les fonctions de votre superadmin.html original.
+        // Seules les fonctions suivantes sont NOUVELLES ou MODIFIÉES :
+
+        // === NOUVELLE FONCTION : Créer un tirage ===
+        async function createNewDraw() {
+            const name = document.getElementById('new-draw-name').value.trim();
+            const time = document.getElementById('new-draw-time').value;
+            const color = document.getElementById('new-draw-color').value.trim();
+            if (!name || !time) {
+                showMessage('create-draw-message', 'Veuillez saisir un nom et une heure', false);
+                return;
+            }
+            const res = await fetchWithToken('/superadmin/draws', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, time, color: color || null })
+            });
+            if (res && res.ok) {
+                const data = await res.json();
+                showMessage('create-draw-message', `✅ Tirage "${name}" créé (ID ${data.draw.id})`, true);
+                document.getElementById('new-draw-name').value = '';
+                document.getElementById('new-draw-time').value = '';
+                document.getElementById('new-draw-color').value = '';
+                // Recharger les listes
+                loadDrawsForActivation();
+                loadDrawsForPublish();
+            } else {
+                showMessage('create-draw-message', '❌ Erreur lors de la création', false);
+            }
+        }
+
+        // === FONCTIONS POUR ACTIVATION ===
+        async function loadOwnersForActivation() {
+            const res = await fetchWithToken('/superadmin/owners');
+            if (!res) return;
+            const owners = await res.json();
+            let opts = '<option value="">-- Choisir un propriétaire --</option>';
+            owners.forEach(o => {
+                opts += `<option value="${o.id}">${escapeHtml(o.name)}</option>`;
+            });
+            document.getElementById('activation-owner-id').innerHTML = opts;
+            document.getElementById('state-owner-id').innerHTML = opts;
+        }
+
+        async function loadDrawsForActivation() {
+            const res = await fetchWithToken('/draws');
+            if (!res) return;
+            const data = await res.json();
+            const draws = data.draws || [];
+            let opts = '<option value="">-- Choisir un tirage --</option>';
+            draws.forEach(d => {
+                opts += `<option value="${d.id}">${escapeHtml(d.name)} (${d.time})</option>`;
+            });
+            document.getElementById('activation-draw-id').innerHTML = opts;
+        }
+
+        async function setDrawForOwner(enabled) {
+            const ownerId = document.getElementById('activation-owner-id').value;
+            const drawId = document.getElementById('activation-draw-id').value;
+            if (!ownerId || !drawId) {
+                showMessage('activation-message', 'Veuillez sélectionner un propriétaire et un tirage', false);
+                return;
+            }
+            const res = await fetchWithToken(`/superadmin/owners/${ownerId}/draws/${drawId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled })
+            });
+            if (res && res.ok) {
+                showMessage('activation-message', enabled ? '✅ Tirage activé pour ce propriétaire' : '❌ Tirage désactivé', true);
+            } else {
+                showMessage('activation-message', '❌ Erreur lors de l\'opération', false);
+            }
+        }
+
+        async function loadDrawsStateForOwner() {
+            const ownerId = document.getElementById('state-owner-id').value;
+            if (!ownerId) {
+                alert('Veuillez sélectionner un propriétaire');
+                return;
+            }
+            const container = document.getElementById('draws-state-container');
+            container.innerHTML = '<p>Chargement...</p>';
+            const res = await fetchWithToken(`/superadmin/owners/${ownerId}/draws`);
+            if (!res) {
+                container.innerHTML = '<p class="loss">Erreur de chargement</p>';
+                return;
+            }
+            const data = await res.json();
+            const draws = data.draws || [];
+            if (draws.length === 0) {
+                container.innerHTML = '<p>Aucun tirage trouvé.</p>';
+                return;
+            }
+            let html = '<div class="table-responsive"><table style="width:100%"><thead><tr><th>Nom du tirage</th><th>Heure</th><th>Activé pour ce propriétaire</th></tr></thead><tbody>';
+            draws.forEach(d => {
+                const enabled = d.enabled_for_owner ? '✅ Oui' : '❌ Non';
+                html += `<tr>
+                    <td>${escapeHtml(d.name)}</td>
+                    <td>${d.time}</td>
+                    <td>${enabled}</td>
+                </tr>`;
+            });
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // Expose global functions
+        window.switchTab = switchTab;
+        window.superAdminLogin = superAdminLogin;
+        window.logout = logout;
+        window.createOwner = createOwner;
+        window.markAsPaid = markAsPaid;
+        window.updateQuota = updateQuota;
+        window.openEditOwnerModal = openEditOwnerModal;
+        window.closeEditOwnerModal = closeEditOwnerModal;
+        window.saveOwnerEdit = saveOwnerEdit;
+        window.deleteAgent = deleteAgent;
+        window.openEditAgentModal = openEditAgentModal;
+        window.closeEditAgentModal = closeEditAgentModal;
+        window.saveAgentEdit = saveAgentEdit;
+        window.deleteSupervisor = deleteSupervisor;
+        window.openEditSupervisorModal = openEditSupervisorModal;
+        window.closeEditSupervisorModal = closeEditSupervisorModal;
+        window.saveSupervisorEdit = saveSupervisorEdit;
+        window.selectAllOwners = selectAllOwners;
+        window.deselectAllOwners = deselectAllOwners;
+        window.sendMessageToSelected = sendMessageToSelected;
+        window.selectAllPublishOwners = selectAllPublishOwners;
+        window.deselectAllPublishOwners = deselectAllPublishOwners;
+        window.publishResultsMulti = publishResultsMulti;
+        window.setDrawForOwner = setDrawForOwner;
+        window.loadDrawsStateForOwner = loadDrawsStateForOwner;
+        window.createNewDraw = createNewDraw;
+    </script>
+</body>
+</html>
