@@ -95,14 +95,6 @@ async function apiCall(url, method = 'GET', body = null) {
 // ==========================================
 // 2. Authentification
 // ==========================================
-function showLoginScreen() {
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('main-container').style.display = 'none';
-    document.getElementById('bottom-nav').style.display = 'none';
-    document.getElementById('sync-status').style.display = 'none';
-    document.getElementById('admin-panel').style.display = 'none';
-}
-
 async function checkAuth() {
     let token = localStorage.getItem('lotato_token');
     if (!token) {
@@ -111,30 +103,20 @@ async function checkAuth() {
     }
     authToken = token;
     try {
-        const res = await fetch(`${API_BASE_URL}/api/auth/check`, {
-            headers: { 'Authorization': `Bearer ${token}`, 'x-auth-token': token }
+        const res = await fetch('/api/auth/check', {
+            headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
             showMainApp();
-            loadDataFromAPI();
-            loadResultsFromDatabase();
-            updateLogoDisplay();
-            showScreen('home');
             return true;
         } else {
             localStorage.removeItem('lotato_token');
-            authToken = null;
             showLoginScreen();
             return false;
         }
     } catch (err) {
-        // Network error - still try to show app if token exists
-        showMainApp();
-        loadDataFromAPI();
-        loadResultsFromDatabase();
-        updateLogoDisplay();
-        showScreen('home');
-        return true;
+        showLoginScreen();
+        return false;
     }
 }
 
@@ -344,7 +326,7 @@ function updateResultsDisplay() {
 }
 
 // ==========================================
-// 7. Écran de pari (CORRECTION DÉFINITIVE)
+// 7. Écran de pari et améliorations
 // ==========================================
 function openBettingScreen(drawId, time = null) {
     currentDraw = drawId;
@@ -362,24 +344,6 @@ function openBettingScreen(drawId, time = null) {
     document.getElementById('bet-form').style.display = 'none';
     document.getElementById('active-bets').style.display = 'block';
     updateBetsList();
-
-    // FORCER L'ATTACHEMENT DIRECT SUR CHAQUE JEU
-    const gameItems = document.querySelectorAll('.game-item');
-    gameItems.forEach(item => {
-        // On clone pour supprimer les anciens écouteurs
-        const newItem = item.cloneNode(true);
-        item.parentNode.replaceChild(newItem, item);
-        newItem.addEventListener('click', function(e) {
-            e.stopPropagation();
-            const gameType = this.getAttribute('data-game');
-            if (!gameType) return;
-            if (gameType === 'auto-marriage' || gameType === 'auto-lotto4') {
-                showAutoGameForm(gameType);
-            } else {
-                showBetForm(gameType);
-            }
-        });
-    });
 }
 
 function closeBettingScreen() {
@@ -392,11 +356,35 @@ function closeBettingScreen() {
     }, 300);
 }
 
+// ========== CORRECTION DÉFINITIVE DES CLIQUES ==========
+// Écouteur unique permanent sur tout le document
+function initGameClickDelegate() {
+    document.body.addEventListener('click', function(event) {
+        const gameItem = event.target.closest('.game-item');
+        if (!gameItem) return;
+        
+        // Vérifier que l'écran de pari est visible
+        const bettingScreen = document.getElementById('betting-screen');
+        if (!bettingScreen || bettingScreen.style.display !== 'block') return;
+        
+        const gameType = gameItem.getAttribute('data-game');
+        if (!gameType) return;
+        
+        console.log("Jeu cliqué :", gameType); // Pour debug
+        
+        if (gameType === 'auto-marriage' || gameType === 'auto-lotto4') {
+            showAutoGameForm(gameType);
+        } else {
+            showBetForm(gameType);
+        }
+    });
+}
+// ===================================================
+
 function showBetForm(gameType) {
     const bet = betTypes[gameType];
     document.getElementById('games-interface').style.display = 'block';
-    const _ab1 = document.getElementById('auto-buttons');
-    if (_ab1) _ab1.style.display = 'none';
+    document.getElementById('auto-buttons').style.display = 'none';
     const betForm = document.getElementById('bet-form');
     betForm.style.display = 'block';
     let formHTML = '';
@@ -727,8 +715,7 @@ function openCartModal() {
 function showAutoGameForm(gameType) {
     const bet = betTypes[gameType];
     document.getElementById('games-interface').style.display = 'block';
-    const _ab2 = document.getElementById('auto-buttons');
-    if (_ab2) _ab2.style.display = 'none';
+    document.getElementById('auto-buttons').style.display = 'none';
     const betForm = document.getElementById('bet-form');
     betForm.style.display = 'block';
     selectedBalls = [];
@@ -1411,18 +1398,21 @@ function loadReportData(start, end) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Document chargé, initialisation...");
     
+    // Initialiser la délégation des clics pour les jeux (une seule fois)
+    initGameClickDelegate();
+    
     document.getElementById('login-btn').addEventListener('click', handleLogin);
     document.getElementById('logout-btn').addEventListener('click', handleLogout);
     
-    // Always attach all event listeners regardless of auth state
-    // Auth state is handled by checkAuth() which shows/hides screens
-    initAllEventListeners();
+    if (!checkAuth()) return;
     
-    // Then check auth asynchronously
-    checkAuth();
-});
-
-function initAllEventListeners() {
+    showMainApp();
+    updateCurrentTime();
+    loadDataFromAPI();
+    updateLogoDisplay();
+    loadResultsFromDatabase();
+    initVoiceCommands();
+    
     document.getElementById('voice-command-btn').addEventListener('click', startListening);
     
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -1520,9 +1510,7 @@ function initAllEventListeners() {
     setInterval(checkForNewResults, 300000);
     
     console.log("Initialisation terminée");
-    initVoiceCommands();
-    updateCurrentTime();
-}
+});
 
 function searchTicket() {
     const term = document.getElementById('search-ticket-number').value.toLowerCase();
