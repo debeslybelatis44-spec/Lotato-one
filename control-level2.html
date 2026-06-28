@@ -1,449 +1,470 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lotato - Superviseur Niveau 2</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="manifest" href="/manifest.json">
-    <style>
-        :root {
-            --primary-color: #3498db;
-            --secondary-color: #2c3e50;
-            --success-color: #27ae60;
-            --warning-color: #f39c12;
-            --danger-color: #e74c3c;
-            --dark-color: #2c3e50;
-            --light-color: #ecf0f1;
-            --sidebar-width: 280px;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #f5f7fa; color: var(--dark-color); display: flex; min-height: 100vh; }
-        
-        .sidebar {
-            width: var(--sidebar-width);
-            background: linear-gradient(180deg, #2980b9, #1a252f);
-            color: white;
-            position: fixed;
-            height: 100vh;
-            overflow-y: auto;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-            z-index: 1000;
-        }
-        .logo-container { padding: 25px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .logo { font-size: 2.5rem; color: var(--warning-color); margin-bottom: 10px; }
-        .logo-text { font-size: 1.3rem; font-weight: bold; color: white; }
-        .logo-subtext { font-size: 0.8rem; color: rgba(255,255,255,0.7); }
-        .user-info { padding: 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .user-avatar { width: 50px; height: 50px; background-color: var(--primary-color); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; }
-        .user-details h3 { font-size: 1rem; margin-bottom: 5px; }
-        .user-details p { font-size: 0.8rem; color: rgba(255,255,255,0.7); }
-        .nav-menu { padding: 20px 0; }
-        .nav-item {
-            display: flex; align-items: center; padding: 15px 25px; color: rgba(255,255,255,0.8);
-            text-decoration: none; transition: all 0.3s; border-left: 4px solid transparent;
-        }
-        .nav-item:hover { background-color: rgba(255,255,255,0.1); color: white; border-left-color: var(--primary-color); }
-        .nav-item.active { background-color: rgba(255,255,255,0.15); color: white; border-left-color: var(--primary-color); }
-        .nav-icon { width: 30px; font-size: 1.2rem; margin-right: 15px; }
-        .nav-label { font-size: 0.95rem; font-weight: 500; }
-        
-        .main-content { flex: 1; margin-left: var(--sidebar-width); padding: 20px; min-height: 100vh; }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; margin-bottom: 30px; border-bottom: 1px solid #ddd; }
-        .page-title { font-size: 1.8rem; color: var(--secondary-color); display: flex; align-items: center; gap: 10px; }
-        .page-title i { color: var(--primary-color); }
-        .top-actions { display: flex; gap: 10px; }
-        .btn {
-            padding: 10px 20px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;
-            transition: all 0.3s; display: flex; align-items: center; gap: 8px;
-        }
-        .btn-primary { background-color: var(--primary-color); color: white; }
-        .btn-primary:hover { background-color: #2980b9; }
-        .btn-success { background-color: var(--success-color); color: white; }
-        .btn-warning { background-color: var(--warning-color); color: white; }
-        .btn-danger { background-color: var(--danger-color); color: white; }
-        
-        .stats-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card {
-            background-color: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            display: flex; align-items: center; gap: 20px; transition: transform 0.3s;
-        }
-        .stat-card:hover { transform: translateY(-5px); }
-        .stat-icon {
-            width: 60px; height: 60px; border-radius: 10px; display: flex; align-items: center;
-            justify-content: center; font-size: 1.8rem; color: white;
-        }
-        .icon-sales { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .icon-users { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .icon-tickets { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-        .icon-profit { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-        .stat-info { flex: 1; }
-        .stat-value { font-size: 1.8rem; font-weight: bold; color: var(--secondary-color); }
-        .stat-label { font-size: 0.9rem; color: #7f8c8d; }
-        
-        .table-container {
-            background-color: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            margin-bottom: 30px; overflow-x: auto;
-        }
-        .table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .table-title { font-size: 1.3rem; color: var(--secondary-color); font-weight: 600; }
-        .search-box { display: flex; gap: 10px; }
-        .search-input { padding: 8px 15px; border: 1px solid #ddd; border-radius: 6px; min-width: 200px; }
-        .table { width: 100%; border-collapse: collapse; }
-        .table th { background-color: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #dee2e6; }
-        .table td { padding: 10px 12px; border-bottom: 1px solid #eee; }
-        .table tr:hover { background-color: #f8f9fa; }
-        
-        .status-badge {
-            padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; display: inline-block;
-        }
-        .status-active { background-color: #d4edda; color: #155724; }
-        .status-inactive { background-color: #f8d7da; color: #721c24; }
-        .status-pending { background-color: #fff3cd; color: #856404; }
-        .role-badge { padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; display: inline-block; }
-        .role-supervisor { background-color: var(--warning-color); color: white; }
-        .role-agent { background-color: var(--success-color); color: white; }
-        
-        .action-buttons { display: flex; gap: 5px; }
-        .action-btn {
-            width: 32px; height: 32px; border-radius: 5px; border: none; background-color: #f8f9fa;
-            color: #6c757d; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center;
-        }
-        .action-btn:hover { background-color: #e9ecef; }
-        .action-btn.view:hover { background-color: var(--primary-color); color: white; }
-        .action-btn.edit:hover { background-color: var(--warning-color); color: white; }
-        
-        .modal {
-            display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5);
-            z-index: 2000; align-items: center; justify-content: center; padding: 20px;
-        }
-        .modal.active { display: flex; }
-        .modal-content {
-            background-color: white; border-radius: 10px; width: 100%; max-width: 500px;
-            max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-        .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        .modal-title { font-size: 1.2rem; color: var(--secondary-color); font-weight: 600; }
-        .modal-close { background: none; border: none; font-size: 1.5rem; color: #6c757d; cursor: pointer; }
-        .modal-body { padding: 20px; }
-        .modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; }
-        
-        .form-group { margin-bottom: 15px; }
-        .form-label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--secondary-color); }
-        .form-control { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem; }
-        
-        .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; color: #6c757d; }
-        .loading-spinner {
-            width: 40px; height: 40px; border: 3px solid #f3f3f3; border-top: 3px solid var(--primary-color);
-            border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        .notification {
-            position: fixed; top: 20px; right: 20px; padding: 12px 18px; border-radius: 8px; color: white;
-            display: flex; align-items: center; gap: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-            z-index: 3000; animation: slideIn 0.3s ease-out; max-width: 350px;
-        }
-        @keyframes slideIn { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
-        .notification.success { background-color: var(--success-color); }
-        .notification.error { background-color: var(--danger-color); }
-        .notification.warning { background-color: var(--warning-color); }
-        .notification.info { background-color: var(--primary-color); }
-        
-        .empty-state { text-align: center; padding: 40px 20px; color: #6c757d; }
-        .empty-icon { font-size: 3rem; color: #dee2e6; margin-bottom: 15px; }
-        
-        @media (max-width: 1024px) {
-            .sidebar { width: 70px; overflow-x: hidden; }
-            .user-details, .nav-label, .logo-text, .logo-subtext { display: none; }
-            .main-content { margin-left: 70px; }
-            .nav-item { justify-content: center; padding: 15px 10px; }
-            .nav-icon { margin-right: 0; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lotato — Superviseur Niveau 2</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root { --brand:#8e44ad; --brand2:#6c3483; --success:#27ae60; --danger:#e74c3c; --info:#3498db; --bg:#f5f7fa; --sidebar:260px; }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); display:flex; min-height:100vh; color:#2c3e50; }
+
+    /* ── Sidebar ── */
+    .sidebar { width:var(--sidebar); background:linear-gradient(180deg,#2d0045,#160022); color:#e2e8f0; position:fixed; height:100vh; overflow-y:auto; display:flex; flex-direction:column; z-index:50; }
+    .sb-brand { padding:22px 18px; text-align:center; border-bottom:1px solid rgba(255,255,255,.1); }
+    .sb-brand .icon { font-size:1.9rem; color:var(--brand); }
+    .sb-brand h2 { font-size:1.1rem; font-weight:800; margin-top:5px; }
+    .sb-brand small { font-size:.72rem; color:#7d5a9a; }
+    .sb-user { display:flex; align-items:center; gap:10px; padding:14px 18px; border-bottom:1px solid rgba(255,255,255,.1); }
+    .sb-avatar { width:40px; height:40px; background:var(--brand); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1rem; color:white; flex-shrink:0; }
+    .sb-user .info h4 { font-size:.88rem; color:white; }
+    .sb-user .info p  { font-size:.72rem; color:#7d5a9a; }
+    .sb-nav { flex:1; padding:10px 0; }
+    .sb-nav a { display:flex; align-items:center; gap:12px; padding:13px 20px; color:#b388cc; text-decoration:none; border-left:3px solid transparent; font-size:.88rem; transition:.2s; }
+    .sb-nav a:hover, .sb-nav a.active { background:rgba(255,255,255,.08); color:white; border-left-color:var(--brand); }
+    .sb-nav a i { width:18px; text-align:center; }
+    .sb-foot { padding:14px 18px; }
+    .btn-logout { width:100%; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); color:white; padding:9px; border-radius:7px; cursor:pointer; font-size:.84rem; transition:.2s; }
+    .btn-logout:hover { background:rgba(231,76,60,.3); }
+
+    /* ── Main ── */
+    .main { flex:1; margin-left:var(--sidebar); padding:24px 28px; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+    .topbar h1 { font-size:1.4rem; display:flex; align-items:center; gap:10px; }
+    .topbar h1 i { color:var(--brand); }
+
+    .btn { padding:9px 18px; border:none; border-radius:8px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:7px; font-size:.88rem; transition:.2s; }
+    .btn:hover { opacity:.87; }
+    .btn-primary { background:var(--brand); color:white; }
+    .btn-sm { padding:5px 12px; font-size:.78rem; }
+
+    /* ── Stats ── */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; margin-bottom:22px; }
+    .stat-card { background:white; border-radius:12px; padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.07); display:flex; align-items:center; gap:14px; }
+    .stat-icon { width:48px; height:48px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1.3rem; color:white; flex-shrink:0; }
+    .stat-value { font-size:1.6rem; font-weight:800; }
+    .stat-label { font-size:.8rem; color:#64748b; margin-top:2px; }
+
+    /* ── Panel ── */
+    .panel { background:white; border-radius:12px; padding:20px; box-shadow:0 2px 8px rgba(0,0,0,.07); margin-bottom:20px; }
+    .panel-title { font-size:1rem; font-weight:700; margin-bottom:16px; }
+    .section { display:none; }
+    .section.active { display:block; }
+
+    /* ── Table ── */
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:10px 12px; text-align:left; border-bottom:1px solid #f0f4f8; font-size:.87rem; }
+    th { font-weight:700; color:#475569; background:#f8fafc; }
+    tr:hover td { background:#fafafa; }
+    .badge { padding:3px 9px; border-radius:20px; font-size:.72rem; font-weight:700; }
+    .badge-active   { background:#d1fae5; color:#065f46; }
+    .badge-inactive { background:#fee2e2; color:#991b1b; }
+    .badge-online   { background:#ede9fe; color:#5b21b6; }
+
+    /* ── Form ── */
+    .field label { display:block; font-size:.82rem; font-weight:600; color:#475569; margin-bottom:5px; }
+    .field select, .field input { width:100%; padding:9px 11px; border:1px solid #e2e8f0; border-radius:8px; font-size:.88rem; outline:none; }
+    .field select:focus, .field input:focus { border-color:var(--brand); }
+    .form-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; align-items:end; }
+
+    /* ── Toast ── */
+    #toast-container { position:fixed; top:16px; right:16px; z-index:2000; display:flex; flex-direction:column; gap:8px; }
+    .toast { padding:10px 15px; border-radius:9px; color:white; display:flex; align-items:center; gap:8px; font-size:.87rem; box-shadow:0 4px 12px rgba(0,0,0,.2); animation:si .3s; }
+    .toast.success { background:var(--success); }
+    .toast.error   { background:var(--danger); }
+    .toast.info    { background:var(--info); }
+    @keyframes si { from { opacity:0; transform:translateX(100%); } to { opacity:1; transform:translateX(0); } }
+
+    .empty { text-align:center; padding:32px; color:#94a3b8; }
+    .empty i { font-size:2rem; margin-bottom:10px; }
+    .agent-perf-card { background:#f8fafc; border-radius:10px; padding:14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+    .agent-perf-card .name { font-weight:700; }
+    .agent-perf-card .stats { display:flex; gap:18px; }
+    .agent-perf-card .stat { text-align:center; }
+    .agent-perf-card .stat-v { font-size:1.1rem; font-weight:800; color:var(--brand); }
+    .agent-perf-card .stat-l { font-size:.72rem; color:#94a3b8; }
+
+    @media(max-width:1024px){ .sidebar{width:62px;} .sb-brand h2,.sb-brand small,.sb-user .info,.sb-nav a span,.sb-foot span{display:none;} .sb-nav a{justify-content:center;padding:13px;} .main{margin-left:62px;} }
+  </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo-container">
-            <div class="logo"><i class="fas fa-shield-alt"></i></div>
-            <div class="logo-text">SUPERVISEUR 2</div>
-            <div class="logo-subtext">Contrôle avancé</div>
-        </div>
-        <div class="user-info">
-            <div class="user-avatar" id="user-avatar">S2</div>
-            <div class="user-details">
-                <h3 id="user-name">Chargement...</h3>
-                <p id="user-role">Superviseur Niveau 2</p>
-            </div>
-        </div>
-        <div class="nav-menu">
-            <a href="#" class="nav-item active" data-section="dashboard"><div class="nav-icon"><i class="fas fa-tachometer-alt"></i></div><div class="nav-label">Tableau de bord</div></a>
-            <a href="#" class="nav-item" data-section="summary"><div class="nav-icon"><i class="fas fa-chart-pie"></i></div><div class="nav-label">Résumé</div></a>
-            <a href="#" class="nav-item" data-section="agents"><div class="nav-icon"><i class="fas fa-users"></i></div><div class="nav-label">Superviseurs & Agents</div></a>
-            <a href="#" class="nav-item" data-section="tickets"><div class="nav-icon"><i class="fas fa-ticket-alt"></i></div><div class="nav-label">Tickets</div></a>
-            <a href="#" class="nav-item" data-section="reports"><div class="nav-icon"><i class="fas fa-chart-bar"></i></div><div class="nav-label">Rapports</div></a>
-            <a href="#" class="nav-item" data-section="activity"><div class="nav-icon"><i class="fas fa-history"></i></div><div class="nav-label">Activité</div></a>
-        </div>
+
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="icon"><i class="fas fa-user-shield"></i></div>
+    <h2>SUPERVISEUR N2</h2>
+    <small>Niveau 2 — Vue globale</small>
+  </div>
+  <div class="sb-user">
+    <div class="sb-avatar" id="sbAvatar">S</div>
+    <div class="info">
+      <h4 id="sbName">Chargement…</h4>
+      <p>Superviseur Niveau 2</p>
     </div>
-    
-    <div class="main-content">
-        <div class="top-bar">
-            <div class="page-title"><i class="fas fa-tachometer-alt"></i><span id="page-title">Tableau de bord Superviseur 2</span></div>
-            <div class="top-actions">
-                <button class="btn btn-primary" id="refresh-btn"><i class="fas fa-sync-alt"></i> Actualiser</button>
-                <button class="btn btn-warning" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
-            </div>
-        </div>
-        
-        <!-- Dashboard Section -->
-        <div id="dashboard-section" class="section-content active">
-            <div class="stats-cards">
-                <div class="stat-card"><div class="stat-icon icon-users"><i class="fas fa-users"></i></div><div class="stat-info"><div class="stat-value" id="total-agents">0</div><div class="stat-label">Agents totaux</div></div></div>
-                <div class="stat-card"><div class="stat-icon icon-sales"><i class="fas fa-money-bill-wave"></i></div><div class="stat-info"><div class="stat-value" id="today-sales">0 HTG</div><div class="stat-label">Ventes aujourd'hui</div></div></div>
-                <div class="stat-card"><div class="stat-icon icon-tickets"><i class="fas fa-ticket-alt"></i></div><div class="stat-info"><div class="stat-value" id="today-tickets">0</div><div class="stat-label">Tickets aujourd'hui</div></div></div>
-                <div class="stat-card"><div class="stat-icon icon-profit"><i class="fas fa-chart-line"></i></div><div class="stat-info"><div class="stat-value" id="online-supervisors">0</div><div class="stat-label">Superviseurs en ligne</div></div></div>
-            </div>
-            <div class="table-container">
-                <div class="table-header"><div class="table-title">Activité récente des superviseurs</div></div>
-                <div id="recent-activity">Chargement...</div>
-            </div>
-        </div>
-        
-        <!-- Summary Section -->
-        <div id="summary-section" class="section-content" style="display:none;">
-            <div class="table-container">
-                <div class="table-header"><div class="table-title">Résumé des performances</div></div>
-                <div id="summary-content">Chargement...</div>
-            </div>
-        </div>
-        
-        <!-- Agents & Supervisors Section -->
-        <div id="agents-section" class="section-content" style="display:none;">
-            <div class="tabs" style="display:flex; border-bottom:1px solid #ddd; margin-bottom:20px;">
-                <button class="tab active" data-tab="supervisors" style="padding:10px 20px; background:none; border:none; border-bottom:3px solid transparent; font-weight:600; cursor:pointer;">Superviseurs N1</button>
-                <button class="tab" data-tab="agents" style="padding:10px 20px; background:none; border:none; border-bottom:3px solid transparent; font-weight:600; cursor:pointer;">Agents</button>
-            </div>
-            <div id="supervisors-tab" class="tab-content active">
-                <div class="table-container">
-                    <div class="table-header"><div class="table-title">Superviseurs Niveau 1</div></div>
-                    <table class="table" id="supervisors-table"><thead><tr><th>Nom</th><th>Email</th><th>Statut</th><th>Agents</th><th>Ventes</th><th>Actions</th></tr></thead><tbody id="supervisors-tbody"></tbody></table>
-                </div>
-            </div>
-            <div id="agents-tab" class="tab-content" style="display:none;">
-                <div class="table-container">
-                    <div class="table-header"><div class="table-title">Tous les Agents</div></div>
-                    <table class="table" id="agents-table"><thead><tr><th>Nom</th><th>Superviseur</th><th>Statut</th><th>Ventes jour</th><th>Actions</th></tr></thead><tbody id="agents-tbody"></tbody></table>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Tickets Section -->
-        <div id="tickets-section" class="section-content" style="display:none;">
-            <div class="tabs" style="display:flex; border-bottom:1px solid #ddd; margin-bottom:20px;">
-                <button class="tab active" data-ticket-tab="today">Aujourd'hui</button>
-                <button class="tab" data-ticket-tab="pending">En attente</button>
-                <button class="tab" data-ticket-tab="winning">Gagnants</button>
-            </div>
-            <div id="today-tickets-tab" class="tab-content active"><div class="table-container"><div id="today-tickets-list">Chargement...</div></div></div>
-            <div id="pending-tickets-tab" class="tab-content" style="display:none;"><div class="table-container"><div id="pending-tickets-list">Chargement...</div></div></div>
-            <div id="winning-tickets-tab" class="tab-content" style="display:none;"><div class="table-container"><div id="winning-tickets-list">Chargement...</div></div></div>
-        </div>
-        
-        <!-- Reports Section -->
-        <div id="reports-section" class="section-content" style="display:none;">
-            <div class="table-container">
-                <div class="table-header"><div class="table-title">Générer un rapport</div></div>
-                <div style="display:flex; gap:10px; margin-bottom:20px;">
-                    <select id="report-period" class="form-control" style="width:200px;">
-                        <option value="today">Aujourd'hui</option>
-                        <option value="week">Cette semaine</option>
-                        <option value="month">Ce mois</option>
-                    </select>
-                    <button class="btn btn-primary" id="generate-report">Générer</button>
-                    <button class="btn btn-success" id="export-report">Exporter</button>
-                </div>
-                <div id="report-results"></div>
-            </div>
-        </div>
-        
-        <!-- Activity Section -->
-        <div id="activity-section" class="section-content" style="display:none;">
-            <div class="table-container">
-                <div class="table-header"><div class="table-title">Journal d'activité</div></div>
-                <div id="activity-log">Chargement...</div>
-            </div>
-        </div>
+  </div>
+  <nav class="sb-nav">
+    <a href="#" class="active" data-sec="dashboard"><i class="fas fa-tachometer-alt"></i><span>Tableau de bord</span></a>
+    <a href="#" data-sec="supervisors"><i class="fas fa-user-tie"></i><span>Superviseurs N1</span></a>
+    <a href="#" data-sec="agents"><i class="fas fa-users"></i><span>Tous les agents</span></a>
+    <a href="#" data-sec="tickets"><i class="fas fa-ticket-alt"></i><span>Tickets</span></a>
+    <a href="#" data-sec="report"><i class="fas fa-chart-bar"></i><span>Rapport</span></a>
+  </nav>
+  <div class="sb-foot">
+    <button class="btn-logout" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> <span>Déconnexion</span></button>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <h1><i class="fas fa-tachometer-alt" id="secIcon"></i><span id="secTitle">Tableau de bord</span></h1>
+    <button class="btn btn-primary" id="refreshBtn"><i class="fas fa-sync-alt"></i> Actualiser</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="section active" id="sec-dashboard">
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,#8e44ad,#6c3483)"><i class="fas fa-user-tie"></i></div><div><div class="stat-value" id="dSups">0</div><div class="stat-label">Superviseurs N1</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,#f39c12,#e67e22)"><i class="fas fa-users"></i></div><div><div class="stat-value" id="dAgents">0</div><div class="stat-label">Agents actifs</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,#667eea,#764ba2)"><i class="fas fa-ticket-alt"></i></div><div><div class="stat-value" id="dTickets">0</div><div class="stat-label">Tickets aujourd'hui</div></div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:linear-gradient(135deg,#43e97b,#38f9d7)"><i class="fas fa-money-bill-wave"></i></div><div><div class="stat-value" id="dSales">0</div><div class="stat-label">Ventes (HTG)</div></div></div>
     </div>
-    
-    <div id="notification-container"></div>
-    
-    <script>
-        const API_BASE = '';
-        let currentUser = null;
-        let supervisorsList = [];
-        let agentsList = [];
-        
-        function showNotification(msg, type='info') {
-            const c = document.getElementById('notification-container');
-            const n = document.createElement('div');
-            n.className = `notification ${type}`;
-            n.innerHTML = `<i class="fas fa-${type==='success'?'check':type==='error'?'times':'info'}-circle"></i><span>${msg}</span>`;
-            c.appendChild(n);
-            setTimeout(() => n.remove(), 5000);
-        }
-        
-        async function apiCall(url, method='GET', body=null) {
-            const token = localStorage.getItem('lotato_token');
-            const headers = { 'Content-Type': 'application/json' };
-            if (token) headers['Authorization'] = `Bearer ${token}`;
-            const options = { method, headers };
-            if (body) options.body = JSON.stringify(body);
-            try {
-                const res = await fetch(url, options);
-                if (res.status === 401) { logout(); return null; }
-                return await res.json();
-            } catch(e) { showNotification('Erreur réseau', 'error'); return null; }
-        }
-        
-        function logout() { localStorage.clear(); window.location.href='/index.html'; }
-        
-        async function loadDashboard() {
-            const userRes = await apiCall('/api/auth/check');
-            if (!userRes?.success) { logout(); return; }
-            currentUser = userRes.user;
-            document.getElementById('user-name').textContent = currentUser.full_name || currentUser.username;
-            document.getElementById('user-avatar').textContent = (currentUser.full_name || 'S2').charAt(0).toUpperCase();
-            
-            // Charger tous les utilisateurs du sous-système
-            const usersRes = await apiCall('/api/subsystem/users');
-            if (usersRes?.success) {
-                const users = usersRes.users;
-                supervisorsList = users.filter(u => u.role === 'supervisor' && u.level === 1);
-                agentsList = users.filter(u => u.role === 'agent');
-                
-                document.getElementById('total-agents').textContent = agentsList.length;
-                document.getElementById('online-supervisors').textContent = supervisorsList.filter(s => s.is_online).length;
-                
-                // Calculer les ventes du jour
-                let todaySales = 0, todayTickets = 0;
-                const ticketsRes = await apiCall('/api/tickets');
-                if (ticketsRes?.success) {
-                    const today = new Date().toISOString().split('T')[0];
-                    ticketsRes.tickets.forEach(t => {
-                        if (t.created_at?.startsWith(today)) {
-                            todaySales += t.total_amount;
-                            todayTickets++;
-                        }
-                    });
-                }
-                document.getElementById('today-sales').textContent = todaySales.toLocaleString() + ' HTG';
-                document.getElementById('today-tickets').textContent = todayTickets;
-            }
-        }
-        
-        async function loadSupervisors() {
-            const tbody = document.getElementById('supervisors-tbody');
-            tbody.innerHTML = '';
-            for (const s of supervisorsList) {
-                const tr = document.createElement('tr');
-                const agentCount = agentsList.filter(a => a.supervisor_id === s.id).length;
-                tr.innerHTML = `<td>${s.full_name}</td><td>${s.email || '-'}</td><td><span class="status-badge ${s.is_active?'status-active':'status-inactive'}">${s.is_active?'Actif':'Inactif'}</span></td><td>${agentCount}</td><td>--</td><td><button class="action-btn view" data-id="${s.id}"><i class="fas fa-eye"></i></button></td>`;
-                tbody.appendChild(tr);
-            }
-        }
-        
-        async function loadAgents() {
-            const tbody = document.getElementById('agents-tbody');
-            tbody.innerHTML = '';
-            for (const a of agentsList) {
-                const supervisor = supervisorsList.find(s => s.id === a.supervisor_id);
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${a.full_name}</td><td>${supervisor?.full_name || 'Non assigné'}</td><td><span class="status-badge ${a.is_active?'status-active':'status-inactive'}">${a.is_active?'Actif':'Inactif'}</span></td><td>--</td><td><button class="action-btn view" data-id="${a.id}"><i class="fas fa-eye"></i></button></td>`;
-                tbody.appendChild(tr);
-            }
-        }
-        
-        function showSection(section) {
-            document.querySelectorAll('.section-content').forEach(s => s.style.display = 'none');
-            document.getElementById(section+'-section').style.display = 'block';
-            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-            document.querySelector(`.nav-item[data-section="${section}"]`).classList.add('active');
-            
-            if (section === 'agents') { loadSupervisors(); loadAgents(); }
-            else if (section === 'tickets') { loadTodayTickets(); }
-            else if (section === 'summary') { loadSummary(); }
-            else if (section === 'activity') { loadActivity(); }
-        }
-        
-        async function loadTodayTickets() {
-            const res = await apiCall('/api/tickets');
-            const container = document.getElementById('today-tickets-list');
-            if (res?.success) {
-                const today = new Date().toISOString().split('T')[0];
-                const todayTickets = res.tickets.filter(t => t.created_at?.startsWith(today));
-                container.innerHTML = todayTickets.length ? `<table class="table">${todayTickets.map(t => `<tr><td>#${t.ticket_number}</td><td>${t.total_amount} HTG</td></tr>`).join('')}</table>` : '<p>Aucun ticket aujourd\'hui</p>';
-            }
-        }
-        
-        async function loadSummary() {
-            const container = document.getElementById('summary-content');
-            let html = '<h3>Performance par superviseur</h3>';
-            for (const s of supervisorsList) {
-                const agents = agentsList.filter(a => a.supervisor_id === s.id);
-                html += `<p><strong>${s.full_name}</strong> : ${agents.length} agents</p>`;
-            }
-            container.innerHTML = html;
-        }
-        
-        async function loadActivity() {
-            const res = await apiCall('/api/subsystem/activities');
-            const container = document.getElementById('activity-log');
-            if (res?.success) {
-                container.innerHTML = res.activities.map(a => `<div><strong>${a.user}</strong> - ${a.action} (${new Date(a.timestamp).toLocaleString()})</div>`).join('');
-            }
-        }
-        
-        async function generateReport() {
-            const period = document.getElementById('report-period').value;
-            const res = await apiCall(`/api/tickets?period=${period}`);
-            const container = document.getElementById('report-results');
-            if (res?.success) {
-                const total = res.tickets.reduce((s,t) => s + t.total_amount, 0);
-                container.innerHTML = `<p>Total tickets: ${res.tickets.length}</p><p>Total ventes: ${total} HTG</p>`;
-            }
-        }
-        
-        document.addEventListener('DOMContentLoaded', async () => {
-            await loadDashboard();
-            
-            document.querySelectorAll('.nav-item').forEach(i => i.addEventListener('click', e => { e.preventDefault(); showSection(i.dataset.section); }));
-            document.getElementById('refresh-btn').addEventListener('click', loadDashboard);
-            document.getElementById('logout-btn').addEventListener('click', logout);
-            
-            document.querySelectorAll('[data-tab]').forEach(t => t.addEventListener('click', function() {
-                const tab = this.dataset.tab;
-                document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-                document.getElementById(tab+'-tab').style.display = 'block';
-                if (tab === 'agents') loadAgents();
-                else if (tab === 'supervisors') loadSupervisors();
-            }));
-            
-            document.querySelectorAll('[data-ticket-tab]').forEach(t => t.addEventListener('click', function() {
-                const tab = this.dataset.ticketTab;
-                document.querySelectorAll('[data-ticket-tab]').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-                document.getElementById(tab+'-tickets-tab').style.display = 'block';
-                if (tab === 'today') loadTodayTickets();
-                else if (tab === 'pending') document.getElementById('pending-tickets-list').innerHTML = '<p>Aucun ticket en attente</p>';
-                else if (tab === 'winning') document.getElementById('winning-tickets-list').innerHTML = '<p>Aucun ticket gagnant</p>';
-            }));
-            
-            document.getElementById('generate-report').addEventListener('click', generateReport);
-            document.getElementById('export-report').addEventListener('click', () => showNotification('Export PDF à implémenter', 'info'));
-        });
-    </script>
+    <div class="panel">
+      <div class="panel-title"><i class="fas fa-chart-line"></i> Performance agents — aujourd'hui</div>
+      <div id="agentPerformance"></div>
+    </div>
+  </div>
+
+  <!-- Superviseurs N1 -->
+  <div class="section" id="sec-supervisors">
+    <div class="panel">
+      <div class="panel-title"><i class="fas fa-user-tie"></i> Superviseurs Niveau 1 sous ma supervision</div>
+      <div id="supervisorsList"></div>
+    </div>
+  </div>
+
+  <!-- Agents -->
+  <div class="section" id="sec-agents">
+    <div class="panel">
+      <div class="panel-title"><i class="fas fa-users"></i> Tous les agents</div>
+      <div id="agentsList"></div>
+    </div>
+  </div>
+
+  <!-- Tickets -->
+  <div class="section" id="sec-tickets">
+    <div class="panel">
+      <div class="panel-title"><i class="fas fa-filter"></i> Filtres</div>
+      <div class="form-row">
+        <div class="field"><label>Agent</label><select id="tAgent"><option value="all">Tous</option></select></div>
+        <div class="field"><label>Tirage</label><select id="tDraw"><option value="all">Tous</option></select></div>
+        <button class="btn btn-primary btn-sm" id="tFilterBtn" style="margin-top:22px"><i class="fas fa-search"></i> Filtrer</button>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><i class="fas fa-ticket-alt"></i> Tickets</div>
+      <div id="ticketsList"></div>
+    </div>
+  </div>
+
+  <!-- Rapport -->
+  <div class="section" id="sec-report">
+    <div class="panel">
+      <div class="panel-title"><i class="fas fa-filter"></i> Générer un rapport</div>
+      <div class="form-row">
+        <div class="field"><label>Superviseur N1</label><select id="rpSup"><option value="all">Tous</option></select></div>
+        <div class="field"><label>Agent</label><select id="rpAgent"><option value="all">Tous</option></select></div>
+        <div class="field"><label>Période</label>
+          <select id="rpPeriod">
+            <option value="today">Aujourd'hui</option>
+            <option value="week">7 derniers jours</option>
+            <option value="month">30 derniers jours</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" id="rpBtn" style="margin-top:22px"><i class="fas fa-chart-bar"></i> Générer</button>
+      </div>
+    </div>
+    <div class="panel" id="rpResult" style="display:none">
+      <div class="panel-title">Résultats</div>
+      <div id="rpContent"></div>
+    </div>
+  </div>
+</main>
+
+<div id="toast-container"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Auth ─────────────────────────────────────────────────────
+  // Utilise le même système que toutes les autres pages (lotato_token)
+  const token = localStorage.getItem('lotato_token');
+  if (!token) { window.location.href = '/index.html'; }
+
+  const $ = id => document.getElementById(id);
+  let currentUser = null;
+  let allUsers    = [];
+  let mySups1     = [];   // superviseurs N1 sous ce superviseur N2
+  let myAgents    = [];   // agents de ces superviseurs N1
+
+  // ── Helpers ──────────────────────────────────────────────────
+  function toast(msg, type = 'info') {
+    const c = $('toast-container');
+    const t = document.createElement('div');
+    const icons = { success:'check-circle', error:'times-circle', info:'info-circle' };
+    t.className = `toast ${type}`;
+    t.innerHTML = `<i class="fas fa-${icons[type]||'info-circle'}"></i> ${msg}`;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 5000);
+  }
+
+  async function api(url, method = 'GET', body = null) {
+    const opts = { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` } };
+    if (body) opts.body = JSON.stringify(body);
+    try {
+      const res = await fetch(url, opts);
+      if (res.status === 401) { logout(); return null; }
+      return await res.json();
+    } catch { toast('Erreur réseau', 'error'); return null; }
+  }
+
+  function logout() { localStorage.clear(); window.location.href = '/index.html'; }
+  function today()  { return new Date().toISOString().split('T')[0]; }
+
+  // ── ID helpers ────────────────────────────────────────────────
+  function getId(obj) {
+    if (!obj) return '';
+    if (typeof obj === 'string') return obj;
+    return (obj._id || obj.id || '').toString();
+  }
+
+  // ── Navigation ────────────────────────────────────────────────
+  const sectionMeta = {
+    dashboard:   { title:'Tableau de bord',        icon:'fa-tachometer-alt' },
+    supervisors: { title:'Superviseurs N1',         icon:'fa-user-tie' },
+    agents:      { title:'Tous les agents',         icon:'fa-users' },
+    tickets:     { title:'Tickets',                 icon:'fa-ticket-alt' },
+    report:      { title:'Rapport',                 icon:'fa-chart-bar' }
+  };
+
+  function showSection(name) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.sb-nav a').forEach(a => a.classList.remove('active'));
+    $(`sec-${name}`).classList.add('active');
+    document.querySelector(`.sb-nav a[data-sec="${name}"]`)?.classList.add('active');
+    const m = sectionMeta[name];
+    $('secTitle').textContent = m.title;
+    $('secIcon').className    = `fas ${m.icon}`;
+    if (name === 'supervisors') loadSupervisors();
+    if (name === 'agents')      loadAgents();
+    if (name === 'tickets')     { populateTicketFilters(); loadTickets(); }
+    if (name === 'report')      populateReportFilters();
+  }
+
+  document.querySelectorAll('.sb-nav a[data-sec]').forEach(a =>
+    a.addEventListener('click', e => { e.preventDefault(); showSection(a.dataset.sec); })
+  );
+
+  // ── Chargement des utilisateurs (une seule fois) ──────────────
+  async function fetchAllUsers() {
+    const res = await api('/api/subsystem/users');
+    if (!res?.success) return;
+    allUsers = res.users;
+
+    // Superviseurs N1 liés à ce superviseur N2 (supervisor2_id = currentUser.id)
+    mySups1  = allUsers.filter(u => u.role === 'supervisor' && u.level === 1 && getId(u.supervisor2_id) === getId(currentUser));
+
+    // Agents des superviseurs N1 sous ma supervision
+    const sup1Ids = mySups1.map(s => getId(s));
+    myAgents = allUsers.filter(u => u.role === 'agent' && sup1Ids.includes(getId(u.supervisor_id)));
+  }
+
+  function filterMyTickets(tickets) {
+    const agentIds = myAgents.map(a => getId(a));
+    return tickets.filter(t => {
+      const agentId = getId(t.agent_id?._id ? t.agent_id : { _id: t.agent_id });
+      return agentIds.includes(agentId);
+    });
+  }
+
+  // ── Dashboard ─────────────────────────────────────────────────
+  async function loadDashboard() {
+    await fetchAllUsers();
+    const ticketsRes = await api('/api/tickets');
+
+    $('dSups').textContent   = mySups1.length;
+    $('dAgents').textContent = myAgents.filter(a => a.is_active).length;
+
+    if (ticketsRes?.success) {
+      const myTkts    = filterMyTickets(ticketsRes.tickets);
+      const todayTkts = myTkts.filter(t => (t.created_at || '').startsWith(today()));
+      const sales     = todayTkts.reduce((s, t) => s + (t.total_amount || 0), 0);
+      $('dTickets').textContent = todayTkts.length;
+      $('dSales').textContent   = sales.toLocaleString();
+
+      // Performance par agent
+      $('agentPerformance').innerHTML = myAgents.length
+        ? myAgents.map(a => {
+            const aId   = getId(a);
+            const aTkts = todayTkts.filter(t => {
+              const agId = t.agent_id?._id ? getId(t.agent_id) : t.agent_id?.toString();
+              return agId === aId;
+            });
+            const aSales = aTkts.reduce((s, t) => s + (t.total_amount || 0), 0);
+            const sup = mySups1.find(s => getId(s) === getId(a.supervisor_id));
+            return `<div class="agent-perf-card">
+              <div>
+                <div class="name">${a.full_name || a.username}</div>
+                <div style="font-size:.78rem;color:#94a3b8">Superviseur: ${sup?.full_name || '—'}</div>
+              </div>
+              <div class="stats">
+                <div class="stat"><div class="stat-v">${aTkts.length}</div><div class="stat-l">Tickets</div></div>
+                <div class="stat"><div class="stat-v">${aSales.toLocaleString()}</div><div class="stat-l">HTG</div></div>
+                <div class="stat"><div class="stat-v">${a.is_online ? '🟢' : '⚫'}</div><div class="stat-l">${a.is_online ? 'En ligne' : 'Hors ligne'}</div></div>
+              </div>
+            </div>`;
+          }).join('')
+        : '<div class="empty"><i class="fas fa-users"></i><p>Aucun agent sous votre supervision indirecte</p></div>';
+    }
+  }
+
+  // ── Superviseurs N1 ───────────────────────────────────────────
+  async function loadSupervisors() {
+    await fetchAllUsers();
+    const ticketsRes = await api('/api/tickets');
+    const allMyTkts  = ticketsRes?.success ? filterMyTickets(ticketsRes.tickets) : [];
+    const todayTkts  = allMyTkts.filter(t => (t.created_at || '').startsWith(today()));
+
+    $('supervisorsList').innerHTML = mySups1.length
+      ? `<table><thead><tr><th>Nom</th><th>Identifiant</th><th>Statut</th><th>Nb agents</th><th>Tickets (auj.)</th><th>Ventes (HTG)</th></tr></thead><tbody>
+          ${mySups1.map(s => {
+            const sId = getId(s);
+            const sAgents = myAgents.filter(a => getId(a.supervisor_id) === sId);
+            const sAgentIds = sAgents.map(a => getId(a));
+            const sTkts = todayTkts.filter(t => {
+              const agId = t.agent_id?._id ? getId(t.agent_id) : t.agent_id?.toString();
+              return sAgentIds.includes(agId);
+            });
+            const sSales = sTkts.reduce((sum, t) => sum + (t.total_amount || 0), 0);
+            return `<tr>
+              <td><strong>${s.full_name || s.username}</strong></td>
+              <td><code>${s.username}</code></td>
+              <td><span class="badge ${s.is_active ? 'badge-active' : 'badge-inactive'}">${s.is_active ? 'Actif' : 'Inactif'}</span></td>
+              <td>${sAgents.length}</td>
+              <td>${sTkts.length}</td>
+              <td>${sSales.toLocaleString()}</td>
+            </tr>`;
+          }).join('')}
+        </tbody></table>`
+      : '<div class="empty"><i class="fas fa-user-tie"></i><p>Aucun superviseur N1 rattaché à votre supervision</p></div>';
+  }
+
+  // ── Agents ────────────────────────────────────────────────────
+  async function loadAgents() {
+    await fetchAllUsers();
+    $('agentsList').innerHTML = myAgents.length
+      ? `<table><thead><tr><th>Nom</th><th>Identifiant</th><th>Superviseur N1</th><th>Statut</th><th>En ligne</th><th>Commission</th></tr></thead><tbody>
+          ${myAgents.map(a => {
+            const sup = mySups1.find(s => getId(s) === getId(a.supervisor_id));
+            return `<tr>
+              <td><strong>${a.full_name || a.username}</strong></td>
+              <td><code>${a.username}</code></td>
+              <td>${sup?.full_name || '—'}</td>
+              <td><span class="badge ${a.is_active ? 'badge-active' : 'badge-inactive'}">${a.is_active ? 'Actif' : 'Inactif'}</span></td>
+              <td>${a.is_online ? '<span class="badge badge-online">En ligne</span>' : '<span style="color:#94a3b8;font-size:.8rem">Hors ligne</span>'}</td>
+              <td>${a.commission_rate || 10}%</td>
+            </tr>`;
+          }).join('')}
+        </tbody></table>`
+      : '<div class="empty"><i class="fas fa-users"></i><p>Aucun agent sous votre supervision</p></div>';
+  }
+
+  // ── Tickets ───────────────────────────────────────────────────
+  async function populateTicketFilters() {
+    await fetchAllUsers();
+    const drawsRes = await api('/api/subsystem/draws');
+    $('tAgent').innerHTML = '<option value="all">Tous</option>' + myAgents.map(a => `<option value="${getId(a)}">${a.full_name || a.username}</option>`).join('');
+    if (drawsRes?.success) {
+      $('tDraw').innerHTML = '<option value="all">Tous</option>' + drawsRes.draws.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+    }
+  }
+
+  async function loadTickets() {
+    await fetchAllUsers();
+    const p = new URLSearchParams();
+    const agentVal = $('tAgent').value;
+    const drawVal  = $('tDraw').value;
+    if (agentVal !== 'all') p.set('agent_id', agentVal);
+    if (drawVal  !== 'all') p.set('draw', drawVal);
+    const res = await api(`/api/tickets?${p}`);
+    if (!res?.success) return;
+    const myTkts = agentVal === 'all' ? filterMyTickets(res.tickets) : res.tickets;
+    $('ticketsList').innerHTML = myTkts.length
+      ? `<table><thead><tr><th>#Ticket</th><th>Agent</th><th>Tirage</th><th>Séance</th><th>Total (HTG)</th><th>Date</th></tr></thead><tbody>
+          ${myTkts.map(t => `<tr>
+            <td><code>${t.ticket_number}</code></td>
+            <td>${t.agent_name || '—'}</td>
+            <td>${t.draw}</td>
+            <td>${t.draw_time === 'morning' ? 'Maten' : 'Swè'}</td>
+            <td><strong>${(t.total_amount||0).toLocaleString()}</strong></td>
+            <td>${new Date(t.created_at).toLocaleString('fr-FR')}</td>
+          </tr>`).join('')}
+        </tbody></table>`
+      : '<div class="empty"><i class="fas fa-ticket-alt"></i><p>Aucun ticket trouvé</p></div>';
+  }
+
+  $('tFilterBtn').addEventListener('click', loadTickets);
+
+  // ── Rapport ───────────────────────────────────────────────────
+  async function populateReportFilters() {
+    await fetchAllUsers();
+    $('rpSup').innerHTML   = '<option value="all">Tous</option>' + mySups1.map(s => `<option value="${getId(s)}">${s.full_name}</option>`).join('');
+    $('rpAgent').innerHTML = '<option value="all">Tous</option>' + myAgents.map(a => `<option value="${getId(a)}">${a.full_name}</option>`).join('');
+  }
+
+  $('rpBtn').addEventListener('click', async () => {
+    await fetchAllUsers();
+    const params = new URLSearchParams({
+      supervisorId: $('rpSup').value,
+      agentId:      $('rpAgent').value,
+      period:       $('rpPeriod').value
+    });
+    const res = await api(`/api/subsystem/reports?${params}`);
+    if (!res?.success) return;
+    const s = res.summary;
+    $('rpContent').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px">
+        ${[['Tickets', s.total_tickets, '#8e44ad'],['Ventes (HTG)',(s.total_bets||0).toLocaleString(),'#f39c12'],['Gains estimés (HTG)',(s.total_wins||0).toLocaleString(),'#27ae60']].map(([label,val,color])=>
+          `<div style="background:white;border-radius:10px;padding:16px;border-left:4px solid ${color};box-shadow:0 2px 6px rgba(0,0,0,.06)">
+            <div style="font-size:1.5rem;font-weight:800">${val}</div>
+            <div style="color:#94a3b8;font-size:.8rem">${label}</div>
+          </div>`).join('')}
+      </div>`;
+    $('rpResult').style.display = '';
+  });
+
+  // ── Globaux ───────────────────────────────────────────────────
+  $('refreshBtn').addEventListener('click', () => {
+    loadDashboard();
+    toast('Données actualisées', 'info');
+  });
+  $('logoutBtn').addEventListener('click', logout);
+
+  // ── Init ──────────────────────────────────────────────────────
+  (async function init() {
+    const res = await api('/api/auth/check');
+    if (!res?.success || res.user.role !== 'supervisor' || res.user.level !== 2) {
+      toast('Accès réservé aux superviseurs niveau 2', 'error');
+      setTimeout(logout, 1800);
+      return;
+    }
+    currentUser = res.user;
+    $('sbName').textContent   = res.user.full_name || res.user.username;
+    $('sbAvatar').textContent = (res.user.full_name || 'S').charAt(0).toUpperCase();
+    await loadDashboard();
+  })();
+})();
+</script>
 </body>
 </html>
