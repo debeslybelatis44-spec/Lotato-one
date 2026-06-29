@@ -268,7 +268,7 @@ function showScreen(screenName) {
     case 'winning-tickets':
       if (mainContainer) mainContainer.style.display = 'none';
       document.getElementById('winning-tickets-screen').style.display = 'block';
-      loadTicketHistory().then(() => checkWinningTickets());
+      loadAndCheckWinners();
       break;
 
     case 'report':
@@ -349,56 +349,73 @@ function showBetForm(gameType) {
   bf.style.display = 'block';
   document.getElementById('games-interface').style.display = 'none';
 
+  // Style commun inline partagé par tous les types
+  const ROW = `style="display:flex;gap:10px;align-items:flex-end;margin-bottom:10px"`;
+  const INP = `style="font-size:1.4rem;font-weight:800;text-align:center;letter-spacing:3px;width:100%;padding:10px;border:2px solid #e2e8f0;border-radius:10px"`;
+  const AMT = `style="font-size:1.3rem;font-weight:700;text-align:center;width:100%;padding:10px;border:2px solid #e2e8f0;border-radius:10px"`;
+
   let html = '';
   switch (gameType) {
     case 'borlette':
     case 'boulpe':
-      html = `<h3>${betTypes[gameType].name}</h3>
-        <div style="display:flex;gap:10px;align-items:flex-end">
-          <div class="form-group" style="flex:1">
-            <label>Nimewo (2 chif)</label>
-            <input type="text" id="bet-number" maxlength="2" inputmode="numeric" placeholder="ex: 23"
-              style="font-size:1.4rem;font-weight:800;text-align:center;letter-spacing:4px">
-          </div>
-          <div class="form-group" style="flex:1">
-            <label>Kantite (HTG)</label>
-            <input type="number" id="bet-amount" min="1" placeholder="ex: 100"
-              style="font-size:1.2rem;font-weight:700;text-align:center">
-          </div>
+      html = `<h3>${betTypes[gameType].name} <small style="font-size:.7em;color:#94a3b8">×${betTypes[gameType].multiplier}/${betTypes[gameType].multiplier2}/${betTypes[gameType].multiplier3}</small></h3>
+        <div ${ROW}>
+          <div style="flex:1.2"><label style="font-size:.8rem;font-weight:700;color:#475569">Nimewo (2 chif)</label>
+            <input type="text" id="bet-number" maxlength="2" inputmode="numeric" placeholder="23" ${INP}></div>
+          <div style="flex:1"><label style="font-size:.8rem;font-weight:700;color:#475569">Kantite (G)</label>
+            <input type="number" id="bet-amount" min="1" placeholder="100" ${AMT}></div>
         </div>`;
       break;
+
     case 'lotto3':
-      html = `<h3>LOTTO 3</h3>
-        <div class="form-group"><label>Nimewo (3 chif)</label><input type="text" id="bet-number" maxlength="3" inputmode="numeric" placeholder="ex: 456"></div>
-        <div class="form-group"><label>Kantite (HTG)</label><input type="number" id="bet-amount" min="1" placeholder="ex: 50"></div>`;
+      html = `<h3>LOTTO 3 <small style="font-size:.7em;color:#94a3b8">×${betTypes.lotto3.multiplier}</small></h3>
+        <div ${ROW}>
+          <div style="flex:1.2"><label style="font-size:.8rem;font-weight:700;color:#475569">Nimewo (3 chif)</label>
+            <input type="text" id="bet-number" maxlength="3" inputmode="numeric" placeholder="456" ${INP}></div>
+          <div style="flex:1"><label style="font-size:.8rem;font-weight:700;color:#475569">Kantite (G)</label>
+            <input type="number" id="bet-amount" min="1" placeholder="50" ${AMT}></div>
+        </div>`;
       break;
+
     case 'marriage':
-      html = `<h3>MARYAJ</h3>
-        <div class="number-inputs">
-          <input type="text" id="bet-num1" maxlength="2" inputmode="numeric" placeholder="1e boule (ex:12)" style="flex:1">
-          <input type="text" id="bet-num2" maxlength="2" inputmode="numeric" placeholder="2e boule (ex:34)" style="flex:1">
-        </div>
-        <div class="form-group"><label>Kantite (HTG)</label><input type="number" id="bet-amount" min="1"></div>`;
+      html = `<h3>MARYAJ <small style="font-size:.7em;color:#94a3b8">×${betTypes.marriage.multiplier}</small></h3>
+        <div ${ROW}>
+          <div style="flex:1"><label style="font-size:.8rem;font-weight:700;color:#475569">1e Boule</label>
+            <input type="text" id="bet-num1" maxlength="2" inputmode="numeric" placeholder="12" ${INP}></div>
+          <div style="flex:1"><label style="font-size:.8rem;font-weight:700;color:#475569">2e Boule</label>
+            <input type="text" id="bet-num2" maxlength="2" inputmode="numeric" placeholder="34" ${INP}></div>
+          <div style="flex:1"><label style="font-size:.8rem;font-weight:700;color:#475569">Kantite (G)</label>
+            <input type="number" id="bet-amount" min="1" placeholder="50" ${AMT}></div>
+        </div>`;
       break;
+
     case 'grap':
-      html = `<h3>GRAP (3 chif idantik)</h3>
-        <div class="form-group"><label>Nimewo Grap (ex: 111, 222)</label><input type="text" id="bet-number" maxlength="3" inputmode="numeric"></div>
-        <div class="form-group"><label>Kantite (HTG)</label><input type="number" id="bet-amount" min="1"></div>`;
+      html = `<h3>GRAP <small style="font-size:.7em;color:#94a3b8">×${betTypes.grap.multiplier} — 3 chif idantik</small></h3>
+        <div ${ROW}>
+          <div style="flex:1.2"><label style="font-size:.8rem;font-weight:700;color:#475569">Nimewo (ex: 111)</label>
+            <input type="text" id="bet-number" maxlength="3" inputmode="numeric" placeholder="111" ${INP}></div>
+          <div style="flex:1"><label style="font-size:.8rem;font-weight:700;color:#475569">Kantite (G)</label>
+            <input type="number" id="bet-amount" min="1" placeholder="50" ${AMT}></div>
+        </div>`;
       break;
+
     case 'lotto4':
     case 'lotto5': {
       const is5 = gameType === 'lotto5';
-      html = `<h3>${is5 ? 'LOTTO 5' : 'LOTTO 4'}</h3>
-        <div class="number-inputs">
-          <input type="text" id="bet-num1" maxlength="${is5 ? 3 : 2}" inputmode="numeric" placeholder="${is5 ? '3 chif' : '2 chif'}" style="flex:1">
-          <input type="text" id="bet-num2" maxlength="2" inputmode="numeric" placeholder="2 chif" style="flex:1">
+      html = `<h3>${is5 ? 'LOTTO 5' : 'LOTTO 4'} <small style="font-size:.7em;color:#94a3b8">×${betTypes[gameType].multiplier}</small></h3>
+        <div ${ROW}>
+          <div style="flex:1"><label style="font-size:.8rem;font-weight:700;color:#475569">${is5 ? '1e (3 chif)' : '1e (2 chif)'}</label>
+            <input type="text" id="bet-num1" maxlength="${is5 ? 3 : 2}" inputmode="numeric" placeholder="${is5 ? '456' : '23'}" ${INP}></div>
+          <div style="flex:1"><label style="font-size:.8rem;font-weight:700;color:#475569">2e (2 chif)</label>
+            <input type="text" id="bet-num2" maxlength="2" inputmode="numeric" placeholder="78" ${INP}></div>
+          <div style="flex:1"><label style="font-size:.8rem;font-weight:700;color:#475569">Kantite/Opsyon (G)</label>
+            <input type="number" id="bet-amount" min="1" placeholder="50" ${AMT}></div>
         </div>
-        <div class="options-container">
+        <div class="options-container" style="margin-top:8px">
           <div class="option-checkbox"><input type="checkbox" id="opt1"><label for="opt1">Opsyon 1 <span class="option-multiplier">×${betTypes[gameType].multiplier}</span></label></div>
           <div class="option-checkbox"><input type="checkbox" id="opt2"><label for="opt2">Opsyon 2 <span class="option-multiplier">×${betTypes[gameType].multiplier}</span></label></div>
-          <div class="option-checkbox"><input type="checkbox" id="opt3"><label for="opt3">Opsyon 3 (Anagram) <span class="option-multiplier">×${betTypes[gameType].multiplier}</span></label></div>
-        </div>
-        <div class="form-group"><label>Kantite pa opsyon (HTG)</label><input type="number" id="bet-amount" min="1"></div>`;
+          <div class="option-checkbox"><input type="checkbox" id="opt3"><label for="opt3">Opsyon 3 Anagram <span class="option-multiplier">×${betTypes[gameType].multiplier}</span></label></div>
+        </div>`;
       break;
     }
   }
@@ -643,9 +660,7 @@ async function shareTicketAfterSave() {
   if (activeBets.length === 0) { showNotification('Pa gen parye pou voye', 'warning'); return; }
   const ticket = await saveTicket();
   if (!ticket) return;
-  currentTicketToShare = ticket;
-  const modal = document.getElementById('send-ticket-modal');
-  if (modal) modal.style.display = 'flex';
+  await openShareModal(ticket);
 }
 
 function formatTicketText(ticket) {
@@ -667,40 +682,155 @@ function formatTicketText(ticket) {
   return lines.join('\n');
 }
 
-// ── Modal d'envoi ─────────────────────────────────────────────────
+// ── Modal d'envoi multi-canal ─────────────────────────────────────
 function initSendModal() {
-  const modal     = document.getElementById('send-ticket-modal');
-  const closeBtn  = document.getElementById('close-send-modal');
-  const confirmBtn= document.getElementById('confirm-send-btn');
-  if (!modal) return;
+  // Le modal est créé dynamiquement dans openShareModal()
+}
 
-  document.querySelectorAll('.send-option-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const method = btn.dataset.method;
-      const phoneDiv = document.getElementById('phone-input-container');
-      if (method === 'whatsapp' || method === 'sms') {
-        if (phoneDiv) phoneDiv.style.display = 'block';
-        if (confirmBtn) {
-          confirmBtn.onclick = () => {
-            const phone = document.getElementById('send-phone-number')?.value?.trim();
-            if (!phone) { showNotification('Antre nimewo', 'warning'); return; }
-            const text  = formatTicketText(currentTicketToShare);
-            const url   = method === 'whatsapp'
-              ? `https://wa.me/${phone.replace(/\D/g,'')}?text=${encodeURIComponent(text)}`
-              : `sms:${phone}?body=${encodeURIComponent(text)}`;
-            window.open(url, '_blank');
-            modal.style.display = 'none';
-            showNotification('Ticket voye!', 'success');
-          };
-        }
-      }
+async function openShareModal(ticket) {
+  currentTicketToShare = ticket;
+  const text = formatTicketText(ticket);
+
+  // Créer le modal dynamiquement si absent
+  let modal = document.getElementById('dynamic-share-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'dynamic-share-modal';
+    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:flex-end;justify-content:center';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div style="background:white;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;animation:slideUp .3s">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h3 style="font-weight:800;font-size:1.1rem"><i class="fas fa-share-alt" style="color:#8e44ad"></i> Voye Ticket</h3>
+        <button onclick="document.getElementById('dynamic-share-modal').style.display='none'"
+          style="background:none;border:none;font-size:1.4rem;color:#94a3b8;cursor:pointer">×</button>
+      </div>
+
+      <!-- Prévisualisation ticket -->
+      <div style="background:#f8fafc;border-radius:10px;padding:12px;font-size:.8rem;font-family:monospace;
+        white-space:pre-wrap;max-height:140px;overflow-y:auto;margin-bottom:16px;color:#2c3e50">
+${text}
+      </div>
+
+      <!-- Champ téléphone (WhatsApp/SMS) -->
+      <div id="phone-row" style="display:none;margin-bottom:14px">
+        <label style="font-size:.82rem;font-weight:700;color:#475569">Nimewo telefòn:</label>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <input type="tel" id="share-phone" placeholder="+509 XXXX XXXX" inputmode="tel"
+            style="flex:1;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.95rem">
+        </div>
+      </div>
+
+      <!-- Boutons -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+
+        <!-- WhatsApp -->
+        <button id="share-wa" style="background:#25D366;color:white;border:none;border-radius:12px;
+          padding:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.92rem">
+          <i class="fab fa-whatsapp" style="font-size:1.3rem"></i> WhatsApp
+        </button>
+
+        <!-- SMS -->
+        <button id="share-sms" style="background:#3498db;color:white;border:none;border-radius:12px;
+          padding:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.92rem">
+          <i class="fas fa-sms" style="font-size:1.1rem"></i> SMS
+        </button>
+
+        <!-- Web Share API (Bluetooth, autres apps) -->
+        <button id="share-native" style="background:#8e44ad;color:white;border:none;border-radius:12px;
+          padding:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.92rem">
+          <i class="fas fa-share" style="font-size:1.1rem"></i> Pataje
+        </button>
+
+        <!-- Copier -->
+        <button id="share-copy" style="background:#f39c12;color:white;border:none;border-radius:12px;
+          padding:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.92rem">
+          <i class="fas fa-copy" style="font-size:1.1rem"></i> Kopye
+        </button>
+      </div>
+
+      <button onclick="document.getElementById('dynamic-share-modal').style.display='none'"
+        style="width:100%;margin-top:12px;padding:12px;background:#f1f5f9;border:none;border-radius:10px;
+          font-weight:700;color:#475569;cursor:pointer">Anile</button>
+    </div>
+    <style>@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}</style>`;
+
+  modal.style.display = 'flex';
+
+  const phoneRow = document.getElementById('phone-row');
+
+  // WhatsApp
+  document.getElementById('share-wa').addEventListener('click', () => {
+    phoneRow.style.display = 'block';
+    document.getElementById('share-phone').placeholder = '+509 XXXX XXXX';
+    document.getElementById('share-phone').focus();
+    document.getElementById('share-wa').onclick = null;
+    document.getElementById('share-wa').addEventListener('click', () => {
+      const phone = document.getElementById('share-phone').value.trim().replace(/\D/g,'');
+      if (!phone) { showNotification('Antre nimewo telefòn', 'warning'); return; }
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
+      modal.style.display = 'none';
+      showNotification('Ticket voye sou WhatsApp!', 'success');
     });
   });
 
-  if (closeBtn) closeBtn.addEventListener('click', () => { modal.style.display = 'none'; });
+  // SMS
+  document.getElementById('share-sms').addEventListener('click', () => {
+    phoneRow.style.display = 'block';
+    document.getElementById('share-phone').focus();
+    document.getElementById('share-sms').addEventListener('click', () => {
+      const phone = document.getElementById('share-phone').value.trim();
+      if (!phone) { showNotification('Antre nimewo telefòn', 'warning'); return; }
+      window.location.href = `sms:${phone}?body=${encodeURIComponent(text)}`;
+      modal.style.display = 'none';
+    });
+  });
+
+  // Web Share API natif (supporte Bluetooth, NFC, toutes les apps)
+  document.getElementById('share-native').addEventListener('click', async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Ticket ${ticket.serverNumber || ticket.number}`, text });
+        modal.style.display = 'none';
+        showNotification('Ticket pataje!', 'success');
+      } catch (e) {
+        if (e.name !== 'AbortError') showNotification('Pataj pa mache', 'error');
+      }
+    } else {
+      showNotification('Fonksyon sa pa disponib sou navigatè sa', 'warning');
+    }
+  });
+
+  // Copier dans le presse-papier
+  document.getElementById('share-copy').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showNotification('Ticket kopye! Kole kote ou vle.', 'success');
+    } catch {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+      showNotification('Ticket kopye!', 'success');
+    }
+    modal.style.display = 'none';
+  });
+
+  // Fermer en cliquant l'arrière-plan
+  modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
 }
 
 // ── Vérification des gagnants ─────────────────────────────────────
+
+// Charger tickets + résultats depuis l'API puis vérifier
+async function loadAndCheckWinners() {
+  showNotification('Ap chèche fich gagnant…', 'info');
+  await Promise.all([loadTicketHistory(), loadResults()]);
+  checkWinningTickets();
+}
+
 function checkBetAgainstResult(bet, result) {
   const lot1 = result.lot1, lot2 = result.lot2 || '', lot3 = result.lot3 || '';
   const lot1Last2 = lot1.length >= 2 ? lot1.slice(-2) : lot1;
@@ -790,23 +920,94 @@ function displayWinningTickets() {
   if (!container) return;
 
   if (!winningTickets.length) {
-    container.innerHTML = '<p style="text-align:center;color:#94a3b8">Pa gen fiche gagnant</p>';
+    container.innerHTML = `
+      <div style="text-align:center;padding:32px;color:#94a3b8">
+        <i class="fas fa-trophy" style="font-size:2.5rem;margin-bottom:12px;display:block"></i>
+        <p>Pa gen fiche gagnant pou moman sa</p>
+        <small>Rezilta yo dwe pibliye anvan wè fiche gagnant</small>
+      </div>`;
     if (summary) summary.innerHTML = '';
     return;
   }
 
   const totalGains = winningTickets.reduce((s, t) => s + t.totalWinnings, 0);
-  if (summary) summary.innerHTML = `
-    <div class="stat-card"><div class="stat-value">${winningTickets.length}</div><div class="stat-label">Fiche Gagnant</div></div>
-    <div class="stat-card"><div class="stat-value">${totalGains.toLocaleString()} G</div><div class="stat-label">Total Gains</div></div>`;
 
-  container.innerHTML = winningTickets.map(t => `
-    <div class="winning-ticket">
-      <strong>Fiche #${t.serverNumber || t.number}</strong> — ${draws[t.draw]?.name || t.draw} (${t.drawTime === 'morning' ? 'Maten' : 'Swè'})<br>
-      Rezilta: ${t.result.lot1}${t.result.lot2 ? ' | ' + t.result.lot2 : ''}${t.result.lot3 ? ' | ' + t.result.lot3 : ''}<br>
-      ${t.winningBets.map(b => `${b.name} ${b.number} → ${b.winType}: <strong>${b.winAmount.toLocaleString()} G</strong>`).join('<br>')}
-      <div style="margin-top:8px;font-weight:bold;color:#27ae60">Total: ${t.totalWinnings.toLocaleString()} G</div>
-    </div>`).join('');
+  // Résumé
+  if (summary) summary.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+      <div style="background:linear-gradient(135deg,#f39c12,#e67e22);color:white;border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:1.8rem;font-weight:800">${winningTickets.length}</div>
+        <div style="font-size:.8rem;opacity:.9">Fiche Gagnant</div>
+      </div>
+      <div style="background:linear-gradient(135deg,#27ae60,#1e8449);color:white;border-radius:12px;padding:14px;text-align:center">
+        <div style="font-size:1.8rem;font-weight:800">${totalGains.toLocaleString()}</div>
+        <div style="font-size:.8rem;opacity:.9">Total Gains (G)</div>
+      </div>
+    </div>`;
+
+  // Détail de chaque ticket gagnant
+  container.innerHTML = winningTickets.map(t => {
+    const drawInfo = draws[t.draw] || { name: t.draw, icon: '' };
+    const seance   = t.drawTime === 'morning' ? '☀️ Maten' : '🌙 Swè';
+
+    // Résultat du tirage
+    const resRow = `
+      <div style="background:#f8fafc;border-radius:8px;padding:10px;margin-bottom:10px;font-size:.88rem">
+        <strong>Rezilta Tiraj:</strong>
+        <span style="margin-left:8px">
+          <span style="background:#e74c3c;color:white;padding:3px 10px;border-radius:20px;font-weight:800;font-size:1rem">${t.result.lot1}</span>
+          ${t.result.lot2 ? `<span style="background:#3498db;color:white;padding:3px 10px;border-radius:20px;font-weight:800;margin-left:4px">${t.result.lot2}</span>` : ''}
+          ${t.result.lot3 ? `<span style="background:#8e44ad;color:white;padding:3px 10px;border-radius:20px;font-weight:800;margin-left:4px">${t.result.lot3}</span>` : ''}
+        </span>
+      </div>`;
+
+    // Bets gagnants avec détail
+    const winRows = t.winningBets.map(b => `
+      <div style="display:flex;justify-content:space-between;align-items:center;
+        padding:8px 10px;background:#f0fdf4;border-radius:8px;margin-bottom:6px;border-left:3px solid #27ae60">
+        <div>
+          <span style="font-weight:800;color:#2c3e50">${b.name}</span>
+          <span style="background:#27ae60;color:white;padding:2px 8px;border-radius:12px;margin-left:6px;font-weight:800">${b.number}</span>
+          <span style="color:#64748b;font-size:.8rem;margin-left:6px">${b.winType} (mise: ${b.amount} G × ${b.multiplier})</span>
+        </div>
+        <span style="font-weight:800;color:#27ae60;font-size:1.1rem">+${b.winAmount.toLocaleString()} G</span>
+      </div>`).join('');
+
+    // Bets non-gagnants (pour transparence)
+    const loseRows = (t.bets || [])
+      .filter(b => !t.winningBets.find(w => w.number === b.number && w.type === b.type))
+      .map(b => `
+        <div style="display:flex;justify-content:space-between;padding:6px 10px;
+          color:#94a3b8;font-size:.82rem;border-left:3px solid #e2e8f0;margin-bottom:4px">
+          <span>${b.name} <strong>${b.number}</strong> — ${b.amount} G</span>
+          <span>❌</span>
+        </div>`).join('');
+
+    return `
+      <div style="background:white;border-radius:14px;padding:16px;margin-bottom:16px;
+        box-shadow:0 4px 16px rgba(39,174,96,.15);border:2px solid #d1fae5">
+        <!-- Header ticket -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div>
+            <span style="font-weight:800;font-size:1rem">${drawInfo.icon||''} ${drawInfo.name}</span>
+            <span style="color:#64748b;font-size:.82rem;margin-left:6px">${seance}</span>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:.75rem;color:#94a3b8">Fiche #${t.serverNumber || String(t.number).padStart(4,'0')}</div>
+            <div style="font-size:.75rem;color:#94a3b8">${new Date(t.date).toLocaleDateString('fr-FR')}</div>
+          </div>
+        </div>
+        ${resRow}
+        <div style="font-weight:700;font-size:.85rem;color:#27ae60;margin-bottom:6px">✅ Parye Gagnant:</div>
+        ${winRows}
+        ${loseRows ? `<div style="font-weight:700;font-size:.82rem;color:#94a3b8;margin:8px 0 4px">Parye pa genyen:</div>${loseRows}` : ''}
+        <div style="display:flex;justify-content:space-between;align-items:center;
+          margin-top:12px;padding-top:10px;border-top:2px solid #d1fae5">
+          <span style="color:#64748b;font-size:.85rem">Total mise: ${(t.total||0).toLocaleString()} G</span>
+          <span style="font-weight:800;font-size:1.2rem;color:#27ae60">Genyen: ${t.totalWinnings.toLocaleString()} G</span>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // ── Historique groupé par tirage ─────────────────────────────────
