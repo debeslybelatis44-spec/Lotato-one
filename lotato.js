@@ -58,12 +58,12 @@ async function apiCall(path, method = 'GET', body = null) {
 // ── Authentification ──────────────────────────────────────────────
 async function checkAuth() {
   const token = localStorage.getItem('lotato_token');
-  if (!token) { showLoginScreen(); return false; }
+  if (!token) { window.location.href = '/index.html'; return false; }
   try {
     const data = await apiCall('/api/auth/check');
     if (!data.success || data.user.role !== 'agent') {
       localStorage.removeItem('lotato_token');
-      showLoginScreen();
+      window.location.href = '/index.html';
       return false;
     }
     currentUser = data.user;
@@ -75,7 +75,7 @@ async function checkAuth() {
       currentUser = JSON.parse(stored);
       if (currentUser.role === 'agent') return true;
     }
-    showLoginScreen();
+    window.location.href = '/index.html';
     return false;
   }
 }
@@ -107,7 +107,8 @@ function handleLogout() {
   localStorage.removeItem('lotato_user');
   currentUser = null;
   activeBets  = [];
-  showLoginScreen();
+  // Rediriger vers la page de connexion principale (index.html)
+  window.location.href = '/index.html';
 }
 
 function showLoginScreen() {
