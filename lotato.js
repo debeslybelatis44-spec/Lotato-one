@@ -256,27 +256,33 @@ function showScreen(screenName) {
 
   switch (screenName) {
     case 'home':
-      // déjà affiché
       break;
+
     case 'history':
       if (mainContainer) mainContainer.style.display = 'none';
       document.getElementById('history-screen').style.display = 'block';
-      updateHistoryScreen();
+      // Recharger depuis l'API puis afficher groupé par tirage
+      loadTicketHistory();
       break;
+
     case 'winning-tickets':
       if (mainContainer) mainContainer.style.display = 'none';
       document.getElementById('winning-tickets-screen').style.display = 'block';
-      checkWinningTickets();
+      loadTicketHistory().then(() => checkWinningTickets());
       break;
+
     case 'report':
+    case 'report-stats':
+      // Le rapport s'affiche dans report-stats-screen (lotato.html)
       if (mainContainer) mainContainer.style.display = 'none';
-      document.getElementById('report-screen').style.display = 'block';
+      document.getElementById('report-stats-screen').style.display = 'block';
       loadReportByPeriod('today');
       break;
+
     case 'results':
       if (mainContainer) mainContainer.style.display = 'none';
       document.getElementById('results-check-screen').style.display = 'block';
-      updateResultsDisplay();
+      loadResults().then(() => updateResultsDisplay());
       break;
   }
 }
@@ -295,9 +301,10 @@ function openBettingScreen(drawId, time = 'morning') {
   bs.style.display = 'block';
 
   const titleEl = document.getElementById('betting-title');
-  const timeEl  = document.getElementById('betting-time');
-  if (titleEl) titleEl.textContent = draw.name;
-  if (timeEl)  timeEl.textContent  = time === 'morning' ? 'Maten' : 'Swè';
+  if (titleEl) {
+    const seance = time === 'morning' ? '☀️ Maten' : '🌙 Swè';
+    titleEl.innerHTML = `${draw.icon || ''} ${draw.name} <span style="font-size:.85em;opacity:.85;margin-left:6px">${seance}</span>`;
+  }
 
   renderGamesInterface();
   updateBetsList();
@@ -347,8 +354,18 @@ function showBetForm(gameType) {
     case 'borlette':
     case 'boulpe':
       html = `<h3>${betTypes[gameType].name}</h3>
-        <div class="form-group"><label>Nimewo (2 chif)</label><input type="text" id="bet-number" maxlength="2" inputmode="numeric" placeholder="ex: 23"></div>
-        <div class="form-group"><label>Kantite (HTG)</label><input type="number" id="bet-amount" min="1" placeholder="ex: 100"></div>`;
+        <div style="display:flex;gap:10px;align-items:flex-end">
+          <div class="form-group" style="flex:1">
+            <label>Nimewo (2 chif)</label>
+            <input type="text" id="bet-number" maxlength="2" inputmode="numeric" placeholder="ex: 23"
+              style="font-size:1.4rem;font-weight:800;text-align:center;letter-spacing:4px">
+          </div>
+          <div class="form-group" style="flex:1">
+            <label>Kantite (HTG)</label>
+            <input type="number" id="bet-amount" min="1" placeholder="ex: 100"
+              style="font-size:1.2rem;font-weight:700;text-align:center">
+          </div>
+        </div>`;
       break;
     case 'lotto3':
       html = `<h3>LOTTO 3</h3>
@@ -792,63 +809,199 @@ function displayWinningTickets() {
     </div>`).join('');
 }
 
-// ── Historique ────────────────────────────────────────────────────
+// ── Historique groupé par tirage ─────────────────────────────────
 function updateHistoryScreen() {
   const list = document.getElementById('history-list');
   if (!list) return;
-  if (!savedTickets.length) { list.innerHTML = '<p style="color:#94a3b8;text-align:center">Pa gen fiche ki sove</p>'; return; }
-  const sorted = [...savedTickets].sort((a, b) => new Date(b.date) - new Date(a.date));
-  list.innerHTML = sorted.map(t => `
-    <div class="history-item">
-      <div class="history-header">
-        <span class="history-draw">#${t.serverNumber || String(t.number).padStart(4,'0')} — ${draws[t.draw]?.name || t.draw} (${t.drawTime === 'morning' ? 'Maten' : 'Swè'})</span>
-        <span class="history-date">${new Date(t.date).toLocaleString('fr-FR')}</span>
-      </div>
-      <div>Total: <strong>${t.total} G</strong></div>
-    </div>`).join('');
+  if (!savedTickets.length) {
+    list.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:24px">Pa gen fiche ki sove</p>';
+    return;
+  }
+
+  // Grouper par tirage + séance
+  const groups = {};
+  [...savedTickets]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .forEach(t => {
+      const key = `${t.draw}__${t.drawTime}`;
+      if (!groups[key]) groups[key] = { draw: t.draw, drawTime: t.drawTime, tickets: [] };
+      groups[key].tickets.push(t);
+    });
+
+  list.innerHTML = Object.values(groups).map(g => {
+    const drawInfo = draws[g.draw] || { name: g.draw, icon: '' };
+    const seance   = g.drawTime === 'morning' ? '☀️ Maten' : '🌙 Swè';
+    const total    = g.tickets.reduce((s, t) => s + (t.total || 0), 0);
+    const rows     = g.tickets.map(t => `
+      <div class="history-item" style="border-left:3px solid #e2e8f0;padding-left:10px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:700">#${t.serverNumber || String(t.number).padStart(4,'0')}</span>
+          <span style="color:#64748b;font-size:.8rem">${new Date(t.date).toLocaleString('fr-FR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</span>
+        </div>
+        <div style="font-size:.85rem;color:#475569">
+          ${(t.bets || []).map(b => `${b.name} <strong>${b.number}</strong> — ${b.amount} G`).join(' &nbsp;|&nbsp; ')}
+        </div>
+        <div style="text-align:right;font-weight:800;color:#2c3e50">Total: ${t.total} G</div>
+      </div>`).join('');
+
+    return `
+      <div style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;
+          background:linear-gradient(135deg,#1e293b,#334155);color:white;
+          padding:12px 16px;border-radius:10px;margin-bottom:10px;cursor:pointer"
+          onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display==='none'?'block':'none'">
+          <span style="font-weight:800;font-size:1rem">${drawInfo.icon || ''} ${drawInfo.name} — ${seance}</span>
+          <div style="text-align:right">
+            <div style="font-size:.8rem;opacity:.8">${g.tickets.length} fiche</div>
+            <div style="font-weight:800">${total.toLocaleString()} G</div>
+          </div>
+        </div>
+        <div style="display:block">${rows}</div>
+      </div>`;
+  }).join('');
 }
 
-// ── Rapports ──────────────────────────────────────────────────────
+// ── Rapports complets par tirage + période ───────────────────────
 function loadReportByPeriod(period) {
-  const end   = new Date();
-  let start   = new Date();
+  const end = new Date();
+  let start = new Date();
   switch (period) {
     case 'today':     start.setHours(0,0,0,0); break;
     case 'yesterday': start.setDate(end.getDate()-1); start.setHours(0,0,0,0); end.setDate(end.getDate()-1); end.setHours(23,59,59,999); break;
-    case '7days':     start.setDate(end.getDate()-7); break;
-    case '15days':    start.setDate(end.getDate()-15); break;
+    case 'week':      start.setDate(end.getDate()-7); break;
     case 'month':     start = new Date(end.getFullYear(), end.getMonth(), 1); break;
-    default:          start.setDate(end.getDate()-15);
+    default:          start.setHours(0,0,0,0);
   }
-  const sdEl = document.getElementById('start-date');
-  const edEl = document.getElementById('end-date');
-  if (sdEl) sdEl.value = start.toISOString().split('T')[0];
-  if (edEl) edEl.value = end.toISOString().split('T')[0];
-  renderReport(start, end);
+  renderReport(start, end, period);
 }
 
-function renderReport(start, end) {
-  const filtered     = savedTickets.filter(t => { const d = new Date(t.date); return d >= start && d <= end; });
-  const totalSales   = filtered.reduce((s, t) => s + t.total, 0);
-  const commission   = companyInfo.agentCommission || 10;
-  const commEarned   = totalSales * (commission / 100);
-  const drawStats    = {};
-  filtered.forEach(t => { drawStats[t.draw] = (drawStats[t.draw] || 0) + t.total; });
+function renderReport(start, end, period = 'custom') {
+  // Récupérer le container du rapport
+  // Le rapport s'affiche dans report-stats-screen (lotato.html)
+  const screen = document.getElementById('report-stats-screen');
+  if (!screen) return;
 
-  const totalSalesEl  = document.getElementById('total-sales');
-  const commRateEl    = document.getElementById('commission-rate');
-  const commEarnedEl  = document.getElementById('commission-earned');
-  const detailEl      = document.getElementById('report-detail-list');
+  const filtered  = savedTickets.filter(t => {
+    const d = new Date(t.date); return d >= start && d <= end;
+  });
+  const totalSales  = filtered.reduce((s, t) => s + (t.total || 0), 0);
+  const commission  = companyInfo.agentCommission || 10;
+  const commEarned  = totalSales * (commission / 100);
 
-  if (totalSalesEl) totalSalesEl.textContent = totalSales.toLocaleString() + ' G';
-  if (commRateEl)   commRateEl.textContent   = commission + '%';
-  if (commEarnedEl) commEarnedEl.textContent = commEarned.toFixed(2) + ' G';
-  if (detailEl) {
-    detailEl.innerHTML = Object.entries(drawStats).map(([d, amt]) =>
-      `<div class="report-detail-item"><span>${draws[d]?.name || d}</span><span>${amt.toLocaleString()} G</span></div>`
-    ).join('') || '<p>Pa gen done pou peryòd sa</p>';
-  }
+  // Stats par tirage + séance
+  const drawStats = {};
+  filtered.forEach(t => {
+    const key = `${t.draw}__${t.drawTime}`;
+    if (!drawStats[key]) drawStats[key] = { draw: t.draw, drawTime: t.drawTime, count: 0, total: 0 };
+    drawStats[key].count++;
+    drawStats[key].total += t.total || 0;
+  });
+
+  // Période label
+  const periodLabels = { today:'Jodi a', yesterday:'Ayè', week:'7 dènye jou', month:'Mwa sa a', custom:'Peryòd pèsonèl' };
+
+  screen.innerHTML = `
+    <div style="padding:16px;max-width:480px;margin:0 auto">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <button onclick="showScreen('home')"
+          style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:#8e44ad">
+          <i class="fas fa-arrow-left"></i>
+        </button>
+        <h2 style="font-size:1.2rem;font-weight:800;color:#2c3e50">
+          <i class="fas fa-chart-bar" style="color:#8e44ad"></i> Rapò Vant
+        </h2>
+      </div>
+
+      <!-- Filtres période -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+        ${[['today','Jodi a'],['yesterday','Ayè'],['week','Semèn'],['month','Mwa'],['custom','Pèsonèl']].map(([p, label]) => `
+          <button onclick="handleReportFilter('${p}')"
+            style="padding:7px 14px;border-radius:20px;border:2px solid #8e44ad;font-weight:700;font-size:.8rem;cursor:pointer;
+              background:${period===p?'#8e44ad':'white'};color:${period===p?'white':'#8e44ad'};transition:.2s">
+            ${label}
+          </button>`).join('')}
+      </div>
+
+      <!-- Dates personnalisées -->
+      <div id="custom-date-inputs" style="display:${period==='custom'?'flex':'none'};gap:8px;margin-bottom:16px;align-items:center">
+        <input type="date" id="rp-start" value="${start.toISOString().split('T')[0]}"
+          style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:.88rem">
+        <span style="color:#94a3b8">→</span>
+        <input type="date" id="rp-end" value="${end.toISOString().split('T')[0]}"
+          style="flex:1;padding:8px;border:1px solid #e2e8f0;border-radius:8px;font-size:.88rem">
+        <button onclick="applyCustomReport()"
+          style="padding:8px 14px;background:#8e44ad;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          OK
+        </button>
+      </div>
+
+      <!-- Résumé global -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+        <div style="background:linear-gradient(135deg,#8e44ad,#6c3483);color:white;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:1.6rem;font-weight:800">${filtered.length}</div>
+          <div style="font-size:.8rem;opacity:.9">Total Fiche</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#27ae60,#1e8449);color:white;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:1.6rem;font-weight:800">${totalSales.toLocaleString()}</div>
+          <div style="font-size:.8rem;opacity:.9">Total Vant (G)</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#f39c12,#d68910);color:white;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:1.6rem;font-weight:800">${commission}%</div>
+          <div style="font-size:.8rem;opacity:.9">Komisyon</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#3498db,#2980b9);color:white;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:1.6rem;font-weight:800">${commEarned.toLocaleString('fr-FR',{maximumFractionDigits:0})}</div>
+          <div style="font-size:.8rem;opacity:.9">Komisyon Ou (G)</div>
+        </div>
+      </div>
+
+      <!-- Détail par tirage -->
+      <div style="background:white;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.07)">
+        <div style="font-weight:800;font-size:.95rem;margin-bottom:14px;color:#2c3e50">
+          <i class="fas fa-trophy" style="color:#8e44ad"></i> Detay pa Tiraj
+        </div>
+        ${Object.values(drawStats).length === 0
+          ? '<p style="color:#94a3b8;text-align:center;padding:16px">Pa gen done pou peryòd sa</p>'
+          : Object.values(drawStats)
+              .sort((a, b) => b.total - a.total)
+              .map(s => {
+                const di     = draws[s.draw] || { name: s.draw, icon: '' };
+                const seance = s.drawTime === 'morning' ? '☀️ Maten' : '🌙 Swè';
+                const pct    = totalSales > 0 ? Math.round(s.total / totalSales * 100) : 0;
+                return `
+                  <div style="margin-bottom:12px">
+                    <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+                      <span style="font-weight:700">${di.icon||''} ${di.name} <small style="color:#94a3b8">${seance}</small></span>
+                      <span style="font-weight:800">${s.total.toLocaleString()} G</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div style="flex:1;background:#f1f5f9;border-radius:20px;height:8px;overflow:hidden">
+                        <div style="width:${pct}%;background:linear-gradient(90deg,#8e44ad,#f39c12);height:100%;border-radius:20px"></div>
+                      </div>
+                      <span style="font-size:.78rem;color:#64748b;min-width:50px">${s.count} fiche (${pct}%)</span>
+                    </div>
+                  </div>`;
+              }).join('')
+        }
+      </div>
+    </div>`;
 }
+
+// Handlers rapport (appelés depuis le HTML généré)
+window.handleReportFilter = function(period) {
+  if (period === 'custom') {
+    renderReport(new Date(), new Date(), 'custom');
+    return;
+  }
+  loadReportByPeriod(period);
+};
+
+window.applyCustomReport = function() {
+  const s = document.getElementById('rp-start')?.value;
+  const e = document.getElementById('rp-end')?.value;
+  if (s && e) renderReport(new Date(s), new Date(e + 'T23:59:59'), 'custom');
+};
 
 // ── Notification ──────────────────────────────────────────────────
 function showNotification(msg, type = 'info') {
