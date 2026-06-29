@@ -4,7 +4,7 @@
 // ================================================================
 
 // ── Base URL (serveur en ligne) ───────────────────────────────────
-const API_BASE_URL = 'https://lotatonova-fv0b.onrender.com';
+const API_BASE_URL = 'https://lotato-one.onrender.com';
 
 // ── Tirages ───────────────────────────────────────────────────────
 const draws = {
@@ -81,8 +81,8 @@ async function checkAuth() {
 }
 
 async function handleLogin() {
-  const username = document.getElementById('login-username')?.value?.trim();
-  const password = document.getElementById('login-password')?.value;
+  const username = (document.getElementById('admin-username') || document.getElementById('login-username'))?.value?.trim();
+  const password = (document.getElementById('admin-password') || document.getElementById('login-password'))?.value;
   const errEl    = document.getElementById('login-error');
   if (!username || !password) { if (errEl) { errEl.textContent = 'Antre identifiant ak modpas'; errEl.style.display = 'block'; } return; }
   try {
@@ -879,8 +879,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Boutons de login
   const loginBtn = document.getElementById('login-btn');
   if (loginBtn) loginBtn.addEventListener('click', handleLogin);
-  const loginPwd = document.getElementById('login-password');
+  const loginPwd = document.getElementById('admin-password') || document.getElementById('login-password');
   if (loginPwd) loginPwd.addEventListener('keypress', e => { if (e.key === 'Enter') handleLogin(); });
+  const loginUser = document.getElementById('admin-username') || document.getElementById('login-username');
+  if (loginUser) loginUser.addEventListener('keypress', e => { if (e.key === 'Enter') loginPwd?.focus(); });
 
   // Vérifier l'auth (async)
   const authed = await checkAuth();
