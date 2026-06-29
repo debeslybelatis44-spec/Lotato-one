@@ -888,25 +888,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   const authed = await checkAuth();
   if (!authed) return;
 
-  // Afficher l'app
+  // Afficher l'app + bottom-nav (caché par défaut dans lotato.html)
   hideLoginScreen();
+  const bottomNav = document.getElementById('bottom-nav');
+  if (bottomNav) bottomNav.style.display = 'flex';
   await initApp();
-
-  // Infos utilisateur dans l'header
-  const userNameEl = document.getElementById('user-name');
-  if (userNameEl && currentUser) userNameEl.textContent = currentUser.full_name || currentUser.username;
 
   // Logout
   document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
 
-  // Navigation bas
+  // Navigation bas — supporte data-screen="report-stats" (lotato.html) ET "report"
   document.querySelectorAll('.nav-item[data-screen]').forEach(item =>
-    item.addEventListener('click', () => showScreen(item.dataset.screen))
+    item.addEventListener('click', () => {
+      const screen = item.dataset.screen === 'report-stats' ? 'report' : item.dataset.screen;
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      item.classList.add('active');
+      showScreen(screen);
+    })
   );
 
-  // Back buttons
-  document.querySelectorAll('.back-button[data-target]').forEach(btn =>
-    btn.addEventListener('click', () => showScreen(btn.dataset.target))
+  // Back buttons — supporte data-screen (lotato.html) ET data-target
+  document.querySelectorAll('.back-button[data-screen], .back-button[data-target]').forEach(btn =>
+    btn.addEventListener('click', () => showScreen(btn.dataset.screen || btn.dataset.target || 'home'))
   );
   document.getElementById('back-button')?.addEventListener('click', closeBettingScreen);
 
@@ -921,34 +924,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     })
   );
 
-  // Boutons d'action ticket
+  // Boutons impression/partage — supporte les deux IDs (lotato.html = save-print-ticket)
+  document.getElementById('save-print-ticket')?.addEventListener('click', printTicket);
   document.getElementById('print-ticket-btn')?.addEventListener('click', printTicket);
   document.getElementById('share-ticket-btn')?.addEventListener('click', shareTicketAfterSave);
-
-  // Panier
-  document.getElementById('cart-icon-btn')?.addEventListener('click', () => {
-    const modal = document.getElementById('cart-modal');
-    if (!modal) return;
-    const list  = document.getElementById('cart-bets-list');
-    const total = document.getElementById('cart-total-amount');
-    let t = 0;
-    list.innerHTML = activeBets.map((b, i) => {
-      t += b.amount;
-      return `<div class="bet-item"><div><strong>${b.name}</strong> ${b.number}</div><div>${b.amount} G <span class="bet-remove" data-idx="${i}"><i class="fas fa-times"></i></span></div></div>`;
-    }).join('') || '<p>Panier vide</p>';
-    if (total) total.textContent = t;
-    list.querySelectorAll('.bet-remove').forEach(btn =>
-      btn.addEventListener('click', () => { activeBets.splice(parseInt(btn.dataset.idx), 1); updateBetsList(); modal.style.display = 'none'; })
-    );
-    modal.style.display = 'flex';
-  });
-  document.getElementById('close-cart-modal')?.addEventListener('click', () => { const m = document.getElementById('cart-modal'); if (m) m.style.display = 'none'; });
-  document.getElementById('cart-print-btn')?.addEventListener('click', () => { const m = document.getElementById('cart-modal'); if (m) m.style.display = 'none'; printTicket(); });
-  document.getElementById('cart-share-btn')?.addEventListener('click', () => { const m = document.getElementById('cart-modal'); if (m) m.style.display = 'none'; shareTicketAfterSave(); });
+  document.getElementById('print-ticket-only')?.addEventListener('click', printTicket);
+  document.getElementById('save-ticket-only')?.addEventListener('click', async () => { await saveTicket(); showNotification('Fiche sove!', 'success'); });
 
   // Vérification gagnants
   document.getElementById('check-winners-btn')?.addEventListener('click', checkWinningTickets);
-  document.getElementById('open-results-check')?.addEventListener('click', () => showScreen('winning-tickets'));
+  document.getElementById('open-results-check')?.addEventListener('click', () => showScreen('results'));
 
   // Rapport
   document.querySelectorAll('.filter-btn[data-period]').forEach(btn =>
