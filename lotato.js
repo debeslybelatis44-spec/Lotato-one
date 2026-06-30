@@ -1204,6 +1204,371 @@ window.applyCustomReport = function() {
   if (s && e) renderReport(new Date(s), new Date(e + 'T23:59:59'), 'custom');
 };
 
+// ── Multi-Tirages : jouer le même pari sur plusieurs tirages ──────
+
+let multiSelectedDraws = [];   // ['miami', 'georgia', ...]
+let multiSelectedTime  = 'morning';
+let multiSelectedGame  = 'borlette';
+
+function initMultiDrawPanel() {
+  renderMultiDrawOptions();
+  renderMultiGameSelect();
+  renderMultiNumberInputs();
+
+  // Toggle ouvrir/fermer le panneau
+  document.getElementById('multi-draw-toggle')?.addEventListener('click', () => {
+    const content = document.getElementById('multi-draw-content');
+    const icon    = document.querySelector('#multi-draw-toggle i');
+    if (!content) return;
+    const isOpen = content.style.display !== 'none';
+    content.style.display = isOpen ? 'none' : 'block';
+    if (icon) icon.className = isOpen ? 'fas fa-chevron-down' : 'fas fa-chevron-up';
+  });
+
+  document.getElementById('add-to-multi-draw')?.addEventListener('click', addToMultiDraw);
+  document.getElementById('view-current-multi-ticket')?.addEventListener('click', toggleMultiTicketSummary);
+  document.getElementById('save-print-multi-ticket')?.addEventListener('click', savePrintMultiTicket);
+
+  document.getElementById('open-multi-tickets')?.addEventListener('click', () => {
+    document.getElementById('main-container').style.display = 'none';
+    document.getElementById('multi-tickets-screen').style.display = 'block';
+    renderMultiTicketsList();
+  });
+  document.getElementById('back-from-multi-tickets')?.addEventListener('click', () => {
+    document.getElementById('multi-tickets-screen').style.display = 'none';
+    document.getElementById('main-container').style.display = 'block';
+  });
+}
+
+// Cases à cocher : tirages disponibles + séance
+function renderMultiDrawOptions() {
+  const container = document.getElementById('multi-draw-options');
+  if (!container) return;
+
+  const timeBtns = `
+    <div style="display:flex;gap:8px;margin-bottom:12px;grid-column:1/-1">
+      <button type="button" class="multi-time-btn" data-time="morning"
+        style="flex:1;padding:9px;border-radius:8px;border:2px solid #f39c12;font-weight:700;cursor:pointer;
+          background:${multiSelectedTime==='morning'?'#f39c12':'white'};color:${multiSelectedTime==='morning'?'white':'#f39c12'}">
+        ☀️ Maten
+      </button>
+      <button type="button" class="multi-time-btn" data-time="evening"
+        style="flex:1;padding:9px;border-radius:8px;border:2px solid #8e44ad;font-weight:700;cursor:pointer;
+          background:${multiSelectedTime==='evening'?'#8e44ad':'white'};color:${multiSelectedTime==='evening'?'white':'#8e44ad'}">
+        🌙 Swè
+      </button>
+    </div>`;
+
+  const drawCards = Object.entries(draws).map(([id, d]) => {
+    const checked = multiSelectedDraws.includes(id);
+    return `
+      <label style="display:flex;align-items:center;gap:8px;padding:10px;border:2px solid ${checked ? d.color : '#e2e8f0'};
+        border-radius:10px;cursor:pointer;background:${checked ? d.color + '15' : 'white'}">
+        <input type="checkbox" class="multi-draw-check" value="${id}" ${checked ? 'checked' : ''}
+          style="width:18px;height:18px;accent-color:${d.color}">
+        <span style="font-weight:700;font-size:.88rem">${d.icon} ${d.name}</span>
+      </label>`;
+  }).join('');
+
+  container.innerHTML = timeBtns + drawCards;
+
+  // Listeners séance
+  container.querySelectorAll('.multi-time-btn').forEach(btn =>
+    btn.addEventListener('click', () => { multiSelectedTime = btn.dataset.time; renderMultiDrawOptions(); })
+  );
+
+  // Listeners tirages
+  container.querySelectorAll('.multi-draw-check').forEach(chk =>
+    chk.addEventListener('change', () => {
+      if (chk.checked) { if (!multiSelectedDraws.includes(chk.value)) multiSelectedDraws.push(chk.value); }
+      else { multiSelectedDraws = multiSelectedDraws.filter(d => d !== chk.value); }
+      renderMultiDrawOptions();
+    })
+  );
+}
+
+// Sélecteur de jeu (borlette, lotto3, etc.)
+function renderMultiGameSelect() {
+  const container = document.getElementById('multi-game-select');
+  if (!container) return;
+
+  const games = [
+    ['borlette', 'BORLETTE'], ['boulpe', 'BOUL PE'], ['lotto3', 'LOTTO 3'],
+    ['marriage', 'MARYAJ'], ['grap', 'GRAP'], ['lotto4', 'LOTTO 4'], ['lotto5', 'LOTTO 5']
+  ];
+
+  container.innerHTML = `
+    <label style="font-size:.85rem;font-weight:700;color:#475569;display:block;margin-bottom:6px">Chwazi jwèt</label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+      ${games.map(([id, name]) => `
+        <button type="button" class="multi-game-btn" data-game="${id}"
+          style="padding:7px 12px;border-radius:8px;border:2px solid #8e44ad;font-weight:700;font-size:.78rem;cursor:pointer;
+            background:${multiSelectedGame===id?'#8e44ad':'white'};color:${multiSelectedGame===id?'white':'#8e44ad'}">
+          ${name}
+        </button>`).join('')}
+    </div>`;
+
+  container.querySelectorAll('.multi-game-btn').forEach(btn =>
+    btn.addEventListener('click', () => { multiSelectedGame = btn.dataset.game; renderMultiGameSelect(); renderMultiNumberInputs(); })
+  );
+}
+
+// Champs de saisie de numéro selon le jeu choisi
+function renderMultiNumberInputs() {
+  const container = document.getElementById('multi-number-inputs');
+  if (!container) return;
+
+  const INP = `style="font-size:1.2rem;font-weight:800;text-align:center;letter-spacing:2px;width:100%;padding:9px;border:2px solid #e2e8f0;border-radius:8px"`;
+
+  switch (multiSelectedGame) {
+    case 'borlette':
+    case 'boulpe':
+      container.innerHTML = `<label>Nimewo (2 chif)</label><input type="text" id="multi-number" maxlength="2" inputmode="numeric" placeholder="23" ${INP}>`;
+      break;
+    case 'lotto3':
+      container.innerHTML = `<label>Nimewo (3 chif)</label><input type="text" id="multi-number" maxlength="3" inputmode="numeric" placeholder="456" ${INP}>`;
+      break;
+    case 'grap':
+      container.innerHTML = `<label>Nimewo Grap (ex: 111)</label><input type="text" id="multi-number" maxlength="3" inputmode="numeric" placeholder="111" ${INP}>`;
+      break;
+    case 'marriage':
+      container.innerHTML = `
+        <label>Maryaj (2 boule)</label>
+        <div style="display:flex;gap:8px">
+          <input type="text" id="multi-num1" maxlength="2" inputmode="numeric" placeholder="12" ${INP}>
+          <input type="text" id="multi-num2" maxlength="2" inputmode="numeric" placeholder="34" ${INP}>
+        </div>`;
+      break;
+    case 'lotto4':
+    case 'lotto5': {
+      const is5 = multiSelectedGame === 'lotto5';
+      container.innerHTML = `
+        <label>${is5 ? 'Lotto 5' : 'Lotto 4'}</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input type="text" id="multi-num1" maxlength="${is5 ? 3 : 2}" inputmode="numeric" placeholder="${is5 ? '456' : '23'}" ${INP}>
+          <input type="text" id="multi-num2" maxlength="2" inputmode="numeric" placeholder="78" ${INP}>
+        </div>
+        <div class="options-container">
+          <div class="option-checkbox"><input type="checkbox" id="multi-opt1"><label for="multi-opt1">Opsyon 1</label></div>
+          <div class="option-checkbox"><input type="checkbox" id="multi-opt2"><label for="multi-opt2">Opsyon 2</label></div>
+          <div class="option-checkbox"><input type="checkbox" id="multi-opt3"><label for="multi-opt3">Opsyon 3</label></div>
+        </div>`;
+      break;
+    }
+  }
+}
+
+// Ajouter le pari courant à tous les tirages sélectionnés
+function addToMultiDraw() {
+  if (multiSelectedDraws.length === 0) return showNotification('Chwazi omwen yon tiraj', 'warning');
+
+  const bt = betTypes[multiSelectedGame];
+  const amountInput = parseInt(document.getElementById('multi-draw-amount')?.value || '0');
+  if (isNaN(amountInput) || amountInput <= 0) return showNotification('Antre yon kantite valab', 'warning');
+
+  let number = '', options = null, perOptionAmount = amountInput;
+
+  switch (multiSelectedGame) {
+    case 'borlette':
+    case 'boulpe': {
+      number = document.getElementById('multi-number')?.value?.trim() || '';
+      if (!/^\d{2}$/.test(number)) return showNotification('2 chif obligatwa', 'warning');
+      if (multiSelectedGame === 'boulpe' && number[0] !== number[1]) return showNotification('Boul Pe: de chif idantik', 'warning');
+      break;
+    }
+    case 'lotto3':
+      number = document.getElementById('multi-number')?.value?.trim() || '';
+      if (!/^\d{3}$/.test(number)) return showNotification('3 chif obligatwa', 'warning');
+      break;
+    case 'grap':
+      number = document.getElementById('multi-number')?.value?.trim() || '';
+      if (!/^\d{3}$/.test(number) || !(number[0]===number[1] && number[1]===number[2]))
+        return showNotification('Grap: 3 chif idantik', 'warning');
+      break;
+    case 'marriage': {
+      const n1 = document.getElementById('multi-num1')?.value?.trim() || '';
+      const n2 = document.getElementById('multi-num2')?.value?.trim() || '';
+      if (!/^\d{2}$/.test(n1) || !/^\d{2}$/.test(n2)) return showNotification('2 boule de 2 chif obligatwa', 'warning');
+      number = `${n1}*${n2}`;
+      break;
+    }
+    case 'lotto4':
+    case 'lotto5': {
+      const is5 = multiSelectedGame === 'lotto5';
+      const n1  = document.getElementById('multi-num1')?.value?.trim() || '';
+      const n2  = document.getElementById('multi-num2')?.value?.trim() || '';
+      const o1  = document.getElementById('multi-opt1')?.checked || false;
+      const o2  = document.getElementById('multi-opt2')?.checked || false;
+      const o3  = document.getElementById('multi-opt3')?.checked || false;
+      const cnt = [o1,o2,o3].filter(Boolean).length;
+      if (is5 ? !/^\d{3}$/.test(n1) : !/^\d{2}$/.test(n1)) return showNotification('1e boule envalid', 'warning');
+      if (!/^\d{2}$/.test(n2)) return showNotification('2e boule envalid', 'warning');
+      if (cnt === 0) return showNotification('Chwazi omwen yon opsyon', 'warning');
+      number  = n1 + n2;
+      options = { option1: o1, option2: o2, option3: o3 };
+      perOptionAmount = amountInput;
+      break;
+    }
+  }
+
+  // Ajouter le pari pour chaque tirage sélectionné
+  multiSelectedDraws.forEach(drawId => {
+    const totalAmt = options ? amountInput * Object.values(options).filter(Boolean).length : amountInput;
+    multiDrawBets.push({
+      id: Date.now() + Math.random(),
+      draw: drawId,
+      drawTime: multiSelectedTime,
+      type: multiSelectedGame,
+      name: bt.name,
+      number,
+      amount: totalAmt,
+      multiplier: bt.multiplier,
+      options,
+      perOptionAmount
+    });
+  });
+
+  showNotification(`${bt.name} ${number} ajoute nan ${multiSelectedDraws.length} tiraj!`, 'success');
+  updateMultiTicketSummary();
+
+  // Reset le formulaire de numéro
+  document.querySelectorAll('#multi-number-inputs input').forEach(i => { i.value = ''; if (i.type === 'checkbox') i.checked = false; });
+}
+
+function toggleMultiTicketSummary() {
+  const info = document.getElementById('current-multi-ticket-info');
+  if (!info) return;
+  const isHidden = info.style.display === 'none';
+  info.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) updateMultiTicketSummary();
+}
+
+function updateMultiTicketSummary() {
+  const summary = document.getElementById('multi-ticket-summary');
+  const info     = document.getElementById('current-multi-ticket-info');
+  if (!summary) return;
+
+  if (multiDrawBets.length === 0) {
+    summary.innerHTML = '<p style="color:#94a3b8;text-align:center">Pa gen parye nan fiche multi-tirages la</p>';
+    return;
+  }
+
+  if (info) info.style.display = 'block';
+
+  // Grouper par tirage
+  const byDraw = {};
+  multiDrawBets.forEach(b => {
+    const key = `${b.draw}__${b.drawTime}`;
+    if (!byDraw[key]) byDraw[key] = { draw: b.draw, drawTime: b.drawTime, bets: [] };
+    byDraw[key].bets.push(b);
+  });
+
+  const total = multiDrawBets.reduce((s, b) => s + b.amount, 0);
+
+  summary.innerHTML = Object.values(byDraw).map(g => {
+    const di = draws[g.draw] || { name: g.draw, icon: '' };
+    const seance = g.drawTime === 'morning' ? '☀️ Maten' : '🌙 Swè';
+    const sub = g.bets.reduce((s,b)=>s+b.amount,0);
+    return `
+      <div style="margin-bottom:10px;padding:8px;background:white;border-radius:8px;border-left:3px solid #8e44ad">
+        <div style="font-weight:700;font-size:.85rem">${di.icon} ${di.name} <small style="color:#94a3b8">${seance}</small></div>
+        ${g.bets.map(b => `
+          <div style="display:flex;justify-content:space-between;font-size:.82rem;padding:3px 0">
+            <span>${b.name} ${b.number}</span>
+            <span>${b.amount} G <span class="remove-multi-bet" data-id="${b.id}" style="color:#e74c3c;cursor:pointer;margin-left:6px"><i class="fas fa-times"></i></span></span>
+          </div>`).join('')}
+        <div style="text-align:right;font-weight:700;font-size:.8rem;color:#8e44ad;margin-top:4px">Sou-total: ${sub} G</div>
+      </div>`;
+  }).join('') + `<div style="text-align:right;font-weight:800;font-size:1rem;margin-top:8px">TOTAL: ${total} G</div>`;
+
+  summary.querySelectorAll('.remove-multi-bet').forEach(btn =>
+    btn.addEventListener('click', () => {
+      multiDrawBets = multiDrawBets.filter(b => b.id != btn.dataset.id);
+      updateMultiTicketSummary();
+    })
+  );
+}
+
+// Sauvegarder + imprimer la fiche multi-tirages (un ticket serveur par tirage)
+async function savePrintMultiTicket() {
+  if (multiDrawBets.length === 0) return showNotification('Pa gen parye nan fiche a', 'warning');
+
+  // Grouper par tirage+séance pour créer un ticket serveur distinct par tirage
+  const byDraw = {};
+  multiDrawBets.forEach(b => {
+    const key = `${b.draw}__${b.drawTime}`;
+    if (!byDraw[key]) byDraw[key] = { draw: b.draw, drawTime: b.drawTime, bets: [] };
+    byDraw[key].bets.push(b);
+  });
+
+  const createdTickets = [];
+  for (const group of Object.values(byDraw)) {
+    const total = group.bets.reduce((s, b) => s + b.amount, 0);
+    const ticket = {
+      number: ticketCounter,
+      date: new Date().toISOString(),
+      draw: group.draw,
+      drawTime: group.drawTime,
+      bets: group.bets,
+      total,
+      agentName: currentUser?.full_name || 'Agent',
+      isMultiDraw: true
+    };
+    try {
+      const res = await apiCall('/api/tickets', 'POST', {
+        draw: group.draw,
+        drawTime: group.drawTime,
+        bets: group.bets.map(b => ({ type: b.type, number: b.number, amount: b.amount, multiplier: b.multiplier, options: b.options || null })),
+        total
+      });
+      if (res?.ticketNumber) ticket.serverNumber = res.ticketNumber;
+    } catch { /* hors-ligne */ }
+
+    savedTickets.push(ticket);
+    createdTickets.push(ticket);
+    ticketCounter++;
+  }
+
+  showNotification(`${createdTickets.length} fiche kreye pou ${Object.keys(byDraw).length} tiraj!`, 'success');
+
+  // Imprimer toutes les fiches d'un coup
+  createdTickets.forEach(t => {
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(buildTicketHTML(t)); w.document.close(); w.print(); }
+  });
+
+  multiDrawBets = [];
+  multiSelectedDraws = [];
+  updateMultiTicketSummary();
+  renderMultiDrawOptions();
+  document.getElementById('current-multi-ticket-info').style.display = 'none';
+}
+
+// Liste des fiches multi-tirages déjà sauvegardées (écran dédié)
+function renderMultiTicketsList() {
+  const container = document.getElementById('multi-tickets-list');
+  if (!container) return;
+
+  const multiTickets = savedTickets.filter(t => t.isMultiDraw);
+  if (!multiTickets.length) {
+    container.innerHTML = '<p style="color:#94a3b8;text-align:center;padding:24px">Pa gen fiche multi-tirages</p>';
+    return;
+  }
+
+  const sorted = [...multiTickets].sort((a, b) => new Date(b.date) - new Date(a.date));
+  container.innerHTML = sorted.map(t => {
+    const di = draws[t.draw] || { name: t.draw, icon: '' };
+    return `
+      <div class="history-item" style="margin-bottom:10px">
+        <div class="history-header">
+          <span class="history-draw">#${t.serverNumber || t.number} — ${di.icon} ${di.name} (${t.drawTime === 'morning' ? 'Maten' : 'Swè'})</span>
+          <span class="history-date">${new Date(t.date).toLocaleString('fr-FR')}</span>
+        </div>
+        <div>Total: <strong>${t.total} G</strong></div>
+      </div>`;
+  }).join('');
+}
+
 // ── Notification ──────────────────────────────────────────────────
 function showNotification(msg, type = 'info') {
   const old = document.querySelector('.notification');
@@ -1228,6 +1593,7 @@ async function initApp() {
   await loadResults();
   await loadTicketHistory();
   updateBetsList();
+  initMultiDrawPanel();
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
