@@ -102,13 +102,28 @@ async function handleLogin() {
 }
 
 function handleLogout() {
-  apiCall('/api/auth/logout', 'POST').catch(() => {});
+  // Nettoyer immédiatement AVANT toute requête réseau
+  // (le serveur Render peut être en veille → ne jamais bloquer sur l'API)
   localStorage.removeItem('lotato_token');
   localStorage.removeItem('lotato_user');
+  sessionStorage.clear();
   currentUser = null;
   activeBets  = [];
-  // Rediriger vers la page de connexion principale (index.html)
-  window.location.href = '/index.html';
+  multiDrawBets = [];
+
+  // Informer le serveur en arrière-plan (fire & forget avec timeout 3s)
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 3000);
+    fetch(`${API_BASE_URL}/api/auth/logout`, {
+      method: 'POST',
+      signal: ctrl.signal,
+      headers: { 'Content-Type': 'application/json' }
+    }).catch(() => {});
+  } catch (_) {}
+
+  // Redirection immédiate vers index.html
+  window.location.replace('/index.html');
 }
 
 function showLoginScreen() {
@@ -714,38 +729,48 @@ async function openShareModal(ticket) {
 ${text}
       </div>
 
-      <!-- Champ téléphone (WhatsApp/SMS) -->
+      <!-- Champ téléphone (WhatsApp/SMS) — affiché après sélection méthode -->
       <div id="phone-row" style="display:none;margin-bottom:14px">
-        <label style="font-size:.82rem;font-weight:700;color:#475569">Nimewo telefòn:</label>
-        <div style="display:flex;gap:8px;margin-top:6px">
+        <label style="font-size:.82rem;font-weight:700;color:#475569;display:block;margin-bottom:6px">
+          <i class="fas fa-phone"></i> Nimewo telefòn:
+        </label>
+        <div style="display:flex;gap:8px">
           <input type="tel" id="share-phone" placeholder="+509 XXXX XXXX" inputmode="tel"
-            style="flex:1;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:.95rem">
+            style="flex:1;padding:11px;border:2px solid #e2e8f0;border-radius:8px;font-size:1rem">
+          <button id="share-send-btn" style="display:none;background:#25D366;color:white;border:none;
+            border-radius:8px;padding:11px 18px;font-weight:800;cursor:pointer;font-size:.9rem;white-space:nowrap">
+            <i class="fas fa-paper-plane"></i> Voye
+          </button>
         </div>
       </div>
 
-      <!-- Boutons -->
+      <!-- Méthodes d'envoi -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
 
         <!-- WhatsApp -->
-        <button id="share-wa" style="background:#25D366;color:white;border:none;border-radius:12px;
+        <button id="share-wa" data-method="whatsapp" class="share-method-btn"
+          style="background:#25D366;color:white;border:none;border-radius:12px;
           padding:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.92rem">
           <i class="fab fa-whatsapp" style="font-size:1.3rem"></i> WhatsApp
         </button>
 
         <!-- SMS -->
-        <button id="share-sms" style="background:#3498db;color:white;border:none;border-radius:12px;
+        <button id="share-sms" data-method="sms" class="share-method-btn"
+          style="background:#3498db;color:white;border:none;border-radius:12px;
           padding:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.92rem">
           <i class="fas fa-sms" style="font-size:1.1rem"></i> SMS
         </button>
 
-        <!-- Web Share API (Bluetooth, autres apps) -->
-        <button id="share-native" style="background:#8e44ad;color:white;border:none;border-radius:12px;
+        <!-- Web Share API natif (Bluetooth, NFC, toutes les apps) -->
+        <button id="share-native" class="share-method-btn"
+          style="background:#8e44ad;color:white;border:none;border-radius:12px;
           padding:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.92rem">
-          <i class="fas fa-share" style="font-size:1.1rem"></i> Pataje
+          <i class="fas fa-share-alt" style="font-size:1.1rem"></i> Pataje
         </button>
 
         <!-- Copier -->
-        <button id="share-copy" style="background:#f39c12;color:white;border:none;border-radius:12px;
+        <button id="share-copy" class="share-method-btn"
+          style="background:#f39c12;color:white;border:none;border-radius:12px;
           padding:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.92rem">
           <i class="fas fa-copy" style="font-size:1.1rem"></i> Kopye
         </button>
@@ -759,67 +784,85 @@ ${text}
 
   modal.style.display = 'flex';
 
-  const phoneRow = document.getElementById('phone-row');
+  // État interne du modal
+  let shareMethod = null; // 'whatsapp' | 'sms' | null
 
-  // WhatsApp
-  document.getElementById('share-wa').addEventListener('click', () => {
-    phoneRow.style.display = 'block';
-    document.getElementById('share-phone').placeholder = '+509 XXXX XXXX';
-    document.getElementById('share-phone').focus();
-    document.getElementById('share-wa').onclick = null;
-    document.getElementById('share-wa').addEventListener('click', () => {
-      const phone = document.getElementById('share-phone').value.trim().replace(/\D/g,'');
-      if (!phone) { showNotification('Antre nimewo telefòn', 'warning'); return; }
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank');
-      modal.style.display = 'none';
+  function closeModal() { modal.style.display = 'none'; shareMethod = null; }
+
+  function showPhoneStep(method) {
+    shareMethod = method;
+    const phoneRow = document.getElementById('phone-row');
+    const sendBtn  = document.getElementById('share-send-btn');
+    if (phoneRow) phoneRow.style.display = 'block';
+    if (sendBtn)  sendBtn.style.display  = 'block';
+    document.getElementById('share-phone')?.focus();
+    // Mettre en évidence le bouton actif
+    document.querySelectorAll('#dynamic-share-modal .share-method-btn').forEach(b => {
+      b.style.opacity = b.dataset.method === method ? '1' : '0.5';
+    });
+  }
+
+  function doSend() {
+    const rawPhone = document.getElementById('share-phone')?.value?.trim() || '';
+    if (!rawPhone) { showNotification('Antre nimewo telefòn', 'warning'); return; }
+    const digits = rawPhone.replace(/\D/g, '');
+    if (shareMethod === 'whatsapp') {
+      window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, '_blank');
       showNotification('Ticket voye sou WhatsApp!', 'success');
-    });
-  });
+    } else if (shareMethod === 'sms') {
+      window.location.href = `sms:${rawPhone}?body=${encodeURIComponent(text)}`;
+    }
+    closeModal();
+  }
 
-  // SMS
-  document.getElementById('share-sms').addEventListener('click', () => {
-    phoneRow.style.display = 'block';
-    document.getElementById('share-phone').focus();
-    document.getElementById('share-sms').addEventListener('click', () => {
-      const phone = document.getElementById('share-phone').value.trim();
-      if (!phone) { showNotification('Antre nimewo telefòn', 'warning'); return; }
-      window.location.href = `sms:${phone}?body=${encodeURIComponent(text)}`;
-      modal.style.display = 'none';
-    });
-  });
+  // Boutons méthodes
+  document.getElementById('share-wa').addEventListener('click', () => showPhoneStep('whatsapp'));
+  document.getElementById('share-sms').addEventListener('click', () => showPhoneStep('sms'));
 
-  // Web Share API natif (supporte Bluetooth, NFC, toutes les apps)
+  // Bouton envoyer
+  document.getElementById('share-send-btn').addEventListener('click', doSend);
+
+  // Enter dans le champ téléphone
+  document.getElementById('share-phone')?.addEventListener('keypress', e => { if (e.key === 'Enter') doSend(); });
+
+  // Web Share API natif (Bluetooth, NFC, toutes les apps installées)
   document.getElementById('share-native').addEventListener('click', async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: `Ticket ${ticket.serverNumber || ticket.number}`, text });
-        modal.style.display = 'none';
+        await navigator.share({
+          title: `Ticket #${ticket.serverNumber || ticket.number}`,
+          text
+        });
+        closeModal();
         showNotification('Ticket pataje!', 'success');
       } catch (e) {
-        if (e.name !== 'AbortError') showNotification('Pataj pa mache', 'error');
+        if (e.name !== 'AbortError') showNotification('Pataj pa disponib', 'warning');
       }
     } else {
-      showNotification('Fonksyon sa pa disponib sou navigatè sa', 'warning');
+      // Fallback : copier + notifier
+      try { await navigator.clipboard.writeText(text); } catch (_) {
+        const ta = document.createElement('textarea');
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); ta.remove();
+      }
+      showNotification('Kopye! Kole nan aplikasyon ou vle.', 'info');
+      closeModal();
     }
   });
 
   // Copier dans le presse-papier
   document.getElementById('share-copy').addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(text);
-      showNotification('Ticket kopye! Kole kote ou vle.', 'success');
-    } catch {
-      // Fallback
+    try { await navigator.clipboard.writeText(text); } catch (_) {
       const ta = document.createElement('textarea');
       ta.value = text; document.body.appendChild(ta); ta.select();
       document.execCommand('copy'); ta.remove();
-      showNotification('Ticket kopye!', 'success');
     }
-    modal.style.display = 'none';
+    showNotification('Ticket kopye! Kole kote ou vle.', 'success');
+    closeModal();
   });
 
   // Fermer en cliquant l'arrière-plan
-  modal.addEventListener('click', e => { if (e.target === modal) modal.style.display = 'none'; });
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
 }
 
 // ── Vérification des gagnants ─────────────────────────────────────
