@@ -177,12 +177,7 @@
             <div class="time-display">
                 <i class="fas fa-clock"></i> <span id="current-time">Samdi, 29 Nov - 10:45 AM</span>
             </div>
-            <!-- Bouton pour vérifier les résultats -->
-            <div style="margin-top: 10px;">
-                <button class="check-results-btn" id="open-results-check">
-                    <i class="fas fa-search"></i> Tcheke Rezilta ak Fich ki genyen 
-                </button>
-            </div>
+
             <!-- Bouton pour voir les fiches multi-tirages -->
             <div style="margin-top: 10px;">
                 <button class="check-results-btn" id="open-multi-tickets">
@@ -436,9 +431,16 @@
         </div>
         
         <div class="active-bets" id="active-bets">
-            <div class="ticket-actions">
-                <button class="ticket-action-btn save-print-btn" id="save-print-ticket">
-                    <i class="fas fa-save"></i> <i class="fas fa-print"></i> Anrejistre & Enprime Fiche
+            <div class="ticket-actions" style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="ticket-action-btn save-print-btn" id="save-print-ticket"
+                  style="flex:1;min-width:160px">
+                    <i class="fas fa-print"></i> Enprime Fiche
+                </button>
+                <button class="ticket-action-btn" id="share-ticket-btn"
+                  style="flex:1;min-width:120px;background:linear-gradient(135deg,#25D366,#128C7E);color:white;
+                    border:none;border-radius:8px;padding:10px;font-weight:700;cursor:pointer;
+                    display:flex;align-items:center;justify-content:center;gap:6px">
+                    <i class="fas fa-share-alt"></i> Voye
                 </button>
             </div>
             <h3>Parye Aktif</h3>
