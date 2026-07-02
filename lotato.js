@@ -134,10 +134,30 @@ function showLoginScreen() {
 }
 
 function hideLoginScreen() {
+  // Cacher l'écran de login
   const ls = document.getElementById('login-screen');
-  const ma = document.getElementById('main-app');
   if (ls) ls.style.display = 'none';
-  if (ma) ma.style.display = 'block';
+
+  // Cacher TOUS les écrans intermédiaires
+  [
+    'report-screen','results-check-screen','multi-tickets-screen',
+    'report-stats-screen','betting-screen','ticket-management-screen',
+    'tickets-screen','winning-tickets-screen','history-screen',
+    'connection-check'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  // Afficher le conteneur principal et la barre de navigation
+  const mainContainer = document.getElementById('main-container');
+  const bottomNav     = document.getElementById('bottom-nav');
+  if (mainContainer) mainContainer.style.display = 'block';
+  if (bottomNav)     bottomNav.style.display     = 'flex';
+
+  // Activer l'onglet Akèy
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector('.nav-item[data-screen="home"]')?.classList.add('active');
 }
 
 // ── Chargement données depuis API ─────────────────────────────────
@@ -706,153 +726,139 @@ async function openShareModal(ticket) {
   currentTicketToShare = ticket;
   const text = formatTicketText(ticket);
 
-  // Créer le modal dynamiquement si absent
-  let modal = document.getElementById('dynamic-share-modal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'dynamic-share-modal';
-    modal.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:flex-end;justify-content:center';
-    document.body.appendChild(modal);
-  }
+  // Supprimer l'ancien modal s'il existe (évite les doublons de listeners)
+  const oldModal = document.getElementById('dynamic-share-modal');
+  if (oldModal) oldModal.remove();
+
+  // Créer le modal à chaque fois pour avoir des listeners propres
+  const modal = document.createElement('div');
+  modal.id = 'dynamic-share-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  document.body.appendChild(modal);
 
   modal.innerHTML = `
-    <div style="background:white;border-radius:20px 20px 0 0;padding:24px;width:100%;max-width:480px;animation:slideUp .3s">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-        <h3 style="font-weight:800;font-size:1.1rem"><i class="fas fa-share-alt" style="color:#8e44ad"></i> Voye Ticket</h3>
-        <button onclick="document.getElementById('dynamic-share-modal').style.display='none'"
-          style="background:none;border:none;font-size:1.4rem;color:#94a3b8;cursor:pointer">×</button>
+    <div style="background:white;border-radius:20px 20px 0 0;padding:22px;width:100%;max-width:480px;
+      animation:slideUp .25s ease-out">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="font-weight:800;font-size:1rem"><i class="fas fa-share-alt" style="color:#8e44ad"></i> Voye Ticket</h3>
+        <button id="sm-close" style="background:none;border:none;font-size:1.5rem;color:#94a3b8;cursor:pointer;line-height:1">×</button>
       </div>
 
-      <!-- Prévisualisation ticket -->
-      <div style="background:#f8fafc;border-radius:10px;padding:12px;font-size:.8rem;font-family:monospace;
-        white-space:pre-wrap;max-height:140px;overflow-y:auto;margin-bottom:16px;color:#2c3e50">
-${text}
-      </div>
+      <!-- Aperçu du ticket -->
+      <div style="background:#f8fafc;border-radius:8px;padding:10px;font-size:.75rem;font-family:monospace;
+        white-space:pre-wrap;max-height:120px;overflow-y:auto;margin-bottom:14px;color:#2c3e50;border:1px solid #e2e8f0"
+      >${text}</div>
 
-      <!-- Champ téléphone (WhatsApp/SMS) — affiché après sélection méthode -->
-      <div id="phone-row" style="display:none;margin-bottom:14px">
+      <!-- Champ téléphone (caché par défaut) -->
+      <div id="sm-phone-row" style="display:none;margin-bottom:14px">
         <label style="font-size:.82rem;font-weight:700;color:#475569;display:block;margin-bottom:6px">
-          <i class="fas fa-phone"></i> Nimewo telefòn:
+          <i class="fas fa-phone"></i> Nimewo telefòn
         </label>
         <div style="display:flex;gap:8px">
-          <input type="tel" id="share-phone" placeholder="+509 XXXX XXXX" inputmode="tel"
-            style="flex:1;padding:11px;border:2px solid #e2e8f0;border-radius:8px;font-size:1rem">
-          <button id="share-send-btn" style="display:none;background:#25D366;color:white;border:none;
-            border-radius:8px;padding:11px 18px;font-weight:800;cursor:pointer;font-size:.9rem;white-space:nowrap">
+          <input type="tel" id="sm-phone" placeholder="+509 XXXX XXXX" inputmode="tel"
+            style="flex:1;padding:11px;border:2px solid #e2e8f0;border-radius:8px;font-size:1rem;outline:none">
+          <button id="sm-send" style="background:#25D366;color:white;border:none;
+            border-radius:8px;padding:11px 16px;font-weight:800;cursor:pointer;font-size:.9rem;white-space:nowrap">
             <i class="fas fa-paper-plane"></i> Voye
           </button>
         </div>
       </div>
 
-      <!-- Méthodes d'envoi -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-
-        <!-- WhatsApp -->
-        <button id="share-wa" data-method="whatsapp" class="share-method-btn"
-          style="background:#25D366;color:white;border:none;border-radius:12px;
-          padding:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.92rem">
-          <i class="fab fa-whatsapp" style="font-size:1.3rem"></i> WhatsApp
+      <!-- Grille des méthodes -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <button id="sm-wa"
+          style="background:#25D366;color:white;border:none;border-radius:12px;padding:13px;
+          font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.9rem">
+          <i class="fab fa-whatsapp" style="font-size:1.2rem"></i> WhatsApp
         </button>
-
-        <!-- SMS -->
-        <button id="share-sms" data-method="sms" class="share-method-btn"
-          style="background:#3498db;color:white;border:none;border-radius:12px;
-          padding:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.92rem">
-          <i class="fas fa-sms" style="font-size:1.1rem"></i> SMS
+        <button id="sm-sms"
+          style="background:#3498db;color:white;border:none;border-radius:12px;padding:13px;
+          font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.9rem">
+          <i class="fas fa-comment-sms" style="font-size:1.1rem"></i> SMS
         </button>
-
-        <!-- Web Share API natif (Bluetooth, NFC, toutes les apps) -->
-        <button id="share-native" class="share-method-btn"
-          style="background:#8e44ad;color:white;border:none;border-radius:12px;
-          padding:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.92rem">
+        <button id="sm-native"
+          style="background:#8e44ad;color:white;border:none;border-radius:12px;padding:13px;
+          font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.9rem">
           <i class="fas fa-share-alt" style="font-size:1.1rem"></i> Pataje
         </button>
-
-        <!-- Copier -->
-        <button id="share-copy" class="share-method-btn"
-          style="background:#f39c12;color:white;border:none;border-radius:12px;
-          padding:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.92rem">
+        <button id="sm-copy"
+          style="background:#f39c12;color:white;border:none;border-radius:12px;padding:13px;
+          font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:.9rem">
           <i class="fas fa-copy" style="font-size:1.1rem"></i> Kopye
         </button>
       </div>
 
-      <button onclick="document.getElementById('dynamic-share-modal').style.display='none'"
-        style="width:100%;margin-top:12px;padding:12px;background:#f1f5f9;border:none;border-radius:10px;
-          font-weight:700;color:#475569;cursor:pointer">Anile</button>
+      <button id="sm-cancel"
+        style="width:100%;padding:12px;background:#f1f5f9;border:none;border-radius:10px;
+        font-weight:700;color:#475569;cursor:pointer">Anile</button>
     </div>
     <style>@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}</style>`;
 
-  modal.style.display = 'flex';
+  // ── Helpers ──────────────────────────────────────
+  function closeModal() { modal.remove(); }
 
-  // État interne du modal
-  let shareMethod = null; // 'whatsapp' | 'sms' | null
+  let pendingMethod = null;
 
-  function closeModal() { modal.style.display = 'none'; shareMethod = null; }
-
-  function showPhoneStep(method) {
-    shareMethod = method;
-    const phoneRow = document.getElementById('phone-row');
-    const sendBtn  = document.getElementById('share-send-btn');
-    if (phoneRow) phoneRow.style.display = 'block';
-    if (sendBtn)  sendBtn.style.display  = 'block';
-    document.getElementById('share-phone')?.focus();
-    // Mettre en évidence le bouton actif
-    document.querySelectorAll('#dynamic-share-modal .share-method-btn').forEach(b => {
-      b.style.opacity = b.dataset.method === method ? '1' : '0.5';
-    });
+  function showPhoneInput(method) {
+    pendingMethod = method;
+    const phoneRow = modal.querySelector('#sm-phone-row');
+    const phoneInp = modal.querySelector('#sm-phone');
+    phoneRow.style.display = 'block';
+    // Changer couleur du bouton Voye selon la méthode
+    const sendBtn = modal.querySelector('#sm-send');
+    sendBtn.style.background = method === 'whatsapp' ? '#25D366' : '#3498db';
+    phoneInp.focus();
   }
 
   function doSend() {
-    const rawPhone = document.getElementById('share-phone')?.value?.trim() || '';
-    if (!rawPhone) { showNotification('Antre nimewo telefòn', 'warning'); return; }
-    const digits = rawPhone.replace(/\D/g, '');
-    if (shareMethod === 'whatsapp') {
+    const raw    = modal.querySelector('#sm-phone')?.value?.trim() || '';
+    if (!raw) { showNotification('Antre nimewo telefòn', 'warning'); return; }
+    const digits = raw.replace(/\D/g, '');
+    if (pendingMethod === 'whatsapp') {
       window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, '_blank');
-      showNotification('Ticket voye sou WhatsApp!', 'success');
-    } else if (shareMethod === 'sms') {
-      window.location.href = `sms:${rawPhone}?body=${encodeURIComponent(text)}`;
+      showNotification('Voye sou WhatsApp!', 'success');
+    } else {
+      window.location.href = `sms:${raw}?body=${encodeURIComponent(text)}`;
     }
     closeModal();
   }
 
-  // Boutons méthodes
-  document.getElementById('share-wa').addEventListener('click', () => showPhoneStep('whatsapp'));
-  document.getElementById('share-sms').addEventListener('click', () => showPhoneStep('sms'));
+  // ── Listeners — tous attachés une seule fois ──────
+  modal.querySelector('#sm-close').addEventListener('click', closeModal);
+  modal.querySelector('#sm-cancel').addEventListener('click', closeModal);
 
-  // Bouton envoyer
-  document.getElementById('share-send-btn').addEventListener('click', doSend);
+  modal.querySelector('#sm-wa').addEventListener('click', () => showPhoneInput('whatsapp'));
+  modal.querySelector('#sm-sms').addEventListener('click', () => showPhoneInput('sms'));
 
-  // Enter dans le champ téléphone
-  document.getElementById('share-phone')?.addEventListener('keypress', e => { if (e.key === 'Enter') doSend(); });
+  modal.querySelector('#sm-send').addEventListener('click', doSend);
+  modal.querySelector('#sm-phone').addEventListener('keypress', e => { if (e.key === 'Enter') doSend(); });
 
-  // Web Share API natif (Bluetooth, NFC, toutes les apps installées)
-  document.getElementById('share-native').addEventListener('click', async () => {
+  // Web Share API natif (Bluetooth, NFC, autres apps installées)
+  modal.querySelector('#sm-native').addEventListener('click', async () => {
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: `Ticket #${ticket.serverNumber || ticket.number}`,
-          text
-        });
+        await navigator.share({ title: `Ticket #${ticket.serverNumber || ticket.number}`, text });
         closeModal();
         showNotification('Ticket pataje!', 'success');
       } catch (e) {
-        if (e.name !== 'AbortError') showNotification('Pataj pa disponib', 'warning');
+        if (e.name !== 'AbortError') {
+          // Fallback : copier
+          try { await navigator.clipboard.writeText(text); } catch (_) {}
+          showNotification('Kopye! Kole nan aplikasyon ou vle.', 'info');
+          closeModal();
+        }
       }
     } else {
-      // Fallback : copier + notifier
-      try { await navigator.clipboard.writeText(text); } catch (_) {
-        const ta = document.createElement('textarea');
-        ta.value = text; document.body.appendChild(ta); ta.select();
-        document.execCommand('copy'); ta.remove();
-      }
-      showNotification('Kopye! Kole nan aplikasyon ou vle.', 'info');
+      showNotification('Fonksyon sa pa disponib — ap kopye a la place', 'info');
+      try { await navigator.clipboard.writeText(text); } catch (_) {}
       closeModal();
     }
   });
 
   // Copier dans le presse-papier
-  document.getElementById('share-copy').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(text); } catch (_) {
+  modal.querySelector('#sm-copy').addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(text); }
+    catch (_) {
       const ta = document.createElement('textarea');
       ta.value = text; document.body.appendChild(ta); ta.select();
       document.execCommand('copy'); ta.remove();
